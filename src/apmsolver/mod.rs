@@ -1,11 +1,14 @@
-use super::{PackageMeta, Pool, Queue, Solver};
-use libsolv_sys::ffi::{SOLVER_FLAG_ALLOW_UNINSTALL, SOLVER_FLAG_BEST_OBEY_POLICY, SOLVER_NOOP, SOLVER_INSTALL, SOLVER_ERASE, SOLVER_UPDATE};
+use libsolv_sys::ffi::{
+    SOLVER_ERASE, SOLVER_FLAG_ALLOW_UNINSTALL, SOLVER_FLAG_BEST_OBEY_POLICY, SOLVER_INSTALL,
+    SOLVER_NOOP, SOLVER_UPDATE,
+};
+use resolver::solv::{PackageMeta, Pool, Queue, Solver};
 use std::path::PathBuf;
 
 #[derive(Clone, Debug)]
-enum SolveError {
+pub enum SolveError {
     Unsolvable(String),
-    DatabaseInitError,
+    DatabaseInitError(String),
     InternalError(String),
 }
 
@@ -15,7 +18,7 @@ impl From<anyhow::Error> for SolveError {
     }
 }
 
-struct ApmSolver {
+pub struct ApmSolver {
     pool: Pool,
 }
 
@@ -24,7 +27,8 @@ impl ApmSolver {
         // Create new pool
         let mut pool = Pool::new();
         // Populate it with some Package from repository
-        super::populate_pool(&mut pool, db_files).map_err(|_| SolveError::DatabaseInitError)?;
+        resolver::solv::populate_pool(&mut pool, db_files)
+            .map_err(|e| SolveError::DatabaseInitError(e.to_string()))?;
 
         Ok(ApmSolver { pool })
     }
@@ -44,7 +48,8 @@ impl ApmSolver {
         // Create transaction
         let mut solver = Solver::new(&self.pool);
         solver.set_flag(SOLVER_FLAG_BEST_OBEY_POLICY as i32, 1)?;
-        solver.solve(&mut queue)
+        solver
+            .solve(&mut queue)
             .map_err(|e| SolveError::Unsolvable(e.to_string()))?;
         let transaction = solver.create_transaction()?;
         // Order transaction
@@ -68,7 +73,8 @@ impl ApmSolver {
         // Create transaction
         let mut solver = Solver::new(&self.pool);
         solver.set_flag(SOLVER_FLAG_BEST_OBEY_POLICY as i32, 1)?;
-        solver.solve(&mut queue)
+        solver
+            .solve(&mut queue)
             .map_err(|e| SolveError::Unsolvable(e.to_string()))?;
         let transaction = solver.create_transaction()?;
         // Order transaction
@@ -85,7 +91,8 @@ impl ApmSolver {
         // Create transaction
         let mut solver = Solver::new(&self.pool);
         solver.set_flag(SOLVER_FLAG_BEST_OBEY_POLICY as i32, 1)?;
-        solver.solve(&mut queue)
+        solver
+            .solve(&mut queue)
             .map_err(|e| SolveError::Unsolvable(e.to_string()))?;
         let transaction = solver.create_transaction()?;
         // Order transaction
