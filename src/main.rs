@@ -1,4 +1,5 @@
 mod solv;
+mod actions;
 mod cli;
 
 use std::path::PathBuf;
