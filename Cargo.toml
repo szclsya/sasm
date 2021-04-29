@@ -1,0 +1,18 @@
+[package]
+name = "apm"
+version = "0.1.0"
+authors = ["Leo Shen <i@szclsya.me>"]
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+# cli
+console = "0.14.1"
+# libsolv related
+libsolv-sys = "0.1"
+libc = "0.2"
+hex = "0.4"
+sha2 = "0.9"
+rayon = "1.5"
+bytesize = "1.0"
+
