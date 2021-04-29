@@ -83,7 +83,6 @@ fn solvable_to_meta(
         name: name,
         version: version,
         sha256: encode(checksum),
-        path: path + "/" + &filename,
         action: change_to_action(change_type)?,
     })
 }

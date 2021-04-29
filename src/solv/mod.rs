@@ -1,5 +1,5 @@
-mod ffi;
 mod actions;
+mod ffi;
 use std::path::PathBuf;
 
 use anyhow::Result;

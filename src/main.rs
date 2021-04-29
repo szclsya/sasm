@@ -1,15 +1,16 @@
-mod solv;
-mod actions;
 mod cli;
+mod solv;
 
 use std::path::PathBuf;
 
-use solv::{Pool, Solver, Queue, PackageMeta};
-use libsolv_sys::ffi::{SOLVER_INSTALL, SOLVER_FLAG_BEST_OBEY_POLICY, SOLVER_FLAG_ALLOW_UNINSTALL};
+use libsolv_sys::ffi::{SOLVER_FLAG_ALLOW_UNINSTALL, SOLVER_FLAG_BEST_OBEY_POLICY, SOLVER_INSTALL};
+use solv::{PackageMeta, Pool, Queue, Solver};
 
 fn main() -> anyhow::Result<()> {
-    let package_path: Vec<PathBuf> = vec!(PathBuf::from("/tmp/apm/Packages-all"),
-                                          PathBuf::from("/tmp/apm/Packages-amd64"));
+    let package_path: Vec<PathBuf> = vec![
+        PathBuf::from("/tmp/apm/Packages-all"),
+        PathBuf::from("/tmp/apm/Packages-amd64"),
+    ];
 
     // Create new pool
     let mut pool = Pool::new();
@@ -31,7 +32,10 @@ fn main() -> anyhow::Result<()> {
     transaction.order(0); // We don't need special order (for now)
 
     println!("Transaction size change: {}", transaction.get_size_change());
-    println!("Transaction detail: {:#?}", transaction.create_metadata().unwrap());
+    println!(
+        "Transaction detail: {:#?}",
+        transaction.create_metadata().unwrap()
+    );
 
     Ok(())
 }
