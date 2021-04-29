@@ -42,7 +42,7 @@ impl ApmSolver {
             // Append temp_queue to main queue
             queue.extend(&temp_queue)
         }
-        // Mark all queue elements as install
+        // Mark all queue elements to be installed
         queue.mark_all_as(SOLVER_INSTALL as i32);
 
         // Create transaction
@@ -67,7 +67,7 @@ impl ApmSolver {
             // Append temp_queue to main queue
             queue.extend(&temp_queue)
         }
-        // Mark all queue elements as install
+        // Mark all queue elements to be removed 
         queue.mark_all_as(SOLVER_ERASE as i32);
 
         // Create transaction

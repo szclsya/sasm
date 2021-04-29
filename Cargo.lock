@@ -3,6 +3,7 @@
 [[package]]
 name = "abbs-meta-apml"
 version = "0.1.0"
+source = "git+https://github.com/AOSC-Dev/abbs-meta-rs?rev=d75c0abd6cf2b5016452b036ddfbd144e6d611ed#d75c0abd6cf2b5016452b036ddfbd144e6d611ed"
 dependencies = [
  "aho-corasick",
  "annotate-snippets",
@@ -14,6 +15,7 @@ dependencies = [
 [[package]]
 name = "abbs-meta-tree"
 version = "0.1.0"
+source = "git+https://github.com/AOSC-Dev/abbs-meta-rs?rev=d75c0abd6cf2b5016452b036ddfbd144e6d611ed#d75c0abd6cf2b5016452b036ddfbd144e6d611ed"
 dependencies = [
  "abbs-meta-apml",
  "anyhow",
@@ -267,6 +269,7 @@ dependencies = [
 [[package]]
 name = "libsolv-sys"
 version = "0.1.4"
+source = "git+https://github.com/AOSC-Dev/abbs-meta-rs?rev=d75c0abd6cf2b5016452b036ddfbd144e6d611ed#d75c0abd6cf2b5016452b036ddfbd144e6d611ed"
 dependencies = [
  "anyhow",
  "bindgen",
@@ -351,6 +354,7 @@ checksum = "24d5f089152e60f62d28b835fbff2cd2e8dc0baf1ac13343bef92ab7eed84548"
 [[package]]
 name = "resolver"
 version = "0.1.0"
+source = "git+https://github.com/AOSC-Dev/abbs-meta-rs?rev=d75c0abd6cf2b5016452b036ddfbd144e6d611ed#d75c0abd6cf2b5016452b036ddfbd144e6d611ed"
 dependencies = [
  "abbs-meta-tree",
  "anyhow",
