@@ -1,6 +1,6 @@
 use libsolv_sys::ffi::{
-    SOLVER_ALL, SOLVER_ERASE, SOLVER_FLAG_ALLOW_UNINSTALL, SOLVER_FLAG_BEST_OBEY_POLICY, SOLVER_INSTALL,
-    SOLVER_NOOP, SOLVER_UPDATE, SOLVER_DISTUPGRADE
+    SOLVER_DISTUPGRADE, SOLVER_ERASE, SOLVER_FLAG_ALLOW_UNINSTALL, SOLVER_FLAG_BEST_OBEY_POLICY,
+    SOLVER_INSTALL, SOLVER_NOOP, SOLVER_SOLVABLE_ALL, SOLVER_UPDATE,
 };
 use resolver::solv::{PackageMeta, Pool, Queue, Solver};
 use std::path::PathBuf;
@@ -67,7 +67,7 @@ impl ApmSolver {
             // Append temp_queue to main queue
             queue.extend(&temp_queue)
         }
-        // Mark all queue elements to be removed 
+        // Mark all queue elements to be removed
         queue.mark_all_as(SOLVER_ERASE as i32);
 
         // Create transaction
@@ -87,7 +87,7 @@ impl ApmSolver {
     pub fn upgrade(&self) -> Result<Vec<PackageMeta>, SolveError> {
         let mut queue = Queue::new();
         // Mark that we want an upgrade
-        queue.push2(SOLVER_UPDATE as i32 | SOLVER_ALL, 0);
+        queue.push2(SOLVER_UPDATE as i32 | SOLVER_SOLVABLE_ALL as i32, 0);
 
         // Create transaction
         let mut solver = Solver::new(&self.pool);
@@ -104,10 +104,10 @@ impl ApmSolver {
 
     pub fn dist_upgrade(&self) -> Result<Vec<PackageMeta>, SolveError> {
         let mut queue = Queue::new();
-         // Mark that we want a dist-upgrade
-        queue.push2(SOLVER_DISTUPGRADE as i32 | SOLVER_ALL, 0);
+        // Mark that we want a dist-upgrade
+        queue.push2(SOLVER_DISTUPGRADE as i32 | SOLVER_SOLVABLE_ALL as i32, 0);
 
-         // Create transaction
+        // Create transaction
         let mut solver = Solver::new(&self.pool);
         solver.set_flag(SOLVER_FLAG_BEST_OBEY_POLICY as i32, 1)?;
         // Since dist-upgrade, uninstall is allowed
@@ -119,6 +119,6 @@ impl ApmSolver {
         // Order transaction
         transaction.order(0); // We don't need special order (for now)
 
-        Ok(transaction.create_metadata()?)      
+        Ok(transaction.create_metadata()?)
     }
 }
