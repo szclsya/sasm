@@ -1,5 +1,5 @@
 use libsolv_sys::ffi::{
-    SOLVER_ERASE, SOLVER_FLAG_ALLOW_UNINSTALL, SOLVER_FLAG_BEST_OBEY_POLICY, SOLVER_INSTALL,
+    SOLVER_ALL, SOLVER_ERASE, SOLVER_FLAG_ALLOW_UNINSTALL, SOLVER_FLAG_BEST_OBEY_POLICY, SOLVER_INSTALL,
     SOLVER_NOOP, SOLVER_UPDATE,
 };
 use resolver::solv::{PackageMeta, Pool, Queue, Solver};
@@ -73,6 +73,7 @@ impl ApmSolver {
         // Create transaction
         let mut solver = Solver::new(&self.pool);
         solver.set_flag(SOLVER_FLAG_BEST_OBEY_POLICY as i32, 1)?;
+        solver.set_flag(SOLVER_FLAG_ALLOW_UNINSTALL as i32, 1)?;
         solver
             .solve(&mut queue)
             .map_err(|e| SolveError::Unsolvable(e.to_string()))?;
@@ -86,11 +87,15 @@ impl ApmSolver {
     pub fn upgrade(&self, allow_remove: bool) -> Result<Vec<PackageMeta>, SolveError> {
         let mut queue = Queue::new();
         // Mark that we want an upgrade
-        queue.push2(SOLVER_NOOP as i32, SOLVER_UPDATE as i32);
+        queue.push2(SOLVER_UPDATE as i32 | SOLVER_ALL, 0);
 
         // Create transaction
         let mut solver = Solver::new(&self.pool);
         solver.set_flag(SOLVER_FLAG_BEST_OBEY_POLICY as i32, 1)?;
+        // dist-upgrade
+        if allow_remove {
+            solver.set_flag(SOLVER_FLAG_ALLOW_UNINSTALL as i32, 1)?;
+        }
         solver
             .solve(&mut queue)
             .map_err(|e| SolveError::Unsolvable(e.to_string()))?;
