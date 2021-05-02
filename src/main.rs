@@ -17,11 +17,12 @@ fn main() -> anyhow::Result<()> {
             package_path.push(PathBuf::from(PACKAGE_FILE_PATH).join(&filename));
         }
     }
+    println!("Package dbs: {:#?}", &package_path);
 
     // Accept args
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        println!("Supply argument (install/upgrade)");
+        println!("Supply argument (install/upgrade/remove/dist-upgrade)");
         return Ok(());
     }
 
@@ -36,11 +37,22 @@ fn main() -> anyhow::Result<()> {
             println!("Installation detail: {:#?}", install_result);
         }
         "upgrade" => {
+            let solver = apmsolver::ApmSolver::new(&package_path).unwrap();
+            let upgrade_result = solver.upgrade().unwrap();
+            println!("Upgrade detail: {:#?}", upgrade_result);
+        }
+        "dist-upgrade" => {
+            let solver = apmsolver::ApmSolver::new(&package_path).unwrap();
+            let upgrade_result = solver.dist_upgrade().unwrap();
+            println!("Upgrade detail: {:#?}", upgrade_result);
+        }
+        "remove" => {
+            let to_remove: Vec<String> = args[2..args.len()].to_vec();
             // Create solver instance
             let solver = apmsolver::ApmSolver::new(&package_path).unwrap();
             // Try some trivial solving
-            let upgrade_result = solver.upgrade().unwrap();
-            println!("Upgrade detail: {:#?}", upgrade_result);
+            let remove_result = solver.remove(&to_remove).unwrap();
+            println!("Installation detail: {:#?}", remove_result);
         }
         _ => {
             println!("Unknown command: {}", &operation);
