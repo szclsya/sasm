@@ -8,7 +8,3 @@ edition = "2018"
 anyhow = "1.0"
 # cli
 console = "0.14.1"
-# libsolv wrapper
-resolver = { git = "https://github.com/AOSC-Dev/abbs-meta-rs", rev = "d75c0abd6cf2b5016452b036ddfbd144e6d611ed" }
-libsolv-sys = { git = "https://github.com/AOSC-Dev/abbs-meta-rs", rev = "d75c0abd6cf2b5016452b036ddfbd144e6d611ed" }
-libc = "0.2"
