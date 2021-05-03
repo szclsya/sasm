@@ -4,6 +4,7 @@ use libsolv_sys::ffi::{
 };
 use resolver::solv::{PackageMeta, Pool, Queue, Solver};
 use std::path::PathBuf;
+use libc::c_int;
 
 #[derive(Clone, Debug)]
 pub enum SolveError {
@@ -43,11 +44,11 @@ impl ApmSolver {
             queue.extend(&temp_queue)
         }
         // Mark all queue elements to be installed
-        queue.mark_all_as(SOLVER_INSTALL as i32);
+        queue.mark_all_as(SOLVER_INSTALL as c_int);
 
         // Create transaction
         let mut solver = Solver::new(&self.pool);
-        solver.set_flag(SOLVER_FLAG_BEST_OBEY_POLICY as i32, 1)?;
+        solver.set_flag(SOLVER_FLAG_BEST_OBEY_POLICY as c_int, 1)?;
         solver
             .solve(&mut queue)
             .map_err(|e| SolveError::Unsolvable(e.to_string()))?;
@@ -68,7 +69,7 @@ impl ApmSolver {
             queue.extend(&temp_queue)
         }
         // Mark all queue elements to be removed
-        queue.mark_all_as(SOLVER_ERASE as i32);
+        queue.mark_all_as(SOLVER_ERASE as c_int);
 
         // Create transaction
         let mut solver = Solver::new(&self.pool);
@@ -87,11 +88,11 @@ impl ApmSolver {
     pub fn upgrade(&self) -> Result<Vec<PackageMeta>, SolveError> {
         let mut queue = Queue::new();
         // Mark that we want an upgrade
-        queue.push2(SOLVER_UPDATE as i32 | SOLVER_SOLVABLE_ALL as i32, 0);
+        queue.push2((SOLVER_UPDATE | SOLVER_SOLVABLE_ALL) as c_int, 0);
 
         // Create transaction
         let mut solver = Solver::new(&self.pool);
-        solver.set_flag(SOLVER_FLAG_BEST_OBEY_POLICY as i32, 1)?;
+        solver.set_flag(SOLVER_FLAG_BEST_OBEY_POLICY as c_int, 1)?;
         solver
             .solve(&mut queue)
             .map_err(|e| SolveError::Unsolvable(e.to_string()))?;
@@ -105,13 +106,13 @@ impl ApmSolver {
     pub fn dist_upgrade(&self) -> Result<Vec<PackageMeta>, SolveError> {
         let mut queue = Queue::new();
         // Mark that we want a dist-upgrade
-        queue.push2(SOLVER_DISTUPGRADE as i32 | SOLVER_SOLVABLE_ALL as i32, 0);
+        queue.push2((SOLVER_DISTUPGRADE | SOLVER_SOLVABLE_ALL) as c_int, 0);
 
         // Create transaction
         let mut solver = Solver::new(&self.pool);
-        solver.set_flag(SOLVER_FLAG_BEST_OBEY_POLICY as i32, 1)?;
+        solver.set_flag(SOLVER_FLAG_BEST_OBEY_POLICY as c_int, 1)?;
         // Since dist-upgrade, uninstall is allowed
-        solver.set_flag(SOLVER_FLAG_ALLOW_UNINSTALL as i32, 1)?;
+        solver.set_flag(SOLVER_FLAG_ALLOW_UNINSTALL as c_int, 1)?;
         solver
             .solve(&mut queue)
             .map_err(|e| SolveError::Unsolvable(e.to_string()))?;
