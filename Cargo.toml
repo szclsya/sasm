@@ -6,5 +6,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+regex = "1"
+lazy_static = "1"
 # cli
 console = "0.14.1"

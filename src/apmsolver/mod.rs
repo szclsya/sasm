@@ -1,6 +1,7 @@
-mod dpkg;
-use std::path::PathBuf;
-use libc::c_int;
+mod pool;
+mod sat;
+mod types;
+mod version;
 
 #[derive(Clone, Debug)]
 pub enum SolveError {
@@ -15,6 +16,7 @@ impl From<anyhow::Error> for SolveError {
     }
 }
 
+/*
 pub struct ApmSolver {
 }
 
@@ -39,3 +41,4 @@ impl ApmSolver {
         todo!()
     }
 }
+*/
