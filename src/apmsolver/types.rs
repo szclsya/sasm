@@ -1,6 +1,6 @@
 use super::version::PackageVersion;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum VersionRequirement {
     Above(PackageVersion),
     Below(PackageVersion),
@@ -11,7 +11,9 @@ pub struct Request {
     pub install: Vec<(String, VersionRequirement)>,
 }
 
+#[derive(Clone)]
 pub struct PackageMeta {
+    pub name: String,
     pub version: PackageVersion,
     pub depends: Vec<(String, VersionRequirement)>,
     pub breaks: Vec<(String, VersionRequirement)>,

@@ -8,5 +8,7 @@ edition = "2018"
 anyhow = "1.0"
 regex = "1"
 lazy_static = "1"
+# Good stuff
+varisat = "0.2"
 # cli
 console = "0.14.1"
