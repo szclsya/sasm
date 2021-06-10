@@ -29,7 +29,7 @@ impl PackageVersion {
         }
 
         let mut epoch = 0;
-        let mut version = Vec::new();
+        let version;
         let mut revision = 0;
 
         let segments = VER_PARTITION
@@ -43,6 +43,8 @@ impl PackageVersion {
         }
         if let Some(v) = segments.name("version") {
             version = parse_version_string(v.as_str())?;
+        } else {
+            bail!("Version segment is required")
         }
         if let Some(r) = segments.name("revision") {
             revision = r
@@ -71,6 +73,9 @@ impl Ord for PackageVersion {
 
         let mut self_vec = self.version.clone();
         let mut other_vec = other.version.clone();
+        // Add | to the back to make sure end of string is more significant than '~'
+        self_vec.push(("|".to_string(), None));
+        other_vec.push(("|".to_string(), None));
         // Reverse them so that we can pop them
         self_vec.reverse();
         other_vec.reverse();
@@ -107,9 +112,9 @@ impl Ord for PackageVersion {
             }
         }
 
-        // If other still has remaining segments, then other is larger
+        // If other still has remaining segments
         if other_vec.len() > 0 {
-            return Ordering::Less;
+            return Ordering::Greater;
         }
 
         // Finally, compare revision
@@ -158,6 +163,9 @@ fn parse_version_string(s: &str) -> Result<Vec<(String, Option<u128>)>> {
         } else if DIGIT_TABLE.contains(&c) {
             digit_buffer.push(c);
             in_digit = true;
+        } else {
+            // This should not happen, we should have sanitized input
+            bail!("Invalid character in version")
         }
     }
 
@@ -185,6 +193,7 @@ fn str_to_ranks(s: &str) -> Vec<usize> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::cmp::Ordering::*;
 
     #[test]
     fn pkg_ver_from_str() {
@@ -202,7 +211,10 @@ mod test {
             },
             PackageVersion {
                 epoch: 999,
-                version: vec![("".to_string(), Some(0)), ("+git".to_string(), Some(20210608))],
+                version: vec![
+                    ("".to_string(), Some(0)),
+                    ("+git".to_string(), Some(20210608)),
+                ],
                 revision: 1,
             },
         ];
@@ -215,29 +227,57 @@ mod test {
     #[test]
     fn pkg_ver_ord() {
         let source = vec![
-            ("1.1.1", "1.1.2"),
-            ("1b", "1a"),
-            ("1~~", "1~~a"),
-            ("1~~a", "1~"),
+            ("1.1.1", Less, "1.1.2"),
+            ("1b", Greater, "1a"),
+            ("1~~", Less, "1~~a"),
+            ("1~~a", Less, "1~"),
+            ("1", Less, "1.1"),
+            ("1.0", Less, "1.1"),
+            ("1.2", Less, "1.11"),
+            ("1.0-1", Less, "1.1"),
+            ("1.0-1", Less, "1.0-12"),
+            // make them different for sorting
+            ("1:1.0-0", Equal, "1:1.0"),
+            ("1.0", Equal, "1.0"),
+            ("1.0-1", Equal, "1.0-1"),
+            ("1:1.0-1", Equal, "1:1.0-1"),
+            ("1:1.0", Equal, "1:1.0"),
+            ("1.0-1", Less, "1.0-2"),
+            //("1.0final-5sarge1", Greater, "1.0final-5"),
+            ("1.0final-5", Greater, "1.0a7-2"),
+            ("0.9.2-5", Less, "0.9.2+cvs.1.0.dev.2004.07.28-1"),
+            ("1:500", Less, "1:5000"),
+            ("100:500", Greater, "11:5000"),
+            ("1.0.4-2", Greater, "1.0pre7-2"),
+            ("1.5~rc1", Less, "1.5"),
+            ("1.5~rc1", Less, "1.5+1"),
+            ("1.5~rc1", Less, "1.5~rc2"),
+            ("1.5~rc1", Greater, "1.5~dev0"),
         ];
-        let result = vec![false, true, false, false];
 
-        for (pos, e) in source.iter().enumerate() {
+        for e in source {
+            println!("Comparing {} vs {}", e.0, e.2);
+            println!(
+                "{:#?} vs {:#?}",
+                PackageVersion::from(e.0).unwrap(),
+                PackageVersion::from(e.2).unwrap()
+            );
             assert_eq!(
-                PackageVersion::from(e.0).unwrap() > PackageVersion::from(e.1).unwrap(),
-                result[pos]
+                PackageVersion::from(e.0)
+                    .unwrap()
+                    .cmp(&PackageVersion::from(e.2).unwrap()),
+                e.1
             );
         }
     }
 
     #[test]
     fn pkg_ver_eq() {
-     let source = vec![
-            ("1.1+git2021", "1.1+git2021")
-        ];
+        let source = vec![("1.1+git2021", "1.1+git2021")];
         for e in &source {
             assert_eq!(
-                PackageVersion::from(e.0).unwrap(), PackageVersion::from(e.1).unwrap()
+                PackageVersion::from(e.0).unwrap(),
+                PackageVersion::from(e.1).unwrap()
             );
         }
     }
