@@ -3,8 +3,8 @@ use super::version::PackageVersion;
 #[derive(PartialEq, Eq, Clone)]
 pub struct VersionRequirement {
     // The bool represents if the restriction is inclusive
-    lower_bond: Option<(PackageVersion, bool)>,
-    upper_bond: Option<(PackageVersion, bool)>,
+    pub lower_bond: Option<(PackageVersion, bool)>,
+    pub upper_bond: Option<(PackageVersion, bool)>,
 }
 
 impl VersionRequirement {

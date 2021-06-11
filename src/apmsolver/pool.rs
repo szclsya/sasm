@@ -1,5 +1,4 @@
 use super::types::PackageMeta;
-use super::version::PackageVersion;
 use std::collections::HashMap;
 use varisat::{
     CnfFormula, ExtendFormula, Var,
@@ -24,7 +23,7 @@ impl PackagePool {
     pub fn add(&mut self, name: &str, meta: PackageMeta) -> usize {
         let this_version = meta.version.clone();
         self.pkgs.push((name.to_string(), meta.clone()));
-        let index = self.pkgs.len() - 1;
+        let index = self.pkgs.len();
 
         if self.name_to_ids.contains_key(name) {
             let ids = self.name_to_ids.get_mut(name).unwrap();
@@ -46,7 +45,7 @@ impl PackagePool {
 
         for (pos, pkg) in self.pkgs.iter().enumerate() {
             if pkg.0 == name {
-                res.push((pos, pkg.1.clone()));
+                res.push((pos + 1, pkg.1.clone()));
             }
         }
         res
@@ -55,7 +54,7 @@ impl PackagePool {
     pub fn to_solver(&self) -> Solver {
         let mut solver = Solver::new();
         for (pos, pkg) in self.pkgs.iter().enumerate() {
-            let formula = self.pkg_to_rule(&pkg.1, pos);
+            let formula = self.pkg_to_rule(&pkg.1, pos + 1);
             solver.add_formula(&formula);
         }
         solver
@@ -94,5 +93,37 @@ impl PackagePool {
         }
 
         formula
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use super::super::types::VersionRequirement;
+    use super::super::version::PackageVersion;
+
+    #[test]
+    fn trivial_pool() {
+        let mut pool = PackagePool::new();
+        let a_id = pool.add("a", PackageMeta {
+            name: "a".to_string(),
+            version: PackageVersion::from("1").unwrap(),
+            depends: Vec::new(),
+            breaks: Vec::new(),
+        });
+        let b_id = pool.add("b", PackageMeta {
+            name: "b".to_string(),
+            version: PackageVersion::from("1").unwrap(),
+            depends: vec![("a".to_string(), VersionRequirement{
+                lower_bond: None, upper_bond: None
+            })],
+            breaks: Vec::new(),
+        });
+
+        let mut solver = pool.to_solver();
+        solver.add_clause(&[Lit::from_dimacs(b_id as isize)]);
+
+        solver.solve().unwrap();
+        assert_eq!(solver.model().unwrap(), vec![Lit::from_dimacs(a_id as isize), Lit::from_dimacs(b_id as isize)]);
     }
 }
