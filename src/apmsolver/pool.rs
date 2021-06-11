@@ -1,4 +1,7 @@
 use super::types::PackageMeta;
+use super::version::PackageVersion;
+
+use anyhow::{bail, Result};
 use std::collections::HashMap;
 use varisat::{
     CnfFormula, ExtendFormula, Var,
@@ -40,7 +43,7 @@ impl PackagePool {
         index
     }
 
-    pub fn get_ids(&self, name: &str) -> Vec<(usize, PackageMeta)> {
+    pub fn pkg_name_to_ids(&self, name: &str) -> Vec<(usize, PackageMeta)> {
         let mut res: Vec<(usize, PackageMeta)> = Vec::new();
 
         for (pos, pkg) in self.pkgs.iter().enumerate() {
@@ -49,6 +52,16 @@ impl PackagePool {
             }
         }
         res
+    }
+
+    pub fn id_to_pkg(&self, id: usize) -> Result<(String, PackageVersion)> {
+        if id > self.pkgs.len() {
+            bail!("ID does not exist");
+        }
+        // Since our SAT solver only accepts int > 0 as Literal, we offset pos by 1
+        let pos = id - 1;
+        let pkg = &self.pkgs[pos];
+        Ok((pkg.0.clone(), pkg.1.version.clone()))
     }
 
     pub fn to_solver(&self) -> Solver {
@@ -98,32 +111,48 @@ impl PackagePool {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use super::super::types::VersionRequirement;
     use super::super::version::PackageVersion;
+    use super::*;
 
     #[test]
     fn trivial_pool() {
         let mut pool = PackagePool::new();
-        let a_id = pool.add("a", PackageMeta {
-            name: "a".to_string(),
-            version: PackageVersion::from("1").unwrap(),
-            depends: Vec::new(),
-            breaks: Vec::new(),
-        });
-        let b_id = pool.add("b", PackageMeta {
-            name: "b".to_string(),
-            version: PackageVersion::from("1").unwrap(),
-            depends: vec![("a".to_string(), VersionRequirement{
-                lower_bond: None, upper_bond: None
-            })],
-            breaks: Vec::new(),
-        });
+        let a_id = pool.add(
+            "a",
+            PackageMeta {
+                name: "a".to_string(),
+                version: PackageVersion::from("1").unwrap(),
+                depends: Vec::new(),
+                breaks: Vec::new(),
+            },
+        );
+        let b_id = pool.add(
+            "b",
+            PackageMeta {
+                name: "b".to_string(),
+                version: PackageVersion::from("1").unwrap(),
+                depends: vec![(
+                    "a".to_string(),
+                    VersionRequirement {
+                        lower_bond: None,
+                        upper_bond: None,
+                    },
+                )],
+                breaks: Vec::new(),
+            },
+        );
 
         let mut solver = pool.to_solver();
         solver.add_clause(&[Lit::from_dimacs(b_id as isize)]);
 
         solver.solve().unwrap();
-        assert_eq!(solver.model().unwrap(), vec![Lit::from_dimacs(a_id as isize), Lit::from_dimacs(b_id as isize)]);
+        assert_eq!(
+            solver.model().unwrap(),
+            vec![
+                Lit::from_dimacs(a_id as isize),
+                Lit::from_dimacs(b_id as isize)
+            ]
+        );
     }
 }

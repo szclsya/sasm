@@ -10,7 +10,7 @@ fn generate(req: &Request, pool: &PackagePool) -> Result<()> {
     // Enroll requirements
     for r in &req.install {
         // Pick the latest version for each requested packages
-        let choices = pool.get_ids(&r.0);
+        let choices = pool.pkg_name_to_ids(&r.0);
         let best_choice = choices.iter().max_by_key(|pkg| pkg.1.version.clone());
         if let Some(best) = best_choice {
             let l = Lit::from_dimacs(best.0 as isize);
