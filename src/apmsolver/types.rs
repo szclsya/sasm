@@ -1,10 +1,42 @@
 use super::version::PackageVersion;
 
 #[derive(PartialEq, Eq, Clone)]
-pub enum VersionRequirement {
-    Above(PackageVersion),
-    Below(PackageVersion),
-    Any,
+pub struct VersionRequirement {
+    // The bool represents if the restriction is inclusive
+    lower_bond: Option<(PackageVersion, bool)>,
+    upper_bond: Option<(PackageVersion, bool)>,
+}
+
+impl VersionRequirement {
+    pub fn within(&self, ver: &PackageVersion) -> bool {
+        if let Some(lower) = &self.lower_bond {
+            // If inclusive
+            if lower.1 {
+                if ver <= &lower.0 {
+                    return false;
+                }
+            } else {
+                if ver < &lower.0 {
+                    return false;
+                }
+            }
+        }
+
+        if let Some(upper) = &self.upper_bond {
+            // If inclusive
+            if upper.1 {
+                if ver >= &upper.0 {
+                    return false;
+                }
+            } else {
+                if ver > &upper.0 {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
 }
 
 pub struct Request {
