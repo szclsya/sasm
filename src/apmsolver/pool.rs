@@ -43,12 +43,11 @@ impl PackagePool {
         index
     }
 
-    pub fn pkg_name_to_ids(&self, name: &str) -> Vec<(usize, PackageMeta)> {
-        let mut res: Vec<(usize, PackageMeta)> = Vec::new();
-
-        for (pos, pkg) in self.pkgs.iter().enumerate() {
-            if pkg.0 == name {
-                res.push((pos + 1, pkg.1.clone()));
+    pub fn pkg_name_to_ids(&self, name: &str) -> Vec<(usize, PackageVersion)> {
+        let mut res: Vec<(usize, PackageVersion)> = Vec::new();
+        if let Some(pkgs) = self.name_to_ids.get(name) {
+            for pkg in pkgs {
+                res.push((*pkg, self.pkgs[*pkg].1.version.clone()))
             }
         }
         res
