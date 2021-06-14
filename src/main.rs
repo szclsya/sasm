@@ -1,4 +1,4 @@
-mod apmsolver;
+mod solver;
 mod cli;
 
 fn main() {}
