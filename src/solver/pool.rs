@@ -1,4 +1,4 @@
-use super::types::PackageMeta;
+use super::types::{PackageExtraMeta, PackageMeta};
 use super::version::PackageVersion;
 
 use anyhow::{bail, Result};
@@ -23,13 +23,14 @@ impl PackagePool {
         }
     }
 
-    pub fn add(&mut self, name: &str, meta: PackageMeta) -> usize {
+    pub fn add(&mut self, meta: PackageMeta) -> usize {
+        let name = meta.name.clone();
         let this_version = meta.version.clone();
         self.pkgs.push((name.to_string(), meta.clone()));
         let index = self.pkgs.len();
 
-        if self.name_to_ids.contains_key(name) {
-            let ids = self.name_to_ids.get_mut(name).unwrap();
+        if self.name_to_ids.contains_key(&name) {
+            let ids = self.name_to_ids.get_mut(&name).unwrap();
             if !ids.is_empty() && self.pkgs[ids[0]].1.version < this_version {
                 ids.insert(0, index);
             } else {
@@ -118,7 +119,6 @@ mod test {
     fn trivial_pool() {
         let mut pool = PackagePool::new();
         let a_id = pool.add(
-            "a",
             PackageMeta {
                 name: "a".to_string(),
                 version: PackageVersion::from("1").unwrap(),
@@ -127,7 +127,6 @@ mod test {
             },
         );
         let b_id = pool.add(
-            "b",
             PackageMeta {
                 name: "b".to_string(),
                 version: PackageVersion::from("1").unwrap(),

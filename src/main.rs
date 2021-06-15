@@ -1,4 +1,4 @@
-mod solver;
 mod cli;
+mod solver;
 
 fn main() {}

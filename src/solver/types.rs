@@ -51,7 +51,7 @@ pub struct PackageMeta {
     pub breaks: Vec<(String, VersionRequirement)>,
 }
 
-struct PackageExtraMeta {
+pub struct PackageExtraMeta {
     description: String,
     section: String,
     arch: String,
