@@ -93,7 +93,10 @@ impl PackagePool {
                     clause.push(Lit::from_dimacs(*dep_pkgid as isize));
                 }
             }
-            formula.add_clause(clause.as_slice());
+
+            if clause.len() > 1 {
+                formula.add_clause(clause.as_slice());
+            }
         }
 
         // Enroll breaks
@@ -112,7 +115,9 @@ impl PackagePool {
                     clause.push(!Lit::from_dimacs(*dep_pkgid as isize));
                 }
             }
-            formula.add_clause(clause.as_slice());
+            if clause.len() > 1 {
+                formula.add_clause(clause.as_slice());
+            }
         }
 
         formula

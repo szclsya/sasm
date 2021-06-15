@@ -112,8 +112,6 @@ impl Solver {
                 if i.is_positive() {
                     let id = i.to_dimacs() as usize;
                     res.push(self.pool.id_to_pkg(id)?);
-                } else {
-                    println!("Not install {}", i);
                 }
             }
         }
