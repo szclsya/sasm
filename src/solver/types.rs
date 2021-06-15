@@ -1,6 +1,6 @@
 use super::version::PackageVersion;
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct VersionRequirement {
     // The bool represents if the restriction is inclusive
     pub lower_bond: Option<(PackageVersion, bool)>,
@@ -43,7 +43,7 @@ pub struct Request {
     pub install: Vec<(String, VersionRequirement)>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PackageMeta {
     pub name: String,
     pub version: PackageVersion,

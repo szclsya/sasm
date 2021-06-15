@@ -64,25 +64,31 @@ impl PackagePool {
         Ok((pkg.0.clone(), pkg.1.version.clone()))
     }
 
-    pub fn to_solver(&self) -> Solver {
-        let mut solver = Solver::new();
+    pub fn add_rules_to_solver(&self, solver: &mut Solver) {
         for (pos, pkg) in self.pkgs.iter().enumerate() {
             let formula = self.pkg_to_rule(&pkg.1, pos + 1);
             solver.add_formula(&formula);
         }
-        solver
     }
 
     fn pkg_to_rule(&self, pkg: &PackageMeta, pkgid: usize) -> CnfFormula {
         let mut formula = CnfFormula::new();
         // Enroll dependencies
         for dep in pkg.depends.iter() {
+            let available = match self.name_to_ids.get(&dep.0) {
+                Some(d) => d,
+                None => {
+                    // TODO: Cannot find dependency
+                    println!("Cannot find dependency {} for {}", dep.0, pkg.name);
+                    continue;
+                }
+            };
+
             let mut clause = Vec::new();
             clause.push(!Lit::from_dimacs(pkgid as isize));
 
-            let available = &self.name_to_ids[&dep.0];
             for dep_pkgid in available {
-                let p = &self.pkgs[*dep_pkgid];
+                let p = &self.pkgs[*dep_pkgid - 1];
                 if dep.1.within(&p.1.version) {
                     clause.push(Lit::from_dimacs(*dep_pkgid as isize));
                 }
@@ -92,12 +98,16 @@ impl PackagePool {
 
         // Enroll breaks
         for bk in pkg.breaks.iter() {
+            let breakable = match self.name_to_ids.get(&bk.0) {
+                Some(b) => b,
+                None => { continue; }
+            };
+
             let mut clause = Vec::new();
             clause.push(!Lit::from_dimacs(pkgid as isize));
 
-            let breakable = &self.name_to_ids[&bk.0];
             for dep_pkgid in breakable {
-                let p = &self.pkgs[*dep_pkgid];
+                let p = &self.pkgs[*dep_pkgid - 1];
                 if bk.1.within(&p.1.version) {
                     clause.push(!Lit::from_dimacs(*dep_pkgid as isize));
                 }
@@ -118,38 +128,54 @@ mod test {
     #[test]
     fn trivial_pool() {
         let mut pool = PackagePool::new();
-        let a_id = pool.add(
-            PackageMeta {
-                name: "a".to_string(),
-                version: PackageVersion::from("1").unwrap(),
-                depends: Vec::new(),
-                breaks: Vec::new(),
-            },
-        );
-        let b_id = pool.add(
-            PackageMeta {
-                name: "b".to_string(),
-                version: PackageVersion::from("1").unwrap(),
-                depends: vec![(
-                    "a".to_string(),
-                    VersionRequirement {
-                        lower_bond: None,
-                        upper_bond: None,
-                    },
-                )],
-                breaks: Vec::new(),
-            },
-        );
+        let a_id = pool.add(PackageMeta {
+            name: "a".to_string(),
+            version: PackageVersion::from("1").unwrap(),
+            depends: vec![(
+                "c".to_string(),
+                VersionRequirement {
+                    lower_bond: None,
+                    upper_bond: None,
+                },
+            )],
+            breaks: Vec::new(),
+        });
+        let b_id = pool.add(PackageMeta {
+            name: "b".to_string(),
+            version: PackageVersion::from("1").unwrap(),
+            depends: vec![(
+                "a".to_string(),
+                VersionRequirement {
+                    lower_bond: None,
+                    upper_bond: None,
+                },
+            )],
+            breaks: Vec::new(),
+        });
+        let c_id = pool.add(PackageMeta {
+            name: "c".to_string(),
+            version: PackageVersion::from("1").unwrap(),
+            depends: vec![(
+                "b".to_string(),
+               VersionRequirement {
+                    lower_bond: None,
+                    upper_bond: None,
+                },
+            )],
+            breaks: Vec::new(),
+        });
 
-        let mut solver = pool.to_solver();
-        solver.add_clause(&[Lit::from_dimacs(b_id as isize)]);
+        let mut solver = Solver::new();
+        pool.add_rules_to_solver(&mut solver);
+        solver.add_clause(&[Lit::from_dimacs(c_id as isize)]);
 
         solver.solve().unwrap();
         assert_eq!(
             solver.model().unwrap(),
             vec![
                 Lit::from_dimacs(a_id as isize),
-                Lit::from_dimacs(b_id as isize)
+                Lit::from_dimacs(b_id as isize),
+                Lit::from_dimacs(c_id as isize),
             ]
         );
     }

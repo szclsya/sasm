@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 lazy_static! {
     static ref DIGIT_TABLE: Vec<char> = "1234567890".chars().collect();
     static ref NON_DIGIT_TABLE: Vec<char> =
-        "~|ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+."
+        "~|ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+-."
             .chars()
             .collect();
 }
@@ -26,15 +26,21 @@ impl PackageVersion {
                 r"^((?P<epoch>[0-9]+):)?(?P<version>[A-Za-z0-9.+~]+)(\-(?P<revision>[0-9]+))?$"
             )
             .unwrap();
+            static ref ALT_VER_PARTITION: Regex = Regex::new(
+                r"^((?P<epoch>[0-9]+):)?(?P<version>[A-Za-z0-9.+-~]+)$"
+            ).unwrap();
         }
 
         let mut epoch = 0;
         let version;
         let mut revision = 0;
 
-        let segments = VER_PARTITION
-            .captures(s)
-            .ok_or(format_err!("Malformed version string"))?;
+        let segments = match VER_PARTITION.captures(s) {
+            Some(c) => c,
+            None => {
+                ALT_VER_PARTITION.captures(s).ok_or(format_err!("Malformed version string: {}", s))?
+            },
+        };
         if let Some(e) = segments.name("epoch") {
             epoch = e
                 .as_str()
@@ -58,6 +64,25 @@ impl PackageVersion {
             version,
             revision,
         })
+    }
+
+    pub fn to_string(&self) -> String {
+        let mut res = String::new();
+        if self.epoch != 0 {
+            res.push_str(&self.epoch.to_string());
+            res.push(':');
+        }
+        for segment in self.version.iter() {
+            res.push_str(&segment.0);
+            if let Some(num) = segment.1 {
+                res.push_str(&num.to_string());
+            }
+        }
+        if self.revision != 0 {
+            res.push('-');
+            res.push_str(&self.revision.to_string());
+        }
+        res
     }
 }
 
