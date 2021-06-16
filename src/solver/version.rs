@@ -2,6 +2,7 @@ use anyhow::{bail, format_err, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::cmp::Ordering;
+use std::fmt;
 
 lazy_static! {
     static ref DIGIT_TABLE: Vec<char> = "1234567890".chars().collect();
@@ -26,9 +27,8 @@ impl PackageVersion {
                 r"^((?P<epoch>[0-9]+):)?(?P<version>[A-Za-z0-9.+~]+)(\-(?P<revision>[0-9]+))?$"
             )
             .unwrap();
-            static ref ALT_VER_PARTITION: Regex = Regex::new(
-                r"^((?P<epoch>[0-9]+):)?(?P<version>[A-Za-z0-9.+-~]+)$"
-            ).unwrap();
+            static ref ALT_VER_PARTITION: Regex =
+                Regex::new(r"^((?P<epoch>[0-9]+):)?(?P<version>[A-Za-z0-9.+-~]+)$").unwrap();
         }
 
         let mut epoch = 0;
@@ -37,9 +37,9 @@ impl PackageVersion {
 
         let segments = match VER_PARTITION.captures(s) {
             Some(c) => c,
-            None => {
-                ALT_VER_PARTITION.captures(s).ok_or(format_err!("Malformed version string: {}", s))?
-            },
+            None => ALT_VER_PARTITION
+                .captures(s)
+                .ok_or_else(|| format_err!("Malformed version string: {}", s))?,
         };
         if let Some(e) = segments.name("epoch") {
             epoch = e
@@ -65,24 +65,23 @@ impl PackageVersion {
             revision,
         })
     }
+}
 
-    pub fn to_string(&self) -> String {
-        let mut res = String::new();
+impl fmt::Display for PackageVersion {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.epoch != 0 {
-            res.push_str(&self.epoch.to_string());
-            res.push(':');
+            write!(f, "{}:", self.epoch)?;
         }
         for segment in self.version.iter() {
-            res.push_str(&segment.0);
+            write!(f, "{}", &segment.0)?;
             if let Some(num) = segment.1 {
-                res.push_str(&num.to_string());
+                write!(f, "{}", num)?;
             }
         }
         if self.revision != 0 {
-            res.push('-');
-            res.push_str(&self.revision.to_string());
+            write!(f, "-{}", self.revision)?;
         }
-        res
+        Ok(())
     }
 }
 
@@ -120,33 +119,45 @@ impl Ord for PackageVersion {
             let x_nondigit_rank = str_to_ranks(&x.0);
             let y_nondigit_rank = str_to_ranks(&y.0);
             for (pos, r_x) in x_nondigit_rank.iter().enumerate() {
-                if r_x > &y_nondigit_rank[pos] {
-                    return Ordering::Greater;
-                } else if r_x < &y_nondigit_rank[pos] {
-                    return Ordering::Less;
+                match r_x.cmp(&y_nondigit_rank[pos]) {
+                    Ordering::Greater => {
+                        return Ordering::Greater;
+                    }
+                    Ordering::Less => {
+                        return Ordering::Less;
+                    }
+                    Ordering::Equal => (),
                 }
             }
 
             // Compare digit part
             let x_digit = x.1.unwrap_or(0);
             let y_digit = y.1.unwrap_or(0);
-            if x_digit > y_digit {
-                return Ordering::Greater;
-            } else if x_digit < y_digit {
-                return Ordering::Less;
+            match x_digit.cmp(&y_digit) {
+                Ordering::Greater => {
+                    return Ordering::Greater;
+                }
+                Ordering::Less => {
+                    return Ordering::Less;
+                }
+                Ordering::Equal => (),
             }
         }
 
         // If other still has remaining segments
-        if other_vec.len() > 0 {
+        if !other_vec.is_empty() {
             return Ordering::Greater;
         }
 
         // Finally, compare revision
-        if self.revision > other.revision {
-            return Ordering::Greater;
-        } else if self.revision < other.revision {
-            return Ordering::Less;
+        match self.revision.cmp(&other.revision) {
+            Ordering::Greater => {
+                return Ordering::Greater;
+            }
+            Ordering::Less => {
+                return Ordering::Less;
+            }
+            Ordering::Equal => (),
         }
 
         Ordering::Equal
@@ -159,8 +170,43 @@ impl PartialOrd for PackageVersion {
     }
 }
 
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct VersionRequirement {
+    // The bool represents if the restriction is inclusive
+    pub lower_bond: Option<(PackageVersion, bool)>,
+    pub upper_bond: Option<(PackageVersion, bool)>,
+}
+
+impl VersionRequirement {
+    pub fn within(&self, ver: &PackageVersion) -> bool {
+        if let Some(lower) = &self.lower_bond {
+            // If inclusive
+            if lower.1 {
+                if ver < &lower.0 {
+                    return false;
+                }
+            } else if ver <= &lower.0 {
+                return false;
+            }
+        }
+
+        if let Some(upper) = &self.upper_bond {
+            // If inclusive
+            if upper.1 {
+                if ver > &upper.0 {
+                    return false;
+                }
+            } else if ver >= &upper.0 {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
 fn parse_version_string(s: &str) -> Result<Vec<(String, Option<u128>)>> {
-    if s.len() == 0 {
+    if s.is_empty() {
         bail!("Empty version string")
     }
 
@@ -175,7 +221,7 @@ fn parse_version_string(s: &str) -> Result<Vec<(String, Option<u128>)>> {
     let mut result = Vec::new();
     for c in s.chars() {
         if NON_DIGIT_TABLE.contains(&c) {
-            if in_digit && digit_buffer.len() != 0 {
+            if in_digit && !digit_buffer.is_empty() {
                 // Previously in digit sequence
                 // Try to parse digit segment
                 let num: u128 = digit_buffer.parse()?;

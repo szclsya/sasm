@@ -26,7 +26,7 @@ impl PackagePool {
     pub fn add(&mut self, meta: PackageMeta) -> usize {
         let name = meta.name.clone();
         let this_version = meta.version.clone();
-        self.pkgs.push((name.to_string(), meta.clone()));
+        self.pkgs.push((name.to_string(), meta));
         let index = self.pkgs.len();
 
         if self.name_to_ids.contains_key(&name) {
@@ -37,8 +37,7 @@ impl PackagePool {
                 ids.push(index);
             }
         } else {
-            self.name_to_ids
-                .insert(name.to_string(), Vec::from([index]));
+            self.name_to_ids.insert(name, Vec::from([index]));
         }
 
         index
@@ -78,14 +77,12 @@ impl PackagePool {
             let available = match self.name_to_ids.get(&dep.0) {
                 Some(d) => d,
                 None => {
-                    // TODO: Cannot find dependency
-                    println!("Cannot find dependency {} for {}", dep.0, pkg.name);
+                    println!("Warning: Cannot find dependency {} for {}", dep.0, pkg.name);
                     continue;
                 }
             };
 
-            let mut clause = Vec::new();
-            clause.push(!Lit::from_dimacs(pkgid as isize));
+            let mut clause = vec![!Lit::from_dimacs(pkgid as isize)];
 
             for dep_pkgid in available {
                 let p = &self.pkgs[*dep_pkgid - 1];
@@ -96,6 +93,11 @@ impl PackagePool {
 
             if clause.len() > 1 {
                 formula.add_clause(clause.as_slice());
+            } else {
+                println!(
+                    "Warning: dependency {} can't be fulfilled for pkg {}",
+                    &dep.0, pkg.name
+                );
             }
         }
 
@@ -103,11 +105,12 @@ impl PackagePool {
         for bk in pkg.breaks.iter() {
             let breakable = match self.name_to_ids.get(&bk.0) {
                 Some(b) => b,
-                None => { continue; }
+                None => {
+                    continue;
+                }
             };
 
-            let mut clause = Vec::new();
-            clause.push(!Lit::from_dimacs(pkgid as isize));
+            let mut clause = vec![!Lit::from_dimacs(pkgid as isize)];
 
             for dep_pkgid in breakable {
                 let p = &self.pkgs[*dep_pkgid - 1];
@@ -162,7 +165,7 @@ mod test {
             version: PackageVersion::from("1").unwrap(),
             depends: vec![(
                 "b".to_string(),
-               VersionRequirement {
+                VersionRequirement {
                     lower_bond: None,
                     upper_bond: None,
                 },
