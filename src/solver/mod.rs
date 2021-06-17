@@ -1,6 +1,5 @@
 mod deb;
 mod pool;
-mod sat;
 mod types;
 mod version;
 
@@ -34,6 +33,7 @@ impl Solver {
             deb::read_deb_db(db_path, &mut pool)?;
         }
 
+        pool.finalize();
         Ok(Solver { pool })
     }
 
@@ -44,13 +44,15 @@ impl Solver {
         let mut solver = varisat::Solver::new();
         // Add requested packages to solver
         for pkg in to_install {
-            let choices = self.pool.pkg_name_to_ids(pkg);
-            if choices.is_empty() {
-                return Err(SolverError::Unsolvable(format!(
-                    "Package {} not found",
-                    pkg
-                )));
-            }
+            let choices = match self.pool.pkg_name_to_ids(pkg) {
+                Some(pkgs) => pkgs,
+                None => {
+                    return Err(SolverError::Unsolvable(format!(
+                        "Package {} not found",
+                        pkg
+                    )));
+                }
+            };
             let id = choices[0].0;
             let pkg_info = self.pool.id_to_pkg(choices[0].0).unwrap();
             println!("{}: {} {}", id, pkg_info.0, pkg_info.1.to_string());
@@ -59,7 +61,7 @@ impl Solver {
             solver.add_formula(&formula);
         }
         // Add rules to solver
-        self.pool.add_rules_to_solver(&mut solver);
+        self.pool.add_rules_to_solver(&mut solver, 0);
 
         // Solve
         let mut res = Vec::new();

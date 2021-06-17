@@ -2,6 +2,7 @@ use super::types::{PackageExtraMeta, PackageMeta};
 use super::version::PackageVersion;
 
 use anyhow::{bail, Result};
+use rayon::prelude::*;
 use std::collections::HashMap;
 use varisat::{
     CnfFormula, ExtendFormula, Var,
@@ -9,10 +10,10 @@ use varisat::{
 };
 
 pub struct PackagePool {
-    pkgs: Vec<(String, PackageMeta)>,
-    // The id of packages for each name
-    // The first item is the latest, the rest is not sorted
-    name_to_ids: HashMap<String, Vec<usize>>,
+    pkgs: Vec<PackageMeta>,
+    // The id of packages for each name, sorted by version
+    name_to_ids: HashMap<String, Vec<(usize, PackageVersion)>>,
+    max_level: usize,
 }
 
 impl PackagePool {
@@ -20,37 +21,42 @@ impl PackagePool {
         PackagePool {
             pkgs: Vec::new(),
             name_to_ids: HashMap::new(),
+            max_level: 0,
         }
     }
 
     pub fn add(&mut self, meta: PackageMeta) -> usize {
         let name = meta.name.clone();
-        let this_version = meta.version.clone();
-        self.pkgs.push((name.to_string(), meta));
+        let version = meta.version.clone();
+        self.pkgs.push(meta);
         let index = self.pkgs.len();
 
         if self.name_to_ids.contains_key(&name) {
             let ids = self.name_to_ids.get_mut(&name).unwrap();
-            if !ids.is_empty() && self.pkgs[ids[0]].1.version < this_version {
-                ids.insert(0, index);
-            } else {
-                ids.push(index);
-            }
+            ids.push((index, version));
         } else {
-            self.name_to_ids.insert(name, Vec::from([index]));
+            self.name_to_ids.insert(name, Vec::from([(index, version)]));
         }
 
         index
     }
 
-    pub fn pkg_name_to_ids(&self, name: &str) -> Vec<(usize, PackageVersion)> {
-        let mut res: Vec<(usize, PackageVersion)> = Vec::new();
-        if let Some(pkgs) = self.name_to_ids.get(name) {
-            for pkg in pkgs {
-                res.push((*pkg, self.pkgs[*pkg].1.version.clone()))
-            }
-        }
-        res
+    pub fn finalize(&mut self) {
+        // Sort versions
+        self.name_to_ids.par_iter_mut().for_each(|(_, pkgs)| {
+            pkgs.sort_by(|a, b| a.1.cmp(&b.1));
+        });
+        // Find max level
+        self.max_level = self
+            .name_to_ids
+            .iter()
+            .map(|a| a.1.len())
+            .max()
+            .unwrap_or(0);
+    }
+
+    pub fn pkg_name_to_ids(&self, name: &str) -> Option<Vec<(usize, PackageVersion)>> {
+        self.name_to_ids.get(name).cloned()
     }
 
     pub fn id_to_pkg(&self, id: usize) -> Result<(String, PackageVersion)> {
@@ -60,17 +66,24 @@ impl PackagePool {
         // Since our SAT solver only accepts int > 0 as Literal, we offset pos by 1
         let pos = id - 1;
         let pkg = &self.pkgs[pos];
-        Ok((pkg.0.clone(), pkg.1.version.clone()))
+        Ok((pkg.name.clone(), pkg.version.clone()))
     }
 
-    pub fn add_rules_to_solver(&self, solver: &mut Solver) {
-        for (pos, pkg) in self.pkgs.iter().enumerate() {
-            let formula = self.pkg_to_rule(&pkg.1, pos + 1);
-            solver.add_formula(&formula);
+    pub fn add_rules_to_solver(&self, solver: &mut Solver, level: usize) -> Option<()> {
+        if level >= self.max_level {
+            return None;
         }
+        for pkgs in self.name_to_ids.values() {
+            if let Some(pkg) = pkgs.get(level) {
+                let formula = self.pkg_to_rule(pkg.0);
+                solver.add_formula(&formula);
+            }
+        }
+        Some(())
     }
 
-    fn pkg_to_rule(&self, pkg: &PackageMeta, pkgid: usize) -> CnfFormula {
+    fn pkg_to_rule(&self, pkgid: usize) -> CnfFormula {
+        let pkg = self.pkgs.get(pkgid - 1).unwrap();
         let mut formula = CnfFormula::new();
         // Enroll dependencies
         for dep in pkg.depends.iter() {
@@ -84,9 +97,9 @@ impl PackagePool {
 
             let mut clause = vec![!Lit::from_dimacs(pkgid as isize)];
 
-            for dep_pkgid in available {
+            for (dep_pkgid, _) in available {
                 let p = &self.pkgs[*dep_pkgid - 1];
-                if dep.1.within(&p.1.version) {
+                if dep.1.within(&p.version) {
                     clause.push(Lit::from_dimacs(*dep_pkgid as isize));
                 }
             }
@@ -112,10 +125,10 @@ impl PackagePool {
 
             let mut clause = vec![!Lit::from_dimacs(pkgid as isize)];
 
-            for dep_pkgid in breakable {
-                let p = &self.pkgs[*dep_pkgid - 1];
-                if bk.1.within(&p.1.version) {
-                    clause.push(!Lit::from_dimacs(*dep_pkgid as isize));
+            for (bk_pkgid, _) in breakable {
+                let p = &self.pkgs[*bk_pkgid - 1];
+                if bk.1.within(&p.version) {
+                    clause.push(!Lit::from_dimacs(*bk_pkgid as isize));
                 }
             }
             if clause.len() > 1 {
@@ -129,8 +142,7 @@ impl PackagePool {
 
 #[cfg(test)]
 mod test {
-    use super::super::types::VersionRequirement;
-    use super::super::version::PackageVersion;
+    use super::super::version::{PackageVersion, VersionRequirement};
     use super::*;
 
     #[test]

@@ -19,7 +19,9 @@ fn main() {
     println!("Solving..");
     let solve_start = Instant::now();
     let res = solver.install(&args[1..]).unwrap();
-    println!("{:?}", res);
+    for pkg in res.iter() {
+        print!("{} {}, ", pkg.0, pkg.1);
+    }
     println!("Total package install: {}", res.len());
     println!(
         "Dependency calculation took {}s",
