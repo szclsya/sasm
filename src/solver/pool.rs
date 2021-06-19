@@ -50,22 +50,33 @@ impl PackagePool {
         self.name_to_ids.get(name).cloned()
     }
 
-    pub fn id_to_pkg(&self, id: usize) -> Result<(String, PackageVersion)> {
+    pub fn id_to_pkg(&self, id: usize) -> Option<(String, PackageVersion)> {
         if id > self.pkgs.len() {
-            bail!("ID does not exist");
+            return None;
         }
         // Since our SAT solver only accepts int > 0 as Literal, we offset pos by 1
         let pos = id - 1;
         let pkg = &self.pkgs[pos];
-        Ok((pkg.name.clone(), pkg.version.clone()))
+        Some((pkg.name.clone(), pkg.version.clone()))
     }
 
     pub fn gen_formula(&self) -> CnfFormula {
         let mut formula = CnfFormula::new();
+        // Generate rules for each individual package
         for (pos, _) in self.pkgs.iter().enumerate() {
             let rules = self.pkg_to_rule(pos + 1);
             for rule in rules {
                 formula.add_clause(&rule);
+            }
+        }
+        // Generate conflict for different versions of the same package
+        for (_, versions) in &self.name_to_ids {
+            if versions.len() > 1 {
+                let mut clause = Vec::new();
+                for pkg in versions {
+                    clause.push(!Lit::from_dimacs(pkg.0 as isize));
+                }
+                formula.add_clause(&clause);
             }
         }
         formula
