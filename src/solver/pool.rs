@@ -13,7 +13,6 @@ pub struct PackagePool {
     pkgs: Vec<PackageMeta>,
     // The id of packages for each name, sorted by version
     name_to_ids: HashMap<String, Vec<(usize, PackageVersion)>>,
-    max_level: usize,
 }
 
 impl PackagePool {
@@ -21,7 +20,6 @@ impl PackagePool {
         PackagePool {
             pkgs: Vec::new(),
             name_to_ids: HashMap::new(),
-            max_level: 0,
         }
     }
 
@@ -46,13 +44,6 @@ impl PackagePool {
         self.name_to_ids.par_iter_mut().for_each(|(_, pkgs)| {
             pkgs.sort_by(|a, b| a.1.cmp(&b.1));
         });
-        // Find max level
-        self.max_level = self
-            .name_to_ids
-            .iter()
-            .map(|a| a.1.len())
-            .max()
-            .unwrap_or(0);
     }
 
     pub fn pkg_name_to_ids(&self, name: &str) -> Option<Vec<(usize, PackageVersion)>> {
@@ -69,22 +60,20 @@ impl PackagePool {
         Ok((pkg.name.clone(), pkg.version.clone()))
     }
 
-    pub fn add_rules_to_solver(&self, solver: &mut Solver, level: usize) -> Option<()> {
-        if level >= self.max_level {
-            return None;
-        }
-        for pkgs in self.name_to_ids.values() {
-            if let Some(pkg) = pkgs.get(level) {
-                let formula = self.pkg_to_rule(pkg.0);
-                solver.add_formula(&formula);
+    pub fn gen_formula(&self) -> CnfFormula {
+        let mut formula = CnfFormula::new();
+        for (pos, _) in self.pkgs.iter().enumerate() {
+            let rules = self.pkg_to_rule(pos + 1);
+            for rule in rules {
+                formula.add_clause(&rule);
             }
         }
-        Some(())
+        formula
     }
 
-    fn pkg_to_rule(&self, pkgid: usize) -> CnfFormula {
+    fn pkg_to_rule(&self, pkgid: usize) -> Vec<Vec<Lit>> {
         let pkg = self.pkgs.get(pkgid - 1).unwrap();
-        let mut formula = CnfFormula::new();
+        let mut res = Vec::new();
         // Enroll dependencies
         for dep in pkg.depends.iter() {
             let available = match self.name_to_ids.get(&dep.0) {
@@ -105,7 +94,7 @@ impl PackagePool {
             }
 
             if clause.len() > 1 {
-                formula.add_clause(clause.as_slice());
+                res.push(clause);
             } else {
                 println!(
                     "Warning: dependency {} can't be fulfilled for pkg {}",
@@ -132,11 +121,11 @@ impl PackagePool {
                 }
             }
             if clause.len() > 1 {
-                formula.add_clause(clause.as_slice());
+                res.push(clause);
             }
         }
 
-        formula
+        res
     }
 }
 
@@ -158,7 +147,13 @@ mod test {
                     upper_bond: None,
                 },
             )],
-            breaks: Vec::new(),
+            breaks: vec![(
+                "d".to_string(),
+                VersionRequirement {
+                    lower_bond: None,
+                    upper_bond: None,
+                },
+            )],
         });
         let b_id = pool.add(PackageMeta {
             name: "b".to_string(),
@@ -184,9 +179,22 @@ mod test {
             )],
             breaks: Vec::new(),
         });
+        let e_id = pool.add(PackageMeta {
+            name: "e".to_string(),
+            version: PackageVersion::from("1").unwrap(),
+            depends: vec![(
+                "b".to_string(),
+                VersionRequirement {
+                    lower_bond: None,
+                    upper_bond: None,
+                },
+            )],
+            breaks: Vec::new(),
+        });
+        pool.finalize();
 
         let mut solver = Solver::new();
-        pool.add_rules_to_solver(&mut solver);
+        pool.add_rules_to_solver(&mut solver, 0);
         solver.add_clause(&[Lit::from_dimacs(c_id as isize)]);
 
         solver.solve().unwrap();
@@ -196,6 +204,7 @@ mod test {
                 Lit::from_dimacs(a_id as isize),
                 Lit::from_dimacs(b_id as isize),
                 Lit::from_dimacs(c_id as isize),
+                !Lit::from_dimacs(e_id as isize),
             ]
         );
     }

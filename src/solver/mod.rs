@@ -61,7 +61,8 @@ impl Solver {
             solver.add_formula(&formula);
         }
         // Add rules to solver
-        self.pool.add_rules_to_solver(&mut solver, 0);
+        let formula = self.pool.gen_formula();
+        solver.add_formula(&formula);
 
         // Solve
         let mut res = Vec::new();
@@ -79,11 +80,46 @@ impl Solver {
             for i in model {
                 if i.is_positive() {
                     let id = i.to_dimacs() as usize;
-                    res.push(self.pool.id_to_pkg(id)?);
+                    res.push(id);
                 }
             }
         }
 
-        Ok(res)
+        let mut best_res = Vec::new();
+        for id in &res {
+            let name = self.pool.id_to_pkg(*id).unwrap().0;
+            let ids: Vec<usize> = self
+                .pool
+                .pkg_name_to_ids(&name)
+                .unwrap()
+                .iter()
+                .map(|pkg| pkg.0)
+                .collect();
+            let remove_rule: Vec<Lit> = ids
+                .iter()
+                .map(|id| !Lit::from_dimacs(*id as isize))
+                .collect();
+
+            // Reduce redundant dependencies
+            solver.assume(&remove_rule);
+            if !solver.solve().unwrap() {
+                // If it is a necessary package, try to upgrade it
+                let latest_id = ids[0];
+                solver.assume(&[Lit::from_dimacs(latest_id as isize)]);
+                if solver.solve().unwrap() {
+                    best_res.push(latest_id);
+                } else {
+                    best_res.push(*id);
+                }
+            }
+        }
+
+        // Generate result
+        let pkgs: Vec<(String, PackageVersion)> = best_res
+            .into_iter()
+            .map(|pkgid| self.pool.id_to_pkg(pkgid).unwrap())
+            .collect();
+
+        Ok(pkgs)
     }
 }
