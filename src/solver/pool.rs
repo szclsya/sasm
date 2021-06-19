@@ -70,7 +70,7 @@ impl PackagePool {
             }
         }
         // Generate conflict for different versions of the same package
-        for (_, versions) in &self.name_to_ids {
+        for versions in self.name_to_ids.values() {
             if versions.len() > 1 {
                 let mut clause = Vec::new();
                 for pkg in versions {
@@ -205,7 +205,8 @@ mod test {
         pool.finalize();
 
         let mut solver = Solver::new();
-        pool.add_rules_to_solver(&mut solver, 0);
+        let formula = pool.gen_formula();
+        solver.add_formula(&formula);
         solver.add_clause(&[Lit::from_dimacs(c_id as isize)]);
 
         solver.solve().unwrap();
