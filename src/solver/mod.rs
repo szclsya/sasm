@@ -68,12 +68,14 @@ impl Solver {
         println!("Init solve finished");
 
         // Upgrade possible packages
+        let mut older: Vec<Lit> = Vec::new();
         loop {
-            let older = gen_update_assume(&self.pool, &res);
-            if older.is_empty() {
+            let mut new_older = gen_update_assume(&self.pool, &res);
+            if new_older.is_empty() {
                 // All packages are up to date!
                 break;
             }
+            older.append(&mut new_older);
             solver.assume(&older);
             if !solver.solve().unwrap() {
                 // It's not possible to improve any further
