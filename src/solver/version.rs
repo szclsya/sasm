@@ -1,7 +1,8 @@
-use anyhow::{bail, format_err, Result};
+use anyhow::{bail, format_err, Error, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::cmp::Ordering;
+use std::convert::TryFrom;
 use std::fmt;
 
 lazy_static! {
@@ -178,6 +179,13 @@ pub struct VersionRequirement {
 }
 
 impl VersionRequirement {
+    pub fn new() -> Self {
+        VersionRequirement {
+            lower_bond: None,
+            upper_bond: None,
+        }
+    }
+
     pub fn within(&self, ver: &PackageVersion) -> bool {
         if let Some(lower) = &self.lower_bond {
             // If inclusive
@@ -202,6 +210,46 @@ impl VersionRequirement {
         }
 
         true
+    }
+}
+
+impl TryFrom<&str> for VersionRequirement {
+    type Error = anyhow::Error;
+
+    fn try_from(s: &str) -> Result<Self> {
+        lazy_static! {
+            static ref VER_REQ: Regex =
+                Regex::new(r"^(?P<req_type>[<>=]+) ?(?P<req_ver>[A-Za-z0-9.\-:+~]+)$").unwrap();
+        }
+        let segments = VER_REQ
+            .captures(s)
+            .ok_or_else(|| format_err!("Malformed version requirement"))?;
+        let req_type = segments.name("req_type").unwrap().as_str();
+        let ver = PackageVersion::from(segments.name("req_ver").unwrap().as_str())?;
+        let mut ver_req = VersionRequirement {
+            upper_bond: None,
+            lower_bond: None,
+        };
+        match req_type {
+            "=" => {
+                ver_req.upper_bond = Some((ver.clone(), true));
+                ver_req.lower_bond = Some((ver, true));
+            }
+            ">" => {
+                ver_req.lower_bond = Some((ver, false));
+            }
+            ">=" => {
+                ver_req.lower_bond = Some((ver, true));
+            }
+            "<" => {
+                ver_req.upper_bond = Some((ver, false));
+            }
+            "<=" => {
+                ver_req.upper_bond = Some((ver, true));
+            }
+            _ => {}
+        }
+        Ok(ver_req)
     }
 }
 

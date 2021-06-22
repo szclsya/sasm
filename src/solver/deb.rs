@@ -9,6 +9,7 @@ use anyhow::{format_err, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -66,7 +67,7 @@ fn fields_to_packagemeta(f: &HashMap<String, String>) -> anyhow::Result<PackageM
 fn parse_pkg_list(s: &str) -> anyhow::Result<Vec<(String, VersionRequirement)>> {
     lazy_static! {
         static ref PKG_PARTITION: Regex = Regex::new(
-            r"^(?P<name>[A-Za-z0-9-.+]+)( \((?P<req_type>[<>=]+) ?(?P<req_ver>[A-Za-z0-9.\-:+~]+)\))?$"
+            r"^(?P<name>[A-Za-z0-9-.+]+)( \((?P<ver_req>[<>=]+ ?[A-Za-z0-9.\-:+~]+)\))?$"
         )
         .unwrap();
     }
@@ -82,33 +83,10 @@ fn parse_pkg_list(s: &str) -> anyhow::Result<Vec<(String, VersionRequirement)>> 
             .ok_or_else(|| format_err!("Malformed version in depends/breaks: {}", pkg))?;
         // The regex should ensure name always exist
         let name = segments.name("name").unwrap().as_str().to_string();
-        let mut ver_req = VersionRequirement {
-            upper_bond: None,
-            lower_bond: None,
+        let ver_req = match segments.name("ver_req") {
+            Some(s) => VersionRequirement::try_from(s.as_str())?,
+            None => VersionRequirement::new(),
         };
-        if let Some(req_type) = segments.name("req_type") {
-            // The regex should ensure req_name and req_type must coexist
-            let ver = PackageVersion::from(segments.name("req_ver").unwrap().as_str())?;
-            match req_type.as_str() {
-                "=" => {
-                    ver_req.upper_bond = Some((ver.clone(), true));
-                    ver_req.lower_bond = Some((ver, true));
-                }
-                ">" => {
-                    ver_req.lower_bond = Some((ver, false));
-                }
-                ">=" => {
-                    ver_req.lower_bond = Some((ver, true));
-                }
-                "<" => {
-                    ver_req.upper_bond = Some((ver, false));
-                }
-                "<=" => {
-                    ver_req.upper_bond = Some((ver, true));
-                }
-                _ => {}
-            }
-        }
         // Add to result
         res.push((name, ver_req));
     }
