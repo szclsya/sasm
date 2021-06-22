@@ -1,12 +1,11 @@
-use super::types::{PackageExtraMeta, PackageMeta};
+use super::types::PackageMeta;
 use super::version::PackageVersion;
 
-use anyhow::{bail, Result};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use varisat::{
-    CnfFormula, ExtendFormula, Var,
-    {lit::Lit, solver::Solver},
+    CnfFormula, ExtendFormula,
+    lit::Lit,
 };
 
 pub struct PackagePool {
@@ -23,6 +22,7 @@ impl PackagePool {
         }
     }
 
+    #[inline]
     pub fn add(&mut self, meta: PackageMeta) -> usize {
         let name = meta.name.clone();
         let version = meta.version.clone();
@@ -39,6 +39,7 @@ impl PackagePool {
         index
     }
 
+    #[inline]
     pub fn finalize(&mut self) {
         // Sort versions
         self.name_to_ids.par_iter_mut().for_each(|(_, pkgs)| {
@@ -46,10 +47,12 @@ impl PackagePool {
         });
     }
 
+    #[inline]
     pub fn pkg_name_to_ids(&self, name: &str) -> Option<Vec<(usize, PackageVersion)>> {
         self.name_to_ids.get(name).cloned()
     }
 
+    #[inline]
     pub fn id_to_pkg(&self, id: usize) -> Option<(String, PackageVersion)> {
         if id > self.pkgs.len() {
             return None;

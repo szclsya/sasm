@@ -4,10 +4,12 @@ mod types;
 mod version;
 
 use std::path::PathBuf;
-use varisat::{lit::Lit, CnfFormula, ExtendFormula};
+use std::collections::HashMap;
+use varisat::{lit::Lit, ExtendFormula};
 
+use anyhow::format_err;
 use pool::PackagePool;
-use version::PackageVersion;
+pub use {version::PackageVersion, version::VersionRequirement};
 
 #[derive(Clone, Debug)]
 pub enum SolverError {
@@ -40,13 +42,13 @@ impl Solver {
 
     pub fn install(
         &self,
-        to_install: &[String],
+        to_install: &HashMap<String, VersionRequirement>,
     ) -> Result<Vec<(String, PackageVersion)>, SolverError> {
         let mut formula = self.pool.gen_formula();
-        // Add requested packages to formula 
-        for pkg in to_install {
-            let choices = match self.pool.pkg_name_to_ids(pkg) {
-                Some(pkgs) => pkgs,
+        // Add requested packages to formula
+        for (pkg, ver_req ) in to_install {
+            let choices: Vec<(usize ,PackageVersion)> = match self.pool.pkg_name_to_ids(pkg) {
+                Some(pkgs) => pkgs.iter().cloned().filter(|(_, ver)| ver_req.within(ver)).collect(),
                 None => {
                     return Err(SolverError::Unsolvable(format!(
                         "Package {} not found",
@@ -54,10 +56,8 @@ impl Solver {
                     )));
                 }
             };
-            let id = choices[0].0;
-            let pkg_info = self.pool.id_to_pkg(choices[0].0).unwrap();
-            println!("{}: {} {}", id, pkg_info.0, pkg_info.1.to_string());
-            formula.add_clause(&[Lit::from_dimacs(choices[0].0 as isize)]);
+            let id = choices.get(0).ok_or_else(|| format_err!("No suitable version for {}", pkg))?;
+            formula.add_clause(&[Lit::from_dimacs(id.0 as isize)]);
         }
         // Add rules to solver
         let mut solver = varisat::Solver::new();

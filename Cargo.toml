@@ -13,3 +13,9 @@ varisat = "0.2"
 rayon = "1"
 # cli
 console = "0.14.1"
+# Dealing with config files
+serde = "1"
+toml = "0.5"
+
+[profile.release]
+debug = true

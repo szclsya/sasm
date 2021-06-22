@@ -1,9 +1,10 @@
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{bail, format_err, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::fmt;
+use serde::Deserialize;
 
 lazy_static! {
     static ref DIGIT_TABLE: Vec<char> = "1234567890".chars().collect();
@@ -171,7 +172,8 @@ impl PartialOrd for PackageVersion {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Deserialize)]
+#[serde(try_from = "&str")]
 pub struct VersionRequirement {
     // The bool represents if the restriction is inclusive
     pub lower_bond: Option<(PackageVersion, bool)>,
@@ -221,15 +223,20 @@ impl TryFrom<&str> for VersionRequirement {
             static ref VER_REQ: Regex =
                 Regex::new(r"^(?P<req_type>[<>=]+) ?(?P<req_ver>[A-Za-z0-9.\-:+~]+)$").unwrap();
         }
+        let mut ver_req = VersionRequirement {
+            upper_bond: None,
+            lower_bond: None,
+        };
+
+        if s == "any" {
+            return Ok(ver_req);
+        }
+
         let segments = VER_REQ
             .captures(s)
             .ok_or_else(|| format_err!("Malformed version requirement"))?;
         let req_type = segments.name("req_type").unwrap().as_str();
         let ver = PackageVersion::from(segments.name("req_ver").unwrap().as_str())?;
-        let mut ver_req = VersionRequirement {
-            upper_bond: None,
-            lower_bond: None,
-        };
         match req_type {
             "=" => {
                 ver_req.upper_bond = Some((ver.clone(), true));
