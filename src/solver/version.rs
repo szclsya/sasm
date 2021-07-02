@@ -1,10 +1,10 @@
 use anyhow::{bail, format_err, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
+use serde::Deserialize;
 use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::fmt;
-use serde::Deserialize;
 
 lazy_static! {
     static ref DIGIT_TABLE: Vec<char> = "1234567890".chars().collect();

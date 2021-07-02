@@ -1,10 +1,11 @@
 mod deb;
 mod pool;
+mod sort;
 mod types;
 mod version;
 
-use std::path::PathBuf;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use varisat::{lit::Lit, ExtendFormula};
 
 use anyhow::format_err;
@@ -46,9 +47,13 @@ impl Solver {
     ) -> Result<Vec<(String, PackageVersion)>, SolverError> {
         let mut formula = self.pool.gen_formula();
         // Add requested packages to formula
-        for (pkg, ver_req ) in to_install {
-            let choices: Vec<(usize ,PackageVersion)> = match self.pool.pkg_name_to_ids(pkg) {
-                Some(pkgs) => pkgs.iter().cloned().filter(|(_, ver)| ver_req.within(ver)).collect(),
+        for (pkg, ver_req) in to_install {
+            let choices: Vec<(usize, PackageVersion)> = match self.pool.pkg_name_to_ids(pkg) {
+                Some(pkgs) => pkgs
+                    .iter()
+                    .cloned()
+                    .filter(|(_, ver)| ver_req.within(ver))
+                    .collect(),
                 None => {
                     return Err(SolverError::Unsolvable(format!(
                         "Package {} not found",
@@ -56,7 +61,9 @@ impl Solver {
                     )));
                 }
             };
-            let id = choices.get(0).ok_or_else(|| format_err!("No suitable version for {}", pkg))?;
+            let id = choices
+                .get(0)
+                .ok_or_else(|| format_err!("No suitable version for {}", pkg))?;
             formula.add_clause(&[Lit::from_dimacs(id.0 as isize)]);
         }
         // Add rules to solver
@@ -102,6 +109,9 @@ impl Solver {
                 min_res.push(*id);
             }
         }
+
+        // Sort result
+        sort::sort_pkgs(&self.pool, &mut min_res).unwrap();
 
         // Generate result
         let pkgs: Vec<(String, PackageVersion)> = min_res

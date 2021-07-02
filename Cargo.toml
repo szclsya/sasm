@@ -10,6 +10,7 @@ regex = "1"
 lazy_static = "1"
 # Good stuff
 varisat = "0.2"
+petgraph = "0.5"
 rayon = "1"
 # cli
 console = "0.14.1"

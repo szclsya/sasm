@@ -1,12 +1,10 @@
 use super::types::PackageMeta;
 use super::version::PackageVersion;
 
+use anyhow::{bail, format_err, Result};
 use rayon::prelude::*;
 use std::collections::HashMap;
-use varisat::{
-    CnfFormula, ExtendFormula,
-    lit::Lit,
-};
+use varisat::{lit::Lit, CnfFormula, ExtendFormula};
 
 pub struct PackagePool {
     pkgs: Vec<PackageMeta>,
@@ -61,6 +59,39 @@ impl PackagePool {
         let pos = id - 1;
         let pkg = &self.pkgs[pos];
         Some((pkg.name.clone(), pkg.version.clone()))
+    }
+
+    pub fn get_deps(&self, pkgid: usize) -> Result<Vec<Vec<usize>>> {
+        let pkg = self
+            .pkgs
+            .get(pkgid - 1)
+            .ok_or_else(|| format_err!("Package with ID {} not found", pkgid))?;
+        let mut res = Vec::new();
+        for dep in pkg.depends.iter() {
+            let mut deps_id = Vec::new();
+            let available = match self.name_to_ids.get(&dep.0) {
+                Some(d) => d,
+                None => {
+                    bail!("Warning: Cannot find dependency {} for {}", dep.0, pkg.name);
+                }
+            };
+            for (dep_pkgid, _) in available {
+                let p = &self.pkgs[*dep_pkgid - 1];
+                if dep.1.within(&p.version) {
+                    deps_id.push(*dep_pkgid);
+                }
+            }
+            if deps_id.is_empty() {
+                bail!(
+                    "Warning: dependency {} can't be fulfilled for pkg {}",
+                    &dep.0,
+                    pkg.name
+                );
+            } else {
+                res.push(deps_id);
+            }
+        }
+        Ok(res)
     }
 
     pub fn gen_formula(&self) -> CnfFormula {
@@ -207,7 +238,7 @@ mod test {
         });
         pool.finalize();
 
-        let mut solver = Solver::new();
+        let mut solver = varisat::Solver::new();
         let formula = pool.gen_formula();
         solver.add_formula(&formula);
         solver.add_clause(&[Lit::from_dimacs(c_id as isize)]);
