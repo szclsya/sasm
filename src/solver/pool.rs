@@ -1,4 +1,4 @@
-use super::types::PackageMeta;
+use super::{VersionRequirement, types::PackageMeta};
 use super::version::PackageVersion;
 
 use anyhow::{bail, format_err, Result};
@@ -157,16 +157,30 @@ impl PackagePool {
                 }
             };
 
-            let mut clause = vec![!Lit::from_dimacs(pkgid as isize)];
-
             for (bk_pkgid, _) in breakable {
                 let p = &self.pkgs[*bk_pkgid - 1];
                 if bk.1.within(&p.version) {
-                    clause.push(!Lit::from_dimacs(*bk_pkgid as isize));
+                    let clause = vec![!Lit::from_dimacs(pkgid as isize), !Lit::from_dimacs(*bk_pkgid as isize)];
+                    res.push(clause);
                 }
             }
-            if clause.len() > 1 {
-                res.push(clause);
+        }
+
+        // Enroll conflicts
+        for conflict in pkg.conflicts.iter() {
+            let conflicable = match self.name_to_ids.get(&conflict.0) {
+                Some(c) => c,
+                None => {
+                    continue;
+                }
+            };
+
+            for (conflict_pkgid, _) in conflicable {
+                let p = &self.pkgs[*conflict_pkgid - 1];
+                if conflict.1.within(&p.version) {
+                    let clause = vec![!Lit::from_dimacs(pkgid as isize), !Lit::from_dimacs(*conflict_pkgid as isize)];
+                    res.push(clause);
+                }
             }
         }
 

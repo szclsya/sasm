@@ -51,9 +51,15 @@ fn fields_to_packagemeta(f: &HashMap<&str, String>) -> anyhow::Result<PackageMet
         )?,
         depends: parse_pkg_list(f.get("Depends").unwrap_or(&String::new()))?,
         breaks: parse_pkg_list(f.get("Breaks").unwrap_or(&String::new()))?,
+        conflicts: parse_pkg_list(f.get("Conflicts").unwrap_or(&String::new()))?,
+        filename: f
+            .get("Filename")
+            .ok_or_else(|| format_err!("Package without filename"))?
+            .to_string(),
     })
 }
 
+#[inline]
 fn parse_pkg_list(s: &str) -> anyhow::Result<Vec<(String, VersionRequirement)>> {
     lazy_static! {
         static ref PKG_PARTITION: Regex = Regex::new(

@@ -72,7 +72,6 @@ impl Solver {
 
         // Initial solve
         let mut res = solve(&mut solver)?;
-        println!("Init solve finished");
 
         // Upgrade possible packages
         let mut older: Vec<Lit> = Vec::new();
@@ -187,7 +186,7 @@ fn gen_update_assume(pool: &PackagePool, ids: &[usize]) -> Vec<Lit> {
 #[inline]
 fn is_up_to_date(pool: &PackagePool, id: usize) -> Option<bool> {
     let name = pool.id_to_pkg(id)?.0;
-    let ids = pool.pkg_name_to_ids(&name).unwrap();
+    let ids = pool.pkg_name_to_ids(&name)?;
     if ids[0].0 != id {
         Some(false)
     } else {

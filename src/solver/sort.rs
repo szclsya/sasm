@@ -26,9 +26,12 @@ pub fn sort_pkgs(pool: &PackagePool, pkgs: &mut Vec<usize>) -> Result<()> {
 
     // Reorder pkgs
     pkgs.clear();
-    for pkg_indexs in solve_res {
-        for pkgnode in pkg_indexs {
-            pkgs.push(g[pkgnode]);
+    for mut pkg_indexs in solve_res {
+        if pkg_indexs.len() == 1 {
+            pkgs.push(g[pkg_indexs[0]]);
+        } else {
+            pkg_indexs.sort_by_key(|index| pool.get_deps(g[*index]).unwrap().len());
+            pkgs.extend(pkg_indexs.into_iter().map(|index| g[index]));
         }
     }
 
