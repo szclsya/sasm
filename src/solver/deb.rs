@@ -1,4 +1,4 @@
-use crate::solver::{
+use super::{
     pool::PackagePool,
     types::PackageMeta,
     version::{PackageVersion, VersionRequirement},
@@ -6,12 +6,12 @@ use crate::solver::{
 };
 /// Utilities to deal with deb package db
 use anyhow::{format_err, Result};
+use debcontrol::{BufParse, Paragraph, Streaming};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 #[inline]
@@ -22,34 +22,24 @@ pub fn read_deb_db(db_path: &Path, pool: &mut PackagePool) -> Result<(), SolverE
             db_path.display()
         )))
     })?;
-    let f = BufReader::with_capacity(50000, f);
-    let mut field_buffer = HashMap::new();
-    for (pos, l) in f.lines().enumerate() {
-        let l = l.unwrap();
-        if !l.is_empty() {
-            let v: Vec<&str> = l.split(": ").collect();
-            if v.len() == 2 {
-                field_buffer.insert(v[0].to_string(), v[1].to_string());
+    let mut buf_parse = BufParse::new(f, 4096);
+    while let Some(result) = buf_parse.try_next().unwrap() {
+        match result {
+            Streaming::Item(paragraph) => {
+                let mut fields = HashMap::new();
+                for field in paragraph.fields {
+                    fields.insert(field.name, field.value);
+                }
+                pool.add(fields_to_packagemeta(&fields)?);
             }
-        } else {
-            // parse all existing fields
-            let pkg_meta = fields_to_packagemeta(&field_buffer).map_err(|e| {
-                SolverError::DatabaseInitError(format!(
-                    "Failed to parse section before line {}: {}",
-                    pos,
-                    e.to_string()
-                ))
-            })?;
-            pool.add(pkg_meta);
-            // new package section
-            field_buffer.clear()
+            Streaming::Incomplete => buf_parse.buffer().unwrap(),
         }
     }
     Ok(())
 }
 
 #[inline]
-fn fields_to_packagemeta(f: &HashMap<String, String>) -> anyhow::Result<PackageMeta> {
+fn fields_to_packagemeta(f: &HashMap<&str, String>) -> anyhow::Result<PackageMeta> {
     Ok(PackageMeta {
         name: f
             .get("Package")
