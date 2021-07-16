@@ -8,7 +8,7 @@ edition = "2018"
 anyhow = "1.0"
 regex = "1"
 lazy_static = "1"
-# Good stuff
+# Solver
 varisat = "0.2"
 petgraph = "0.5"
 rayon = "1"
@@ -19,6 +19,10 @@ console = "0.14.1"
 # Dealing with config files
 serde = "1"
 toml = "0.5"
+# Network stack
+reqwest = { version = "0.11", features = ["blocking"] }
+bytes = "1"
 
 [profile.release]
 debug = true
+lto = "thin"

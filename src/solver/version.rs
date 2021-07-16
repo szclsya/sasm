@@ -15,7 +15,7 @@ lazy_static! {
 }
 
 /// dpkg style version comparison.
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Deserialize)]
 pub struct PackageVersion {
     epoch: usize,
     version: Vec<(String, Option<u128>)>,

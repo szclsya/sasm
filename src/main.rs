@@ -1,7 +1,9 @@
 mod cli;
+mod repo;
 mod solver;
 
 use anyhow::{Context, Result};
+use repo::{Repo, RepoConfig};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -12,7 +14,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 struct Config {
-    dbs: Vec<PathBuf>,
+    arch: String,
+    repo: HashMap<String, RepoConfig>,
     wishlist: HashMap<String, solver::VersionRequirement>,
 }
 
@@ -35,9 +38,15 @@ fn try_main() -> Result<()> {
         .context("Failed to read config file")?;
     let config: Config = toml::from_str(&data).context("Failed to parse config file")?;
 
-    println!("Importing db..");
+    println!("Downloading and importing db..");
     let import_start = Instant::now();
-    let solver = solver::Solver::from_dpkg_dbs(&config.dbs).unwrap();
+    let netrepo = repo::NetRepo::new(config.arch, config.repo);
+    let mut solver = solver::Solver::new();
+    let dbs = netrepo.get_db("main")?;
+    for mut db in dbs.into_iter() {
+        solver.add_dpkg_db(&mut db).unwrap();
+    }
+    solver.finalize();
     println!(
         "Reading deb db took {}s",
         import_start.elapsed().as_secs_f32()

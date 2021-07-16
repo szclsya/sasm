@@ -1,5 +1,5 @@
-use super::{VersionRequirement, types::PackageMeta};
 use super::version::PackageVersion;
+use super::{types::PackageMeta, VersionRequirement};
 
 use anyhow::{bail, format_err, Result};
 use rayon::prelude::*;
@@ -160,7 +160,10 @@ impl PackagePool {
             for (bk_pkgid, _) in breakable {
                 let p = &self.pkgs[*bk_pkgid - 1];
                 if bk.1.within(&p.version) {
-                    let clause = vec![!Lit::from_dimacs(pkgid as isize), !Lit::from_dimacs(*bk_pkgid as isize)];
+                    let clause = vec![
+                        !Lit::from_dimacs(pkgid as isize),
+                        !Lit::from_dimacs(*bk_pkgid as isize),
+                    ];
                     res.push(clause);
                 }
             }
@@ -178,7 +181,10 @@ impl PackagePool {
             for (conflict_pkgid, _) in conflicable {
                 let p = &self.pkgs[*conflict_pkgid - 1];
                 if conflict.1.within(&p.version) {
-                    let clause = vec![!Lit::from_dimacs(pkgid as isize), !Lit::from_dimacs(*conflict_pkgid as isize)];
+                    let clause = vec![
+                        !Lit::from_dimacs(pkgid as isize),
+                        !Lit::from_dimacs(*conflict_pkgid as isize),
+                    ];
                     res.push(clause);
                 }
             }

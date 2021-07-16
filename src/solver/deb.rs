@@ -1,28 +1,20 @@
+/// Utilities to deal with deb package db
 use super::{
     pool::PackagePool,
     types::PackageMeta,
     version::{PackageVersion, VersionRequirement},
     SolverError,
 };
-/// Utilities to deal with deb package db
 use anyhow::{format_err, Result};
-use debcontrol::{BufParse, Paragraph, Streaming};
+use debcontrol::{BufParse, Streaming};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::fs::File;
-use std::path::Path;
 
 #[inline]
-pub fn read_deb_db(db_path: &Path, pool: &mut PackagePool) -> Result<(), SolverError> {
-    let f = File::open(db_path).or_else(|_| {
-        Err(SolverError::DatabaseInitError(format!(
-            "Failed to open dpkg db {}",
-            db_path.display()
-        )))
-    })?;
-    let mut buf_parse = BufParse::new(f, 4096);
+pub fn read_deb_db(db: &mut dyn std::io::Read, pool: &mut PackagePool) -> Result<(), SolverError> {
+    let mut buf_parse = BufParse::new(db, 4096);
     while let Some(result) = buf_parse.try_next().unwrap() {
         match result {
             Streaming::Item(paragraph) => {

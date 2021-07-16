@@ -4,12 +4,12 @@ mod sort;
 mod types;
 mod version;
 
-use std::collections::HashMap;
-use std::path::PathBuf;
-use varisat::{lit::Lit, ExtendFormula};
-
 use anyhow::format_err;
 use pool::PackagePool;
+use std::collections::HashMap;
+use std::io;
+use std::path::PathBuf;
+use varisat::{lit::Lit, ExtendFormula};
 pub use {version::PackageVersion, version::VersionRequirement};
 
 #[derive(Clone, Debug)]
@@ -30,11 +30,32 @@ pub struct Solver {
 }
 
 impl Solver {
+    pub fn new() -> Self {
+        Solver {
+            pool: PackagePool::new(),
+        }
+    }
+
+    pub fn add_dpkg_db(&mut self, db: &mut dyn io::Read) -> Result<(), SolverError> {
+        deb::read_deb_db(db, &mut self.pool)?;
+        Ok(())
+    }
+
+    pub fn finalize(&mut self) {
+        self.pool.finalize();
+    }
+
     pub fn from_dpkg_dbs(dbs: &[PathBuf]) -> Result<Self, SolverError> {
         let mut pool = PackagePool::new();
 
         for db_path in dbs {
-            deb::read_deb_db(db_path, &mut pool)?;
+            let mut f = std::fs::File::open(db_path).or_else(|_| {
+                Err(SolverError::DatabaseInitError(format!(
+                    "Unable to open {}",
+                    db_path.display()
+                )))
+            })?;
+            deb::read_deb_db(&mut f, &mut pool)?;
         }
 
         pool.finalize();
