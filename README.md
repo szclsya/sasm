@@ -2,7 +2,22 @@
 `apm` is an experimental package manager that employs the power of modern Boolean satisfiability problem solvers.
 
 ## Try it out
-Currently, apm accepts deb style `Packages` db. Provide the path of the dbs with `NOARCH_DEB_DB` and `ARCH_DEB_DB`, and then provide package names you wish to install in the command line arguments (you can provide multiple package names). `apm` will give a feasible package installation list, or spill out Unsolvable.
+Currently, apm accepts a rudimentary config file:
+```toml
+arch = "amd64"
+
+[repo.main]
+url = "https://repo.aosc.io/debs"
+distribution = "stable"
+components = ["main"]
+
+[wishlist]
+# Add packages and version you want here.
+# Specifying "any" then apm will try to use the latest available package
+plasma-desktop = "any"
+```
+
+Put this file at `/tmp/apm.toml` and run. apm will download dbs from the specified mirror and find a feasible package installation list, or spill out Unsolvable.
 
 ## Solver
 apm utilizes [varisat](https://github.com/jix/varisat), a very fast, CDCL based SAT solver. Currently, solver is able to enroll all dependency rules (like package dependencies and breaks) in the db into the solver and try to find a feasible solution, and then try to optimize the result.
