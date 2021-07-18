@@ -1,4 +1,4 @@
-mod deb;
+pub mod deb;
 mod pool;
 mod sort;
 mod types;
@@ -7,15 +7,15 @@ mod version;
 use anyhow::format_err;
 use pool::PackagePool;
 use std::collections::HashMap;
-use std::io;
-use std::path::PathBuf;
+use thiserror::Error;
 use varisat::{lit::Lit, ExtendFormula};
-pub use {version::PackageVersion, version::VersionRequirement};
+pub use {types::PackageMeta, version::PackageVersion, version::VersionRequirement};
 
-#[derive(Clone, Debug)]
+#[derive(Error, Clone, Debug)]
 pub enum SolverError {
+    #[error("Failed to satisfy package wishlist: {0}")]
     Unsolvable(String),
-    DatabaseInitError(String),
+    #[error("Internal solver error: {0}")]
     InternalError(String),
 }
 
@@ -26,7 +26,7 @@ impl From<anyhow::Error> for SolverError {
 }
 
 pub struct Solver {
-    pool: PackagePool,
+    pub pool: PackagePool,
 }
 
 impl Solver {
@@ -36,36 +36,14 @@ impl Solver {
         }
     }
 
-    pub fn add_dpkg_db(&mut self, db: &mut dyn io::Read) -> Result<(), SolverError> {
-        deb::read_deb_db(db, &mut self.pool)?;
-        Ok(())
-    }
-
     pub fn finalize(&mut self) {
         self.pool.finalize();
-    }
-
-    pub fn from_dpkg_dbs(dbs: &[PathBuf]) -> Result<Self, SolverError> {
-        let mut pool = PackagePool::new();
-
-        for db_path in dbs {
-            let mut f = std::fs::File::open(db_path).or_else(|_| {
-                Err(SolverError::DatabaseInitError(format!(
-                    "Unable to open {}",
-                    db_path.display()
-                )))
-            })?;
-            deb::read_deb_db(&mut f, &mut pool)?;
-        }
-
-        pool.finalize();
-        Ok(Solver { pool })
     }
 
     pub fn install(
         &self,
         to_install: &HashMap<String, VersionRequirement>,
-    ) -> Result<Vec<(String, PackageVersion)>, SolverError> {
+    ) -> Result<Vec<&PackageMeta>, SolverError> {
         let mut formula = self.pool.gen_formula();
         // Add requested packages to formula
         for (pkg, ver_req) in to_install {
@@ -115,7 +93,7 @@ impl Solver {
         // Reduce redundant dependencies
         let mut min_res = Vec::new();
         for id in &res {
-            let name = self.pool.id_to_pkg(*id).unwrap().0;
+            let name = &self.pool.id_to_pkg(*id).unwrap().name;
             let remove_rule: Vec<Lit> = self
                 .pool
                 .pkg_name_to_ids(&name)
@@ -134,12 +112,12 @@ impl Solver {
         sort::sort_pkgs(&self.pool, &mut min_res).unwrap();
 
         // Generate result
-        let pkgs: Vec<(String, PackageVersion)> = min_res
+        let pkgs: Vec<&PackageMeta> = min_res
             .into_iter()
             .map(|pkgid| {
                 let res = self.pool.id_to_pkg(pkgid).unwrap();
                 if !is_up_to_date(&self.pool, pkgid).unwrap() {
-                    println!("{} not latest!", res.0);
+                    println!("{} not latest!", res.name);
                 }
                 res
             })
@@ -180,7 +158,7 @@ fn gen_update_assume(pool: &PackagePool, ids: &[usize]) -> Vec<Lit> {
     for id in ids {
         if !is_up_to_date(pool, *id).unwrap() {
             // Find all newer versions of this package
-            let name = pool.id_to_pkg(*id).unwrap().0;
+            let name = &pool.id_to_pkg(*id).unwrap().name;
             let pkgids: Vec<usize> = pool
                 .pkg_name_to_ids(&name)
                 .unwrap()
@@ -206,7 +184,7 @@ fn gen_update_assume(pool: &PackagePool, ids: &[usize]) -> Vec<Lit> {
 
 #[inline]
 fn is_up_to_date(pool: &PackagePool, id: usize) -> Option<bool> {
-    let name = pool.id_to_pkg(id)?.0;
+    let name = &pool.id_to_pkg(id)?.name;
     let ids = pool.pkg_name_to_ids(&name)?;
     if ids[0].0 != id {
         Some(false)

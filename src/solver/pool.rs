@@ -51,14 +51,14 @@ impl PackagePool {
     }
 
     #[inline]
-    pub fn id_to_pkg(&self, id: usize) -> Option<(String, PackageVersion)> {
+    pub fn id_to_pkg(&self, id: usize) -> Option<&PackageMeta> {
         if id > self.pkgs.len() {
             return None;
         }
         // Since our SAT solver only accepts int > 0 as Literal, we offset pos by 1
         let pos = id - 1;
         let pkg = &self.pkgs[pos];
-        Some((pkg.name.clone(), pkg.version.clone()))
+        Some(pkg)
     }
 
     pub fn get_deps(&self, pkgid: usize) -> Result<Vec<Vec<usize>>> {

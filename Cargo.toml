@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+thiserror = "1.0"
 regex = "1"
 lazy_static = "1"
 # Solver
@@ -22,7 +23,3 @@ toml = "0.5"
 # Network stack
 reqwest = { version = "0.11", features = ["blocking"] }
 bytes = "1"
-
-[profile.release]
-debug = true
-lto = "thin"

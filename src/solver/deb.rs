@@ -13,7 +13,11 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 
 #[inline]
-pub fn read_deb_db(db: &mut dyn std::io::Read, pool: &mut PackagePool) -> Result<(), SolverError> {
+pub fn read_deb_db(
+    db: &mut dyn std::io::Read,
+    pool: &mut PackagePool,
+    baseurl: &str,
+) -> Result<(), SolverError> {
     let mut buf_parse = BufParse::new(db, 4096);
     while let Some(result) = buf_parse.try_next().unwrap() {
         match result {
@@ -22,7 +26,7 @@ pub fn read_deb_db(db: &mut dyn std::io::Read, pool: &mut PackagePool) -> Result
                 for field in paragraph.fields {
                     fields.insert(field.name, field.value);
                 }
-                pool.add(fields_to_packagemeta(&fields)?);
+                pool.add(fields_to_packagemeta(&fields, baseurl)?);
             }
             Streaming::Incomplete => buf_parse.buffer().unwrap(),
         }
@@ -31,7 +35,14 @@ pub fn read_deb_db(db: &mut dyn std::io::Read, pool: &mut PackagePool) -> Result
 }
 
 #[inline]
-fn fields_to_packagemeta(f: &HashMap<&str, String>) -> anyhow::Result<PackageMeta> {
+fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> anyhow::Result<PackageMeta> {
+    // Generate real url
+    let mut path = baseurl.to_string();
+    path.push('/');
+    path.push_str(
+        f.get("Filename")
+            .ok_or_else(|| format_err!("Package without filename"))?,
+    );
     Ok(PackageMeta {
         name: f
             .get("Package")
@@ -44,10 +55,7 @@ fn fields_to_packagemeta(f: &HashMap<&str, String>) -> anyhow::Result<PackageMet
         depends: parse_pkg_list(f.get("Depends").unwrap_or(&String::new()))?,
         breaks: parse_pkg_list(f.get("Breaks").unwrap_or(&String::new()))?,
         conflicts: parse_pkg_list(f.get("Conflicts").unwrap_or(&String::new()))?,
-        filename: f
-            .get("Filename")
-            .ok_or_else(|| format_err!("Package without filename"))?
-            .to_string(),
+        url: path,
     })
 }
 

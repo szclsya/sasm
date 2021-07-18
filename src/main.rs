@@ -3,7 +3,7 @@ mod repo;
 mod solver;
 
 use anyhow::{Context, Result};
-use repo::{Repo, RepoConfig};
+use repo::RepoConfig;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -40,11 +40,11 @@ fn try_main() -> Result<()> {
 
     println!("Downloading and importing db..");
     let import_start = Instant::now();
-    let netrepo = repo::NetRepo::new(config.arch, config.repo);
     let mut solver = solver::Solver::new();
-    let dbs = netrepo.get_db("main")?;
-    for mut db in dbs.into_iter() {
-        solver.add_dpkg_db(&mut db).unwrap();
+
+    let dbs = repo::get_dbs(&config.repo, &config.arch)?;
+    for (baseurl, mut db) in dbs.into_iter() {
+        solver::deb::read_deb_db(&mut db, &mut solver.pool, &baseurl)?;
     }
     solver.finalize();
     println!(
@@ -54,9 +54,9 @@ fn try_main() -> Result<()> {
 
     println!("Solving..");
     let solve_start = Instant::now();
-    let res = solver.install(&config.wishlist).unwrap();
+    let res = solver.install(&config.wishlist)?;
     for pkg in res.iter() {
-        print!("{} {}, ", pkg.0, pkg.1);
+        println!("{} {}\t{}", pkg.name, pkg.version, pkg.url);
     }
     println!("Total package install: {}", res.len());
     println!(

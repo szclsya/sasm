@@ -7,5 +7,5 @@ pub struct PackageMeta {
     pub depends: Vec<(String, VersionRequirement)>,
     pub breaks: Vec<(String, VersionRequirement)>,
     pub conflicts: Vec<(String, VersionRequirement)>,
-    pub filename: String,
+    pub url: String,
 }
