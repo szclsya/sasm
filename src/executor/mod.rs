@@ -1,3 +1,4 @@
+pub mod dpkg;
 mod error;
 mod types;
 
@@ -22,7 +23,7 @@ impl MachineStatus {
         // Load dpkg's status db
         let stauts_file_path = root.join("var/lib/dpkg/status");
         let status_file = fs::File::open(&stauts_file_path)
-            .or_else(|err| Err(ExecutionError::StateError(err.to_string())))?;
+            .map_err(|err| ExecutionError::StateError(err.to_string()))?;
         let mut buf_parse = BufParse::new(status_file, 4096);
         while let Some(result) = buf_parse.try_next().unwrap() {
             match result {
@@ -50,7 +51,10 @@ impl MachineStatus {
         for newpkg in wishlist {
             if !old_pkgs.contains_key(&newpkg.name) {
                 // New one! Install it
-                res.push(PkgAction::Install((newpkg.name.clone(), newpkg.url.clone())));
+                res.push(PkgAction::Install(
+                    newpkg.name.clone(),
+                    newpkg.url.clone(),
+                ));
             } else {
                 // Older version exists. Let's check the state of it
                 // Remove it to mark it's been processed
@@ -58,13 +62,19 @@ impl MachineStatus {
                 match oldpkg.state {
                     PkgState::NotInstalled | PkgState::ConfigFiles | PkgState::HalfInstalled => {
                         // Just install as normal
-                        res.push(PkgAction::Install((newpkg.name.clone(), newpkg.url.clone())));
+                        res.push(PkgAction::Install(
+                            newpkg.name.clone(),
+                            newpkg.url.clone(),
+                        ));
                     }
                     PkgState::Installed => {
                         // Check version. If installed is different,
                         //   then install the one in the wishlist
                         if oldpkg.version != newpkg.version {
-                            res.push(PkgAction::Upgrade((newpkg.name.clone(), newpkg.url.clone())));
+                            res.push(PkgAction::Upgrade(
+                                newpkg.name.clone(),
+                                newpkg.url.clone(),
+                            ));
                         }
                     }
                     PkgState::Unpacked
@@ -74,7 +84,10 @@ impl MachineStatus {
                         // Reconfigure this package, then if have updates, do it
                         res.push(PkgAction::Reconfigure(oldpkg.name.clone()));
                         if oldpkg.version != newpkg.version {
-                            res.push(PkgAction::Upgrade((newpkg.name.clone(), newpkg.url.clone())));
+                            res.push(PkgAction::Upgrade(
+                                newpkg.name.clone(),
+                                newpkg.url.clone(),
+                            ));
                         }
                     }
                 }
@@ -82,11 +95,16 @@ impl MachineStatus {
         }
 
         // Now deal with the leftovers
+        let mut remove_list = Vec::new();
         let mut purge_list = Vec::new();
         for oldpkg in old_pkgs {
             match oldpkg.1.state {
                 PkgState::Installed => {
-                    purge_list.push(oldpkg.0);
+                    if purge_config {
+                        purge_list.push(oldpkg.0);
+                    } else {
+                        remove_list.push(oldpkg.0);
+                    }
                 }
                 PkgState::HalfConfigured
                 | PkgState::HalfInstalled
@@ -101,6 +119,7 @@ impl MachineStatus {
                 }
             }
         }
+        res.push(PkgAction::Remove(remove_list, false));
         res.push(PkgAction::Remove(purge_list, true));
         res
     }

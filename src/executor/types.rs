@@ -55,14 +55,22 @@ impl TryFrom<&HashMap<&str, String>> for PkgStatus {
     fn try_from(f: &HashMap<&str, String>) -> Result<PkgStatus, ExecutionError> {
         let name = f
             .get("Package")
-            .ok_or_else(|| ExecutionError::StateError("Malformed dpkg status db: no Package name for package".to_string()))?
+            .ok_or_else(|| {
+                ExecutionError::StateError(
+                    "Malformed dpkg status db: no Package name for package".to_string(),
+                )
+            })?
             .to_string();
-        let state_line = f
-            .get("Status")
-            .ok_or_else(|| ExecutionError::StateError("Malformed dpkg status db: no Status for package".to_string()))?;
-        let version = f
-            .get("Version")
-            .ok_or_else(|| ExecutionError::StateError("Malformed dpkg status db: no Version for package".to_string()))?;
+        let state_line = f.get("Status").ok_or_else(|| {
+            ExecutionError::StateError(
+                "Malformed dpkg status db: no Status for package".to_string(),
+            )
+        })?;
+        let version = f.get("Version").ok_or_else(|| {
+            ExecutionError::StateError(
+                "Malformed dpkg status db: no Version for package".to_string(),
+            )
+        })?;
 
         let status: Vec<&str> = state_line.split(' ').collect();
         if status.len() != 3 {
@@ -72,11 +80,11 @@ impl TryFrom<&HashMap<&str, String>> for PkgStatus {
         }
 
         let state = PkgState::try_from(*status.get(2).unwrap())?;
-        let version = PackageVersion::try_from(version.as_str()).or_else(|err| {
-            Err(ExecutionError::StateError(format!(
+        let version = PackageVersion::try_from(version.as_str()).map_err(|err| {
+            ExecutionError::StateError(format!(
                 "Malformed dpkg status db, cannot parse version: {}",
                 err
-            )))
+            ))
         })?;
         let res = PkgStatus {
             name,
@@ -92,10 +100,10 @@ impl TryFrom<&HashMap<&str, String>> for PkgStatus {
 #[derive(Debug)]
 pub enum PkgAction {
     // Install((PackageName, deb file URL))
-    Install((String, String)),
+    Install(String, String),
     // Upgrade((PackageName, deb file URL))
     // Upgrade is identical for dpkg, differentiate for display purpose
-    Upgrade((String, String)),
+    Upgrade(String, String),
     // Remove(PackageName, Purge?)
     Remove(Vec<String>, bool),
     // Reconfigure(PackageName)

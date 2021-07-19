@@ -4,21 +4,28 @@ mod repo;
 mod solver;
 
 use anyhow::{Context, Result};
+use lazy_static::lazy_static;
 use repo::RepoConfig;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use serde::{Deserialize, Serialize};
-
 #[derive(Deserialize)]
 struct Config {
     arch: String,
+    #[serde(default = "default_root")]
     root: String,
+    purge_on_remove: bool,
     repo: HashMap<String, RepoConfig>,
     wishlist: HashMap<String, solver::VersionRequirement>,
+}
+
+#[inline]
+fn default_root() -> String {
+    "/".to_string()
 }
 
 fn main() {
@@ -60,10 +67,12 @@ fn try_main() -> Result<()> {
     // Translating result to list of actions
     let root = PathBuf::from(&config.root);
     let machine_status = executor::MachineStatus::new(&root)?;
-    let actions = machine_status.gen_actions(res.as_slice(), true);
-    for action in actions {
+    let actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
+    for action in &actions {
         println!("{:?}", action);
     }
 
+    // Run it!
+    executor::dpkg::execute_pkg_actions(&actions, &PathBuf::from(&config.root))?;
     Ok(())
 }
