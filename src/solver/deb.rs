@@ -48,9 +48,10 @@ fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> anyhow::Re
             .get("Package")
             .ok_or_else(|| format_err!("Package without name"))?
             .to_string(),
-        version: PackageVersion::from(
+        version: PackageVersion::try_from(
             f.get("Version")
-                .ok_or_else(|| format_err!("Package without version"))?,
+                .ok_or_else(|| format_err!("Package without version"))?
+                .as_str(),
         )?,
         depends: parse_pkg_list(f.get("Depends").unwrap_or(&String::new()))?,
         breaks: parse_pkg_list(f.get("Breaks").unwrap_or(&String::new()))?,

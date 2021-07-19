@@ -5,6 +5,7 @@
 Currently, apm accepts a rudimentary config file:
 ```toml
 arch = "amd64"
+root = "/"
 
 [repo.main]
 url = "https://repo.aosc.io/debs"

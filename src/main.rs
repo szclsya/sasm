@@ -1,4 +1,5 @@
 mod cli;
+mod executor;
 mod repo;
 mod solver;
 
@@ -15,6 +16,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Deserialize)]
 struct Config {
     arch: String,
+    root: String,
     repo: HashMap<String, RepoConfig>,
     wishlist: HashMap<String, solver::VersionRequirement>,
 }
@@ -53,16 +55,15 @@ fn try_main() -> Result<()> {
     );
 
     println!("Solving..");
-    let solve_start = Instant::now();
     let res = solver.install(&config.wishlist)?;
-    for pkg in res.iter() {
-        println!("{} {}\t{}", pkg.name, pkg.version, pkg.url);
+
+    // Translating result to list of actions
+    let root = PathBuf::from(&config.root);
+    let machine_status = executor::MachineStatus::new(&root)?;
+    let actions = machine_status.gen_actions(res.as_slice(), true);
+    for action in actions {
+        println!("{:?}", action);
     }
-    println!("Total package install: {}", res.len());
-    println!(
-        "Dependency calculation took {}s",
-        solve_start.elapsed().as_secs_f32()
-    );
 
     Ok(())
 }

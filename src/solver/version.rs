@@ -22,8 +22,9 @@ pub struct PackageVersion {
     revision: usize,
 }
 
-impl PackageVersion {
-    pub fn from(s: &str) -> Result<Self> {
+impl TryFrom<&str> for PackageVersion {
+    type Error = anyhow::Error;
+    fn try_from(s: &str) -> Result<Self> {
         lazy_static! {
             static ref VER_PARTITION: Regex = Regex::new(
                 r"^((?P<epoch>[0-9]+):)?(?P<version>[A-Za-z0-9.+~]+)(\-(?P<revision>[0-9]+))?$"
@@ -236,7 +237,7 @@ impl TryFrom<&str> for VersionRequirement {
             .captures(s)
             .ok_or_else(|| format_err!("Malformed version requirement"))?;
         let req_type = segments.name("req_type").unwrap().as_str();
-        let ver = PackageVersion::from(segments.name("req_ver").unwrap().as_str())?;
+        let ver = PackageVersion::try_from(segments.name("req_ver").unwrap().as_str())?;
         match req_type {
             "=" => {
                 ver_req.upper_bond = Some((ver.clone(), true));

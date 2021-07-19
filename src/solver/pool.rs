@@ -41,7 +41,8 @@ impl PackagePool {
     pub fn finalize(&mut self) {
         // Sort versions
         self.name_to_ids.par_iter_mut().for_each(|(_, pkgs)| {
-            pkgs.sort_by(|a, b| a.1.cmp(&b.1));
+            // Sort in descending order
+            pkgs.sort_by(|a, b| b.1.cmp(&a.1));
         });
     }
 
