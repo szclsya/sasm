@@ -73,15 +73,15 @@ impl Solver {
         let mut res = solve(&mut solver)?;
 
         // Upgrade possible packages
-        let mut older: Vec<Lit> = Vec::new();
+        let mut reducable: Vec<Lit> = Vec::new();
         loop {
             let mut new_older = gen_update_assume(&self.pool, &res);
             if new_older.is_empty() {
                 // All packages are up to date!
                 break;
             }
-            older.append(&mut new_older);
-            solver.assume(&older);
+            reducable.append(&mut new_older);
+            solver.assume(&reducable);
             if !solver.solve().unwrap() {
                 // It's not possible to improve any further
                 break;
@@ -91,28 +91,47 @@ impl Solver {
         }
 
         // Reduce redundant dependencies
-        let mut min_res = Vec::new();
-        for id in &res {
-            let name = &self.pool.id_to_pkg(*id).unwrap().name;
-            let remove_rule: Vec<Lit> = self
-                .pool
-                .pkg_name_to_ids(&name)
-                .unwrap()
-                .iter()
-                .map(|pkg| !Lit::from_dimacs(pkg.0 as isize))
-                .collect();
-
-            solver.assume(&remove_rule);
+        for pkg in &res {
+            let previous_non_latest = gen_update_assume(&self.pool, &res).len();
+            // See if this pkg can be reduced
+            reducable.push(!Lit::from_dimacs(*pkg as isize));
+            solver.assume(&reducable);
             if !solver.solve().unwrap() {
-                min_res.push(*id);
+                // Not solvable, this pkg is required
+                reducable.pop();
+            } else {
+                // Is reducible. See if non_latest pkgs increases
+                let new_res = solve(&mut solver).unwrap();
+                let new_non_latest = gen_update_assume(&self.pool, &new_res).len();
+                if new_non_latest > previous_non_latest {
+                    // The reduction introduces more non-latest pkgs, don't do it!
+                    reducable.pop();
+                }
+            }
+        }
+
+        // Update again
+        loop {
+            let mut new_older = gen_update_assume(&self.pool, &res);
+            if new_older.is_empty() {
+                // All packages are up to date!
+                break;
+            }
+            reducable.append(&mut new_older);
+            solver.assume(&reducable);
+            if !solver.solve().unwrap() {
+                // It's not possible to improve any further
+                break;
+            } else {
+                res = solve(&mut solver).unwrap();
             }
         }
 
         // Sort result
-        sort::sort_pkgs(&self.pool, &mut min_res).unwrap();
+        sort::sort_pkgs(&self.pool, &mut res).unwrap();
 
         // Generate result
-        let pkgs: Vec<&PackageMeta> = min_res
+        let pkgs: Vec<&PackageMeta> = res
             .into_iter()
             .map(|pkgid| {
                 let res = self.pool.id_to_pkg(pkgid).unwrap();
@@ -160,7 +179,7 @@ fn gen_update_assume(pool: &PackagePool, ids: &[usize]) -> Vec<Lit> {
             // Find all newer versions of this package
             let name = &pool.id_to_pkg(*id).unwrap().name;
             let pkgids: Vec<usize> = pool
-                .pkg_name_to_ids(&name)
+                .pkg_name_to_ids(name)
                 .unwrap()
                 .into_iter()
                 .map(|pkg| pkg.0)
@@ -185,7 +204,7 @@ fn gen_update_assume(pool: &PackagePool, ids: &[usize]) -> Vec<Lit> {
 #[inline]
 fn is_up_to_date(pool: &PackagePool, id: usize) -> Option<bool> {
     let name = &pool.id_to_pkg(id)?.name;
-    let ids = pool.pkg_name_to_ids(&name)?;
+    let ids = pool.pkg_name_to_ids(name)?;
     if ids[0].0 != id {
         Some(false)
     } else {

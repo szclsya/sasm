@@ -67,9 +67,10 @@ impl TryFrom<&HashMap<&str, String>> for PkgStatus {
             )
         })?;
         let version = f.get("Version").ok_or_else(|| {
-            ExecutionError::StateError(
-                "Malformed dpkg status db: no Version for package".to_string(),
-            )
+            ExecutionError::StateError(format!(
+                "Malformed dpkg status db: no Version for package {}",
+                name
+            ))
         })?;
 
         let status: Vec<&str> = state_line.split(' ').collect();

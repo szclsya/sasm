@@ -11,7 +11,7 @@ pub enum ExecutionError {
     #[error("dpkg terminated by signal")]
     DpkgTerminated,
     #[error("Internal error: {0}")]
-    InteranlError(String),
+    InternalError(String),
 }
 
 impl From<reqwest::Error> for ExecutionError {

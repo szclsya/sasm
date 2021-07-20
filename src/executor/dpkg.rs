@@ -1,50 +1,42 @@
 use super::{ExecutionError, PkgAction};
 use reqwest::blocking::Client;
-use std::collections::HashMap;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::{fs, io};
 
 pub fn execute_pkg_actions(actions: &[PkgAction], root: &Path) -> Result<(), ExecutionError> {
-    let mut pkgname_to_path = HashMap::new();
-    // First, download all the archives we will need
+    let mut to_install = vec!["--install".to_string()];
+    let mut to_remove = vec!["--remove".to_string()];
+    let mut to_purge = vec!["--purge".to_string()];
+    let mut to_configure = vec!["--configure".to_string()];
+    // Organize and download stuff
     for action in actions {
         match action {
-            PkgAction::Install(name, url) | PkgAction::Upgrade(name, url) => {
+            PkgAction::Install(_, url) | PkgAction::Upgrade(_, url) => {
                 let path = download(url, root)?;
-                pkgname_to_path.insert(name, path);
+                to_install.push(path.to_str().unwrap().to_string());
             }
-            _ => (),
-        }
-    }
-    for action in actions {
-        match action {
-            PkgAction::Install(name, _) | PkgAction::Upgrade(name, _) => {
-                // Run install
-                let path = pkgname_to_path.get(name).ok_or_else(|| {
-                    ExecutionError::InteranlError(format!(
-                        "Package archive for {} not found after download",
-                        name
-                    ))
-                })?;
-                dpkg_run(&["--install", path.to_str().unwrap()], root)?;
-            },
             PkgAction::Remove(names, purge) => {
-                // Prepare command
-                let mut command = names.clone();
                 if *purge {
-                    command.insert(0, "--purge".to_string());
+                    to_purge.append(&mut names.clone());
                 } else {
-                    command.insert(0, "--remove".to_string());
+                    to_remove.append(&mut names.clone());
                 }
-                // Run it!
-                dpkg_run(&command.as_slice(), root)?;
             }
             PkgAction::Reconfigure(name) => {
-                dpkg_run(&["--configure", name], root)?;
+                to_configure.push(name.clone());
             }
         }
     }
+
+    // Purge stuff
+    dpkg_run(to_purge.as_slice(), root)?;
+    // Remove stuff
+    dpkg_run(to_remove.as_slice(), root)?;
+    // Configure stuff
+    dpkg_run(to_configure.as_slice(), root)?;
+    // Install stuff
+    dpkg_run(to_install.as_slice(), root)?;
     Ok(())
 }
 
@@ -88,13 +80,19 @@ fn dpkg_run<T: AsRef<std::ffi::OsStr>>(args: &[T], root: &Path) -> Result<(), Ex
     // Add root position
     cmd.arg("--root");
     cmd.arg(root.as_os_str());
+    // Force all!
+    cmd.arg("--force-all");
+    // If no stuff is specified, success automatically
+    if args.len() <= 1 {
+        return Ok(());
+    }
     // Add rest of the arguments
     cmd.args(args);
 
     // Run it!
     let res = cmd
         .status()
-        .map_err(|e| ExecutionError::InteranlError(e.to_string()))?;
+        .map_err(|e| ExecutionError::InternalError(e.to_string()))?;
     if res.success() {
         Ok(())
     } else {

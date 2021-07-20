@@ -4,7 +4,6 @@ mod repo;
 mod solver;
 
 use anyhow::{Context, Result};
-use lazy_static::lazy_static;
 use repo::RepoConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -39,7 +38,7 @@ fn main() {
 }
 
 fn try_main() -> Result<()> {
-    let config_path = PathBuf::from("/tmp/apm.toml");
+    let config_path = PathBuf::from("/etc/apm/config.toml");
     let mut config_file = File::open(&config_path).context("Failed to open config file")?;
     let mut data = String::new();
     config_file
@@ -62,7 +61,16 @@ fn try_main() -> Result<()> {
     );
 
     println!("Solving..");
+    let solve_start = Instant::now();
     let res = solver.install(&config.wishlist)?;
+    for pkg in &res {
+        println!("{} {}", pkg.name, pkg.version);
+    }
+    println!("Total packages: {}", res.len());
+    println!(
+        "Dependency resolution took {}s",
+        solve_start.elapsed().as_secs_f32()
+    );
 
     // Translating result to list of actions
     let root = PathBuf::from(&config.root);
