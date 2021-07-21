@@ -1,10 +1,6 @@
 /// Utilities to deal with deb package db
-use super::{
-    pool::PackagePool,
-    types::PackageMeta,
-    version::{PackageVersion, VersionRequirement},
-    SolverError,
-};
+use super::{pool::PackagePool, SolverError};
+use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
 use anyhow::{format_err, Result};
 use debcontrol::{BufParse, Streaming};
 use lazy_static::lazy_static;
@@ -35,7 +31,7 @@ pub fn read_deb_db(
 }
 
 #[inline]
-fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> anyhow::Result<PackageMeta> {
+fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> anyhow::Result<PkgMeta> {
     // Generate real url
     let mut path = baseurl.to_string();
     path.push('/');
@@ -43,12 +39,12 @@ fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> anyhow::Re
         f.get("Filename")
             .ok_or_else(|| format_err!("Package without filename"))?,
     );
-    Ok(PackageMeta {
+    Ok(PkgMeta {
         name: f
             .get("Package")
             .ok_or_else(|| format_err!("Package without name"))?
             .to_string(),
-        version: PackageVersion::try_from(
+        version: PkgVersion::try_from(
             f.get("Version")
                 .ok_or_else(|| format_err!("Package without version"))?
                 .as_str(),

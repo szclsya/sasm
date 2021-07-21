@@ -1,5 +1,5 @@
 use super::ExecutionError;
-use crate::solver::PackageVersion;
+use crate::types::PkgVersion;
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -44,7 +44,7 @@ impl std::convert::TryFrom<&str> for PkgState {
 #[derive(Clone)]
 pub struct PkgStatus {
     pub name: String,
-    pub version: PackageVersion,
+    pub version: PkgVersion,
     pub state: PkgState,
 }
 
@@ -81,7 +81,7 @@ impl TryFrom<&HashMap<&str, String>> for PkgStatus {
         }
 
         let state = PkgState::try_from(*status.get(2).unwrap())?;
-        let version = PackageVersion::try_from(version.as_str()).map_err(|err| {
+        let version = PkgVersion::try_from(version.as_str()).map_err(|err| {
             ExecutionError::StateError(format!(
                 "Malformed dpkg status db, cannot parse version: {}",
                 err

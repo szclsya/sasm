@@ -16,13 +16,13 @@ lazy_static! {
 
 /// dpkg style version comparison.
 #[derive(PartialEq, Eq, Clone, Debug, Deserialize)]
-pub struct PackageVersion {
+pub struct PkgVersion {
     epoch: usize,
     version: Vec<(String, Option<u128>)>,
     revision: usize,
 }
 
-impl TryFrom<&str> for PackageVersion {
+impl TryFrom<&str> for PkgVersion {
     type Error = anyhow::Error;
     fn try_from(s: &str) -> Result<Self> {
         lazy_static! {
@@ -62,7 +62,7 @@ impl TryFrom<&str> for PackageVersion {
                 .map_err(|_| format_err!("Malformed revision"))?
         }
 
-        Ok(PackageVersion {
+        Ok(PkgVersion {
             epoch,
             version,
             revision,
@@ -70,7 +70,7 @@ impl TryFrom<&str> for PackageVersion {
     }
 }
 
-impl fmt::Display for PackageVersion {
+impl fmt::Display for PkgVersion {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.epoch != 0 {
             write!(f, "{}:", self.epoch)?;
@@ -88,7 +88,7 @@ impl fmt::Display for PackageVersion {
     }
 }
 
-impl Ord for PackageVersion {
+impl Ord for PkgVersion {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.epoch > other.epoch {
             return Ordering::Greater;
@@ -167,7 +167,7 @@ impl Ord for PackageVersion {
     }
 }
 
-impl PartialOrd for PackageVersion {
+impl PartialOrd for PkgVersion {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -177,8 +177,8 @@ impl PartialOrd for PackageVersion {
 #[serde(try_from = "&str")]
 pub struct VersionRequirement {
     // The bool represents if the restriction is inclusive
-    pub lower_bond: Option<(PackageVersion, bool)>,
-    pub upper_bond: Option<(PackageVersion, bool)>,
+    pub lower_bond: Option<(PkgVersion, bool)>,
+    pub upper_bond: Option<(PkgVersion, bool)>,
 }
 
 impl VersionRequirement {
@@ -189,7 +189,7 @@ impl VersionRequirement {
         }
     }
 
-    pub fn within(&self, ver: &PackageVersion) -> bool {
+    pub fn within(&self, ver: &PkgVersion) -> bool {
         if let Some(lower) = &self.lower_bond {
             // If inclusive
             if lower.1 {
@@ -237,7 +237,7 @@ impl TryFrom<&str> for VersionRequirement {
             .captures(s)
             .ok_or_else(|| format_err!("Malformed version requirement"))?;
         let req_type = segments.name("req_type").unwrap().as_str();
-        let ver = PackageVersion::try_from(segments.name("req_ver").unwrap().as_str())?;
+        let ver = PkgVersion::try_from(segments.name("req_ver").unwrap().as_str())?;
         match req_type {
             "=" => {
                 ver_req.upper_bond = Some((ver.clone(), true));
@@ -326,7 +326,7 @@ mod test {
     fn pkg_ver_from_str() {
         let source = vec!["1.1.1.", "999:0+git20210608-1"];
         let result = vec![
-            PackageVersion {
+            PkgVersion {
                 epoch: 0,
                 version: vec![
                     ("".to_string(), Some(1)),
@@ -336,7 +336,7 @@ mod test {
                 ],
                 revision: 0,
             },
-            PackageVersion {
+            PkgVersion {
                 epoch: 999,
                 version: vec![
                     ("".to_string(), Some(0)),
@@ -347,7 +347,7 @@ mod test {
         ];
 
         for (pos, e) in source.iter().enumerate() {
-            assert_eq!(PackageVersion::from(e).unwrap(), result[pos]);
+            assert_eq!(PkgVersion::from(e).unwrap(), result[pos]);
         }
     }
 
@@ -386,13 +386,13 @@ mod test {
             println!("Comparing {} vs {}", e.0, e.2);
             println!(
                 "{:#?} vs {:#?}",
-                PackageVersion::from(e.0).unwrap(),
-                PackageVersion::from(e.2).unwrap()
+                PkgVersion::from(e.0).unwrap(),
+                PkgVersion::from(e.2).unwrap()
             );
             assert_eq!(
-                PackageVersion::from(e.0)
+                PkgVersion::from(e.0)
                     .unwrap()
-                    .cmp(&PackageVersion::from(e.2).unwrap()),
+                    .cmp(&PkgVersion::from(e.2).unwrap()),
                 e.1
             );
         }
@@ -403,8 +403,8 @@ mod test {
         let source = vec![("1.1+git2021", "1.1+git2021")];
         for e in &source {
             assert_eq!(
-                PackageVersion::from(e.0).unwrap(),
-                PackageVersion::from(e.1).unwrap()
+                PkgVersion::from(e.0).unwrap(),
+                PkgVersion::from(e.1).unwrap()
             );
         }
     }

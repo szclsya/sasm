@@ -1,15 +1,15 @@
-use super::version::PackageVersion;
-use super::{types::PackageMeta, VersionRequirement};
+use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
 
+use crate::warn;
 use anyhow::{bail, format_err, Result};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use varisat::{lit::Lit, CnfFormula, ExtendFormula};
 
 pub struct PackagePool {
-    pkgs: Vec<PackageMeta>,
+    pkgs: Vec<PkgMeta>,
     // The id of packages for each name, sorted by version
-    name_to_ids: HashMap<String, Vec<(usize, PackageVersion)>>,
+    name_to_ids: HashMap<String, Vec<(usize, PkgVersion)>>,
 }
 
 impl PackagePool {
@@ -21,7 +21,7 @@ impl PackagePool {
     }
 
     #[inline]
-    pub fn add(&mut self, meta: PackageMeta) -> usize {
+    pub fn add(&mut self, meta: PkgMeta) -> usize {
         let name = meta.name.clone();
         let version = meta.version.clone();
         self.pkgs.push(meta);
@@ -47,12 +47,12 @@ impl PackagePool {
     }
 
     #[inline]
-    pub fn pkg_name_to_ids(&self, name: &str) -> Option<Vec<(usize, PackageVersion)>> {
+    pub fn pkg_name_to_ids(&self, name: &str) -> Option<Vec<(usize, PkgVersion)>> {
         self.name_to_ids.get(name).cloned()
     }
 
     #[inline]
-    pub fn id_to_pkg(&self, id: usize) -> Option<&PackageMeta> {
+    pub fn id_to_pkg(&self, id: usize) -> Option<&PkgMeta> {
         if id > self.pkgs.len() {
             return None;
         }
@@ -125,7 +125,7 @@ impl PackagePool {
             let available = match self.name_to_ids.get(&dep.0) {
                 Some(d) => d,
                 None => {
-                    println!("Warning: Cannot find dependency {} for {}", dep.0, pkg.name);
+                    warn!("Cannot find dependency {} for {}", dep.0, pkg.name);
                     continue;
                 }
             };
@@ -142,8 +142,8 @@ impl PackagePool {
             if clause.len() > 1 {
                 res.push(clause);
             } else {
-                println!(
-                    "Warning: dependency {} can't be fulfilled for pkg {}",
+                warn!(
+                    "Dependency {} can't be fulfilled for pkg {}",
                     &dep.0, pkg.name
                 );
             }
@@ -197,15 +197,15 @@ impl PackagePool {
 
 #[cfg(test)]
 mod test {
-    use super::super::version::{PackageVersion, VersionRequirement};
+    use super::super::version::{PkgVersion, VersionRequirement};
     use super::*;
 
     #[test]
     fn trivial_pool() {
         let mut pool = PackagePool::new();
-        let a_id = pool.add(PackageMeta {
+        let a_id = pool.add(PkgMeta {
             name: "a".to_string(),
-            version: PackageVersion::from("1").unwrap(),
+            version: PkgVersion::from("1").unwrap(),
             depends: vec![(
                 "c".to_string(),
                 VersionRequirement {
@@ -221,9 +221,9 @@ mod test {
                 },
             )],
         });
-        let b_id = pool.add(PackageMeta {
+        let b_id = pool.add(PkgMeta {
             name: "b".to_string(),
-            version: PackageVersion::from("1").unwrap(),
+            version: PkgVersion::from("1").unwrap(),
             depends: vec![(
                 "a".to_string(),
                 VersionRequirement {
@@ -233,9 +233,9 @@ mod test {
             )],
             breaks: Vec::new(),
         });
-        let c_id = pool.add(PackageMeta {
+        let c_id = pool.add(PkgMeta {
             name: "c".to_string(),
-            version: PackageVersion::from("1").unwrap(),
+            version: PkgVersion::from("1").unwrap(),
             depends: vec![(
                 "b".to_string(),
                 VersionRequirement {
@@ -245,9 +245,9 @@ mod test {
             )],
             breaks: Vec::new(),
         });
-        let e_id = pool.add(PackageMeta {
+        let e_id = pool.add(PkgMeta {
             name: "e".to_string(),
-            version: PackageVersion::from("1").unwrap(),
+            version: PkgVersion::from("1").unwrap(),
             depends: vec![(
                 "b".to_string(),
                 VersionRequirement {

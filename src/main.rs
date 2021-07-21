@@ -2,37 +2,21 @@ mod cli;
 mod executor;
 mod repo;
 mod solver;
+mod types;
+mod config;
 
 use anyhow::{Context, Result};
-use repo::RepoConfig;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
-use std::time::Instant;
-
-#[derive(Deserialize)]
-struct Config {
-    arch: String,
-    #[serde(default = "default_root")]
-    root: String,
-    purge_on_remove: bool,
-    repo: HashMap<String, RepoConfig>,
-    wishlist: HashMap<String, solver::VersionRequirement>,
-}
-
-#[inline]
-fn default_root() -> String {
-    "/".to_string()
-}
+use config::Config;
 
 fn main() {
     if let Err(err) = try_main() {
-        eprintln!("ERROR: {}", err);
-        err.chain()
-            .skip(1)
-            .for_each(|cause| eprintln!("because: {}", cause));
+        error!("{}", err);
+        err.chain().skip(1).for_each(|cause| {
+            due_to!("{}", cause);
+        });
         std::process::exit(1);
     }
 }
@@ -46,8 +30,7 @@ fn try_main() -> Result<()> {
         .context("Failed to read config file")?;
     let config: Config = toml::from_str(&data).context("Failed to parse config file")?;
 
-    println!("Downloading and importing db..");
-    let import_start = Instant::now();
+    info!("Synchronizing package databases...");
     let mut solver = solver::Solver::new();
 
     let dbs = repo::get_dbs(&config.repo, &config.arch)?;
@@ -55,29 +38,20 @@ fn try_main() -> Result<()> {
         solver::deb::read_deb_db(&mut db, &mut solver.pool, &baseurl)?;
     }
     solver.finalize();
-    println!(
-        "Reading deb db took {}s",
-        import_start.elapsed().as_secs_f32()
-    );
 
-    println!("Solving..");
-    let solve_start = Instant::now();
-    let res = solver.install(&config.wishlist)?;
-    for pkg in &res {
-        println!("{} {}", pkg.name, pkg.version);
-    }
-    println!("Total packages: {}", res.len());
-    println!(
-        "Dependency resolution took {}s",
-        solve_start.elapsed().as_secs_f32()
-    );
-
+    info!("Resolving dependencies...");
+    let res = solver.install(config.wishlist)?;
     // Translating result to list of actions
     let root = PathBuf::from(&config.root);
     let machine_status = executor::MachineStatus::new(&root)?;
     let actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
-    for action in &actions {
-        println!("{:?}", action);
+    if actions.is_empty() {
+        success!("There's nothing to do, all wishes has been fulfilled!");
+    } else {
+        info!("Actions:");
+        for action in &actions {
+            println!("{:?}", action);
+        }
     }
 
     // Run it!

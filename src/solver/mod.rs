@@ -1,15 +1,13 @@
 pub mod deb;
 mod pool;
 mod sort;
-mod types;
-mod version;
 
+pub use crate::types::{PkgRequirement, PkgMeta, PkgVersion, VersionRequirement};
 use anyhow::format_err;
 use pool::PackagePool;
 use std::collections::HashMap;
 use thiserror::Error;
 use varisat::{lit::Lit, ExtendFormula};
-pub use {types::PackageMeta, version::PackageVersion, version::VersionRequirement};
 
 #[derive(Error, Clone, Debug)]
 pub enum SolverError {
@@ -40,14 +38,11 @@ impl Solver {
         self.pool.finalize();
     }
 
-    pub fn install(
-        &self,
-        to_install: &HashMap<String, VersionRequirement>,
-    ) -> Result<Vec<&PackageMeta>, SolverError> {
+    pub fn install(&self, to_install: HashMap<String, VersionRequirement>) -> Result<Vec<&PkgMeta>, SolverError> {
         let mut formula = self.pool.gen_formula();
         // Add requested packages to formula
-        for (pkg, ver_req) in to_install {
-            let choices: Vec<(usize, PackageVersion)> = match self.pool.pkg_name_to_ids(pkg) {
+        for (name, ver_req) in to_install {
+            let choices: Vec<(usize, PkgVersion)> = match self.pool.pkg_name_to_ids(&name) {
                 Some(pkgs) => pkgs
                     .iter()
                     .cloned()
@@ -56,13 +51,13 @@ impl Solver {
                 None => {
                     return Err(SolverError::Unsolvable(format!(
                         "Package {} not found",
-                        pkg
+                        &name
                     )));
                 }
             };
             let id = choices
                 .get(0)
-                .ok_or_else(|| format_err!("No suitable version for {}", pkg))?;
+                .ok_or_else(|| format_err!("No suitable version for {}", &name))?;
             formula.add_clause(&[Lit::from_dimacs(id.0 as isize)]);
         }
         // Add rules to solver
@@ -131,7 +126,7 @@ impl Solver {
         sort::sort_pkgs(&self.pool, &mut res).unwrap();
 
         // Generate result
-        let pkgs: Vec<&PackageMeta> = res
+        let pkgs: Vec<&PkgMeta> = res
             .into_iter()
             .map(|pkgid| {
                 let res = self.pool.id_to_pkg(pkgid).unwrap();
@@ -149,11 +144,6 @@ impl Solver {
 fn solve(solver: &mut varisat::Solver) -> Result<Vec<usize>, SolverError> {
     let mut res = Vec::new();
     if !solver.solve().unwrap() {
-        println!("Failed core:");
-        let failed_core = solver.failed_core().unwrap();
-        for c in failed_core {
-            print!(", {}", c.to_dimacs());
-        }
         return Err(SolverError::Unsolvable(
             "Cannot satisfy requirements".to_string(),
         ));

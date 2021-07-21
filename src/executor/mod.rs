@@ -2,7 +2,7 @@ pub mod dpkg;
 mod error;
 mod types;
 
-use crate::solver::PackageMeta;
+use crate::types::PkgMeta;
 pub use error::ExecutionError;
 pub use types::{PkgAction, PkgState, PkgStatus};
 
@@ -43,7 +43,7 @@ impl MachineStatus {
     }
 
     /// Generate a list of actions according to machine status and package wishlist
-    pub fn gen_actions(&self, wishlist: &[&PackageMeta], purge_config: bool) -> Vec<PkgAction> {
+    pub fn gen_actions(&self, wishlist: &[&PkgMeta], purge_config: bool) -> Vec<PkgAction> {
         let mut res: Vec<PkgAction> = Vec::new();
         // We will modify the list, so do a clone
         let mut old_pkgs = self.pkgs.clone();

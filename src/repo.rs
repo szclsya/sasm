@@ -1,15 +1,8 @@
+use crate::config::RepoConfig;
 use anyhow::{bail, Result};
 use bytes::Buf;
 use reqwest::blocking::Client;
-use serde::Deserialize;
 use std::collections::HashMap;
-
-#[derive(Deserialize)]
-pub struct RepoConfig {
-    url: String,
-    distribution: String,
-    components: Vec<String>,
-}
 
 pub fn get_dbs(
     repos: &HashMap<String, RepoConfig>,
