@@ -46,14 +46,14 @@ impl Downloader {
                 let client = self.client.clone();
                 let path = download_path.to_owned();
                 let handle =
-                    tokio::spawn(async move { try_download_file(client, path, name, url, len, 0) });
+                    tokio::spawn(async move { try_download_file(client, path, name, url, len, 0).await });
                 handles.push(handle);
             }
             // Wait for any of them to stop
             let (download_res, _, remaining) = select_all(handles).await;
             handles = remaining;
             // Remove the handle from the list
-            match download_res.unwrap().await {
+            match download_res.unwrap() {
                 Ok((name, path)) => {
                     res.insert(name, path);
                 }
@@ -71,7 +71,7 @@ impl Downloader {
                                 err.url,
                                 err.len,
                                 err.retries + 1,
-                            )
+                            ).await
                         });
                         handles.push(handle);
                     } else {
@@ -84,7 +84,7 @@ impl Downloader {
         while !handles.is_empty() {
             let (download_res, _, remaining) = select_all(handles).await;
             handles = remaining;
-            match download_res.unwrap().await {
+            match download_res.unwrap() {
                 Ok((url, path)) => {
                     res.insert(url, path);
                 }
@@ -102,7 +102,7 @@ impl Downloader {
                                 err.url,
                                 err.len,
                                 err.retries + 1,
-                            )
+                            ).await
                         });
                         handles.push(handle);
                     } else {
