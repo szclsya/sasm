@@ -46,13 +46,23 @@ fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> anyhow::Re
             .to_string(),
         version: PkgVersion::try_from(
             f.get("Version")
-                .ok_or_else(|| format_err!("Package without version"))?
+                .ok_or_else(|| format_err!("Package without Version"))?
                 .as_str(),
         )?,
         depends: parse_pkg_list(f.get("Depends").unwrap_or(&String::new()))?,
         breaks: parse_pkg_list(f.get("Breaks").unwrap_or(&String::new()))?,
         conflicts: parse_pkg_list(f.get("Conflicts").unwrap_or(&String::new()))?,
+        install_size: f
+            .get("Installed-Size")
+            .ok_or_else(|| format_err!("Package without Installed-Size"))?
+            .as_str()
+            .parse()?,
         url: path,
+        size: f
+            .get("Size")
+            .ok_or_else(|| format_err!("Package without Size"))?
+            .as_str()
+            .parse()?,
     })
 }
 

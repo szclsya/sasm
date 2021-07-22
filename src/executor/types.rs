@@ -97,16 +97,3 @@ impl TryFrom<&HashMap<&str, String>> for PkgStatus {
     }
 }
 
-/// Single action to modify package state on local instance
-#[derive(Debug)]
-pub enum PkgAction {
-    // Install((PackageName, deb file URL))
-    Install(String, String),
-    // Upgrade((PackageName, deb file URL))
-    // Upgrade is identical for dpkg, differentiate for display purpose
-    Upgrade(String, String),
-    // Remove(PackageName, Purge?)
-    Remove(Vec<String>, bool),
-    // Reconfigure(PackageName)
-    Reconfigure(String),
-}

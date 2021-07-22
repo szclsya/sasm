@@ -2,7 +2,7 @@ pub mod deb;
 mod pool;
 mod sort;
 
-pub use crate::types::{PkgRequirement, PkgMeta, PkgVersion, VersionRequirement};
+pub use crate::types::{PkgMeta, PkgRequirement, PkgVersion, VersionRequirement};
 use anyhow::format_err;
 use pool::PackagePool;
 use std::collections::HashMap;
@@ -38,7 +38,10 @@ impl Solver {
         self.pool.finalize();
     }
 
-    pub fn install(&self, to_install: HashMap<String, VersionRequirement>) -> Result<Vec<&PkgMeta>, SolverError> {
+    pub fn install(
+        &self,
+        to_install: HashMap<String, VersionRequirement>,
+    ) -> Result<Vec<&PkgMeta>, SolverError> {
         let mut formula = self.pool.gen_formula();
         // Add requested packages to formula
         for (name, ver_req) in to_install {

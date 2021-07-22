@@ -17,9 +17,13 @@ rayon = "1"
 debcontrol = "0.1"
 # cli
 console = "0.14.1"
+indicatif = "0.16"
+dialoguer = "0.8"
 # Dealing with config files
 serde = "1"
 toml = "0.5"
 # Network stack
-reqwest = { version = "0.11", default-features = false, features = ["blocking", "rustls-tls"] }
+futures = "0.3"
+tokio = { version = "1.8", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
 bytes = "1"
+reqwest = { version = "0.11", default-features = false, features = ["blocking", "rustls-tls"] }

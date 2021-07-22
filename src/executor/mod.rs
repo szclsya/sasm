@@ -1,16 +1,17 @@
+pub mod download;
 pub mod dpkg;
 mod error;
 mod types;
 
-use crate::types::PkgMeta;
+use crate::types::{ PkgActions, PkgMeta };
 pub use error::ExecutionError;
-pub use types::{PkgAction, PkgState, PkgStatus};
+pub use types::{PkgState, PkgStatus};
 
 use debcontrol::{BufParse, Streaming};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Status of this machine
 pub struct MachineStatus {
@@ -43,15 +44,21 @@ impl MachineStatus {
     }
 
     /// Generate a list of actions according to machine status and package wishlist
-    pub fn gen_actions(&self, wishlist: &[&PkgMeta], purge_config: bool) -> Vec<PkgAction> {
-        let mut res: Vec<PkgAction> = Vec::new();
+    pub fn gen_actions(&self, wishlist: &[&PkgMeta], purge_config: bool) -> PkgActions {
+        let mut res = PkgActions::default();
         // We will modify the list, so do a clone
         let mut old_pkgs = self.pkgs.clone();
 
         for newpkg in wishlist {
             if !old_pkgs.contains_key(&newpkg.name) {
                 // New one! Install it
-                res.push(PkgAction::Install(newpkg.name.clone(), newpkg.url.clone()));
+                res.install.push((
+                    newpkg.name.clone(),
+                    newpkg.url.clone(),
+                    newpkg.size,
+                    newpkg.version.clone(),
+                    None,
+                ));
             } else {
                 // Older version exists. Let's check the state of it
                 // Remove it to mark it's been processed
@@ -59,13 +66,25 @@ impl MachineStatus {
                 match oldpkg.state {
                     PkgState::NotInstalled | PkgState::ConfigFiles | PkgState::HalfInstalled => {
                         // Just install as normal
-                        res.push(PkgAction::Install(newpkg.name.clone(), newpkg.url.clone()));
+                        res.install.push((
+                            newpkg.name.clone(),
+                            newpkg.url.clone(),
+                            newpkg.size,
+                            newpkg.version.clone(),
+                            None,
+                        ));
                     }
                     PkgState::Installed => {
                         // Check version. If installed is different,
                         //   then install the one in the wishlist
                         if oldpkg.version != newpkg.version {
-                            res.push(PkgAction::Upgrade(newpkg.name.clone(), newpkg.url.clone()));
+                            res.install.push((
+                                newpkg.name.clone(),
+                                newpkg.url.clone(),
+                                newpkg.size,
+                                newpkg.version.clone(),
+                                Some(oldpkg.version),
+                            ));
                         }
                     }
                     PkgState::Unpacked
@@ -73,9 +92,15 @@ impl MachineStatus {
                     | PkgState::TriggerAwaited
                     | PkgState::TriggerPending => {
                         // Reconfigure this package, then if have updates, do it
-                        res.push(PkgAction::Reconfigure(oldpkg.name.clone()));
+                        res.configure.push(oldpkg.name.clone());
                         if oldpkg.version != newpkg.version {
-                            res.push(PkgAction::Upgrade(newpkg.name.clone(), newpkg.url.clone()));
+                            res.install.push((
+                                newpkg.name.clone(),
+                                newpkg.url.clone(),
+                                newpkg.size,
+                                newpkg.version.clone(),
+                                Some(oldpkg.version),
+                            ));
                         }
                     }
                 }
@@ -83,15 +108,13 @@ impl MachineStatus {
         }
 
         // Now deal with the leftovers
-        let mut remove_list = Vec::new();
-        let mut purge_list = Vec::new();
         for oldpkg in old_pkgs {
             match oldpkg.1.state {
                 PkgState::Installed => {
                     if purge_config {
-                        purge_list.push(oldpkg.0);
+                        res.purge.push(oldpkg.0);
                     } else {
-                        remove_list.push(oldpkg.0);
+                        res.remove.push(oldpkg.0);
                     }
                 }
                 PkgState::HalfConfigured
@@ -100,18 +123,12 @@ impl MachineStatus {
                 | PkgState::TriggerPending
                 | PkgState::Unpacked => {
                     // Just purge it
-                    purge_list.push(oldpkg.0);
+                    res.purge.push(oldpkg.0);
                 }
                 PkgState::ConfigFiles | PkgState::NotInstalled => {
                     // Not installed in the first place, nothing to do
                 }
             }
-        }
-        if !remove_list.is_empty() {
-            res.push(PkgAction::Remove(remove_list, false));
-        }
-        if !purge_list.is_empty() {
-            res.push(PkgAction::Remove(purge_list, true));
         }
         res
     }

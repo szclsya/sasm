@@ -1,6 +1,9 @@
 mod version;
+mod action;
+
 use serde::Deserialize;
 pub use version::{PkgVersion, VersionRequirement};
+pub use action::PkgActions;
 
 #[derive(Deserialize, Default)]
 pub struct PkgRequirement {
@@ -15,5 +18,8 @@ pub struct PkgMeta {
     pub depends: Vec<(String, VersionRequirement)>,
     pub breaks: Vec<(String, VersionRequirement)>,
     pub conflicts: Vec<(String, VersionRequirement)>,
+    pub install_size: usize,
     pub url: String,
+    // u64 because reqwest's content length is u64
+    pub size: u64,
 }

@@ -1,42 +1,68 @@
-use super::{ExecutionError, PkgAction};
+use super::{download::Downloader, ExecutionError};
+use crate::types::PkgActions;
 use reqwest::blocking::Client;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub fn execute_pkg_actions(actions: &[PkgAction], root: &Path) -> Result<(), ExecutionError> {
-    let mut to_install = vec!["--install".to_string()];
-    let mut to_remove = vec!["--remove".to_string()];
-    let mut to_purge = vec!["--purge".to_string()];
-    let mut to_configure = vec!["--configure".to_string()];
-    // Organize and download stuff
-    for action in actions {
-        match action {
-            PkgAction::Install(_, url) | PkgAction::Upgrade(_, url) => {
-                let path = download(url, root)?;
-                to_install.push(path.to_str().unwrap().to_string());
-            }
-            PkgAction::Remove(names, purge) => {
-                if *purge {
-                    to_purge.append(&mut names.clone());
-                } else {
-                    to_remove.append(&mut names.clone());
-                }
-            }
-            PkgAction::Reconfigure(name) => {
-                to_configure.push(name.clone());
-            }
-        }
-    }
+pub async fn execute_pkg_actions(
+    mut actions: PkgActions,
+    root: &Path,
+    downloader: &Downloader,
+) -> Result<(), ExecutionError> {
+    // Download packages
+    let download_info: Vec<(String, String, Option<u64>)> = actions
+        .install
+        .iter()
+        .map(|x| (x.0.clone(), x.1.clone(), Some(x.2)))
+        .collect();
+    let download_res = downloader
+        .fetch(download_info, &root.join("var/cache/apm"))
+        .await
+        .map_err(|e| ExecutionError::ResourceFetchError(e.to_string()))?;
+
+    let mut deb_paths: Vec<String> = actions
+        .install
+        .iter()
+        .map(|x| {
+            download_res
+                .get(&x.0)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string()
+        })
+        .collect();
 
     // Purge stuff
-    dpkg_run(to_purge.as_slice(), root)?;
+    if !actions.purge.is_empty() {
+        let mut cmd: Vec<String> = Vec::new();
+        cmd.push("--purge".to_string());
+        cmd.append(&mut actions.purge);
+        dpkg_run(&cmd, root)?;
+    }
     // Remove stuff
-    dpkg_run(to_remove.as_slice(), root)?;
+    if !actions.remove.is_empty() {
+        let mut cmd: Vec<String> = Vec::new();
+        cmd.push("--remove".to_string());
+        cmd.append(&mut actions.remove);
+        dpkg_run(&cmd, root)?;
+    }
     // Configure stuff
-    dpkg_run(to_configure.as_slice(), root)?;
+    if !actions.configure.is_empty() {
+        let mut cmd: Vec<String> = Vec::new();
+        cmd.push("--configure".to_string());
+        cmd.append(&mut actions.configure);
+        dpkg_run(&cmd, root)?;
+    }
     // Install stuff
-    dpkg_run(to_install.as_slice(), root)?;
+    if !deb_paths.is_empty() {
+        let mut cmd: Vec<String> = Vec::new();
+        cmd.push("--install".to_string());
+        cmd.append(&mut deb_paths);
+        dpkg_run(&cmd, root)?;
+    }
+
     Ok(())
 }
 
