@@ -1,5 +1,5 @@
 /// Utilities to deal with deb package db
-use super::{pool::PackagePool, SolverError};
+use super::{pool::PackagePool};
 use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
 use anyhow::{format_err, Result};
 use debcontrol::{BufParse, Streaming};
@@ -7,14 +7,13 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fs::File;
+use std::path::Path;
 
 #[inline]
-pub fn read_deb_db(
-    db: &mut dyn std::io::Read,
-    pool: &mut PackagePool,
-    baseurl: &str,
-) -> Result<(), SolverError> {
-    let mut buf_parse = BufParse::new(db, 4096);
+pub fn read_deb_db(db: &Path, pool: &mut PackagePool, baseurl: &str) -> Result<()> {
+    let f = File::open(db)?;
+    let mut buf_parse = BufParse::new(f, 4096);
     while let Some(result) = buf_parse.try_next().unwrap() {
         match result {
             Streaming::Item(paragraph) => {
@@ -31,7 +30,7 @@ pub fn read_deb_db(
 }
 
 #[inline]
-fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> anyhow::Result<PkgMeta> {
+fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> Result<PkgMeta> {
     // Generate real url
     let mut path = baseurl.to_string();
     path.push('/');
@@ -67,7 +66,7 @@ fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> anyhow::Re
 }
 
 #[inline]
-fn parse_pkg_list(s: &str) -> anyhow::Result<Vec<(String, VersionRequirement)>> {
+fn parse_pkg_list(s: &str) -> Result<Vec<(String, VersionRequirement)>> {
     lazy_static! {
         static ref PKG_PARTITION: Regex = Regex::new(
             r"^(?P<name>[A-Za-z0-9-.+]+)( \((?P<ver_req>[<>=]+ ?[A-Za-z0-9.\-:+~]+)\))?$"

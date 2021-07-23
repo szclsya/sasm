@@ -1,4 +1,4 @@
-use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
+use crate::types::{PkgMeta, PkgVersion};
 
 use crate::warn;
 use anyhow::{bail, format_err, Result};

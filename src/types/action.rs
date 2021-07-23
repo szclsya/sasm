@@ -18,4 +18,3 @@ impl PkgActions {
             && self.configure.is_empty()
     }
 }
-

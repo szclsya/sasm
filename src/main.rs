@@ -16,7 +16,7 @@ use std::{fs::File, io::Read, path::PathBuf};
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     if let Err(err) = try_main().await {
-        error!("{}", err);
+        error!("{}", err.to_string());
         err.chain().skip(1).for_each(|cause| {
             due_to!("{}", cause);
         });
@@ -25,6 +25,7 @@ async fn main() {
 }
 
 async fn try_main() -> Result<()> {
+    warn!("apm is still in alpha stage. DO NOT use on production system!");
     let config_path = PathBuf::from("/etc/apm/config.toml");
     let mut config_file = File::open(&config_path).context("Failed to open config file")?;
     let mut data = String::new();
@@ -37,9 +38,9 @@ async fn try_main() -> Result<()> {
     let downloader = executor::download::Downloader::new();
     let mut solver = solver::Solver::new();
 
-    let dbs = repo::get_dbs(&config.repo, &config.arch)?;
-    for (baseurl, mut db) in dbs.into_iter() {
-        solver::deb::read_deb_db(&mut db, &mut solver.pool, &baseurl)?;
+    let dbs = repo::get_dbs(&config.repo, &config.arch, &config.root, &downloader).await?;
+    for (baseurl, db) in dbs.into_iter() {
+        solver::deb::read_deb_db(&db, &mut solver.pool, &baseurl)?;
     }
     solver.finalize();
 
@@ -51,17 +52,14 @@ async fn try_main() -> Result<()> {
     let actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
     if actions.is_empty() {
         success!("There's nothing to do, all wishes has been fulfilled!");
+    } else if Confirm::new()
+        .with_prompt("          Proceed with actions?")
+        .interact()?
+    {
+        // Run it!
+        executor::dpkg::execute_pkg_actions(actions, &config.root, &downloader).await?;
     } else {
-        if Confirm::new()
-            .with_prompt("Proceed with actions?")
-            .interact()?
-        {
-            // Run it!
-            executor::dpkg::execute_pkg_actions(actions, &PathBuf::from(&config.root), &downloader)
-                .await?;
-        } else {
-            std::process::exit(2);
-        }
+        std::process::exit(2);
     }
 
     Ok(())

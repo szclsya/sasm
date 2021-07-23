@@ -1,9 +1,9 @@
-mod version;
 mod action;
+mod version;
 
+pub use action::PkgActions;
 use serde::Deserialize;
 pub use version::{PkgVersion, VersionRequirement};
-pub use action::PkgActions;
 
 #[derive(Deserialize, Default)]
 pub struct PkgRequirement {

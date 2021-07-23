@@ -5,7 +5,9 @@
 Currently, apm accepts a rudimentary config file:
 ```toml
 arch = "amd64"
-root = "/"
+# Whether to purge package when it's no longer needed
+# If set to false, package will only be removed so that configs will remain
+purge_on_remove = true
 
 [repo.main]
 url = "https://repo.aosc.io/debs"
@@ -15,10 +17,11 @@ components = ["main"]
 [wishlist]
 # Add packages and version you want here.
 # Specifying "any" then apm will try to use the latest available package
+# For package names including '+' and '.', double quote the package name
 plasma-desktop = "any"
 ```
 
-Put this file at `/tmp/apm.toml` and run. apm will download dbs from the specified mirror and find a feasible package installation list, or spill out Unsolvable.
+Put this file at `/etc/apm/config.toml` and run. apm will download dbs from the specified mirror and find a feasible package installation list, or spill out Unsolvable.
 
 ## Solver
 apm utilizes [varisat](https://github.com/jix/varisat), a very fast, CDCL based SAT solver. Currently, solver is able to enroll all dependency rules (like package dependencies and breaks) in the db into the solver and try to find a feasible solution, and then try to optimize the result.

@@ -1,11 +1,12 @@
-use crate::success;
+use crate::msg;
 use anyhow::{format_err, Result};
-use futures::future::{select, select_all};
-use indicatif::MultiProgress;
+use futures::future::select_all;
+use indicatif::{HumanBytes};
 use reqwest::Client;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
+    time::Instant,
 };
 use tokio::{fs::File, io::AsyncWriteExt};
 
@@ -25,10 +26,10 @@ impl Downloader {
     }
 
     /// Download all required stuff in an async manner and show a progress bar (TODO)
-    /// to_download: Vec<(Name, URL, Option<size>)
+    /// to_download: Vec<(URL, Option<DesiredFilename>, Option<size>)
     pub async fn fetch(
         &self,
-        mut to_download: Vec<(String, String, Option<u64>)>,
+        mut to_download: Vec<(String, Option<String>, Option<u64>)>,
         download_path: &Path,
     ) -> Result<HashMap<String, PathBuf>> {
         // Create download dir
@@ -40,13 +41,15 @@ impl Downloader {
         // Handles for download processes
         let mut handles = Vec::with_capacity(self.max_concurrent);
 
+        msg!("", "Downloading {} files...", to_download.len());
         while !to_download.is_empty() {
             while handles.len() < self.max_concurrent && !to_download.is_empty() {
-                let (name, url, len) = to_download.pop().unwrap();
+                let (url, filename, len) = to_download.pop().unwrap();
                 let client = self.client.clone();
                 let path = download_path.to_owned();
-                let handle =
-                    tokio::spawn(async move { try_download_file(client, path, name, url, len, 0).await });
+                let handle = tokio::spawn(async move {
+                    try_download_file(client, path, url, filename, len, 0).await
+                });
                 handles.push(handle);
             }
             // Wait for any of them to stop
@@ -60,18 +63,19 @@ impl Downloader {
                 Err(err) => {
                     // Handling download errors
                     // If have remaining reties, do it
-                    if err.retries < self.max_retry {
+                    if err.retry < self.max_retry {
                         let client = self.client.clone();
                         let path = download_path.to_owned();
                         let handle = tokio::spawn(async move {
                             try_download_file(
                                 client,
                                 path,
-                                err.name,
                                 err.url,
+                                err.filename,
                                 err.len,
-                                err.retries + 1,
-                            ).await
+                                err.retry + 1,
+                            )
+                            .await
                         });
                         handles.push(handle);
                     } else {
@@ -91,18 +95,19 @@ impl Downloader {
                 Err(err) => {
                     // Handling download errors
                     // If have remaining reties, do it
-                    if err.retries < self.max_retry {
+                    if err.retry < self.max_retry {
                         let client = self.client.clone();
                         let path = download_path.to_owned();
                         let handle = tokio::spawn(async move {
                             try_download_file(
                                 client,
                                 path,
-                                err.name,
                                 err.url,
+                                err.filename,
                                 err.len,
-                                err.retries + 1,
-                            ).await
+                                err.retry + 1,
+                            )
+                            .await
                         });
                         handles.push(handle);
                     } else {
@@ -118,48 +123,52 @@ impl Downloader {
 
 struct DownloadError {
     error: anyhow::Error,
-    name: String,
     url: String,
+    filename: Option<String>,
     len: Option<u64>,
-    retries: usize,
+    retry: usize,
 }
 
 async fn try_download_file(
     client: Client,
     path: PathBuf,
-    name: String,
     url: String,
+    filename: Option<String>,
     len: Option<u64>,
-    retries: usize,
+    retry: usize,
 ) -> Result<(String, PathBuf), DownloadError> {
-    match download_file(&client, &name, &path, url.clone(), len).await {
+    match download_file(&client, &path, url.clone(), filename.clone(), len).await {
         Ok(res) => Ok(res),
         Err(error) => Err(DownloadError {
             error,
-            name,
             url,
+            filename,
             len,
-            retries: retries + 1,
+            retry: retry + 1,
         }),
     }
 }
 
 async fn download_file(
     client: &Client,
-    name: &str,
     path: &Path,
     url: String,
+    filename: Option<String>,
     len: Option<u64>,
 ) -> Result<(String, PathBuf)> {
+    let start = Instant::now();
     let mut resp = client.get(&url).send().await?;
     resp.error_for_status_ref()?;
-    let filename = resp
-        .url()
-        .path_segments()
-        .and_then(|segments| segments.last())
-        .and_then(|name| if name.is_empty() { None } else { Some(name) })
-        .ok_or_else(|| format_err!("{} doesn't contain filename", &url))?
-        .to_string();
+    let filename = match filename {
+        Some(n) => n,
+        None => resp
+            .url()
+            .path_segments()
+            .and_then(|segments| segments.last())
+            .and_then(|name| if name.is_empty() { None } else { Some(name) })
+            .ok_or_else(|| format_err!("{} doesn't contain filename", &url))?
+            .to_string(),
+    };
     let file_path = path.join(&filename);
     let mut f = File::create(&file_path).await?;
 
@@ -176,6 +185,15 @@ async fn download_file(
         current_len += chunk.len();
     }
 
-    success!("{}", &filename);
-    Ok((name.to_string(), file_path))
+    // Showcase this download
+    let time = start.elapsed();
+    let rate = HumanBytes((len as f64 / time.as_secs_f64()) as u64);
+    msg!(
+        "",
+        "{:<40} ({} transferred at {}/s)",
+        &filename,
+        HumanBytes(len),
+        rate
+    );
+    Ok((url.to_string(), file_path))
 }

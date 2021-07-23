@@ -2,26 +2,12 @@ pub mod deb;
 mod pool;
 mod sort;
 
-pub use crate::types::{PkgMeta, PkgRequirement, PkgVersion, VersionRequirement};
-use anyhow::format_err;
+use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
+use crate::warn;
+use anyhow::{ Result, format_err, bail};
 use pool::PackagePool;
 use std::collections::HashMap;
-use thiserror::Error;
 use varisat::{lit::Lit, ExtendFormula};
-
-#[derive(Error, Clone, Debug)]
-pub enum SolverError {
-    #[error("Failed to satisfy package wishlist: {0}")]
-    Unsolvable(String),
-    #[error("Internal solver error: {0}")]
-    InternalError(String),
-}
-
-impl From<anyhow::Error> for SolverError {
-    fn from(e: anyhow::Error) -> Self {
-        SolverError::InternalError(e.to_string())
-    }
-}
 
 pub struct Solver {
     pub pool: PackagePool,
@@ -41,7 +27,7 @@ impl Solver {
     pub fn install(
         &self,
         to_install: HashMap<String, VersionRequirement>,
-    ) -> Result<Vec<&PkgMeta>, SolverError> {
+    ) -> Result<Vec<&PkgMeta>> {
         let mut formula = self.pool.gen_formula();
         // Add requested packages to formula
         for (name, ver_req) in to_install {
@@ -52,10 +38,7 @@ impl Solver {
                     .filter(|(_, ver)| ver_req.within(ver))
                     .collect(),
                 None => {
-                    return Err(SolverError::Unsolvable(format!(
-                        "Package {} not found",
-                        &name
-                    )));
+                    bail!("Package {} not found", &name);
                 }
             };
             let id = choices
@@ -134,7 +117,7 @@ impl Solver {
             .map(|pkgid| {
                 let res = self.pool.id_to_pkg(pkgid).unwrap();
                 if !is_up_to_date(&self.pool, pkgid).unwrap() {
-                    println!("{} not latest!", res.name);
+                    warn!("Cannot select latest version of {}", res.name);
                 }
                 res
             })
@@ -144,12 +127,10 @@ impl Solver {
     }
 }
 
-fn solve(solver: &mut varisat::Solver) -> Result<Vec<usize>, SolverError> {
+fn solve(solver: &mut varisat::Solver) -> Result<Vec<usize>> {
     let mut res = Vec::new();
     if !solver.solve().unwrap() {
-        return Err(SolverError::Unsolvable(
-            "Cannot satisfy requirements".to_string(),
-        ));
+        bail!("Cannot satisfy package requirements");
     } else {
         let model = solver.model().unwrap();
         for i in model {

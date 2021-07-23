@@ -1,6 +1,6 @@
-use super::ExecutionError;
 use crate::types::PkgVersion;
 
+use anyhow::{Result, Error, format_err, bail, Context};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
@@ -21,7 +21,7 @@ pub enum PkgState {
 }
 
 impl std::convert::TryFrom<&str> for PkgState {
-    type Error = ExecutionError;
+    type Error = Error;
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         let res = match s {
             "not-installed" => Self::NotInstalled,
@@ -33,7 +33,7 @@ impl std::convert::TryFrom<&str> for PkgState {
             "triggers-pending" => Self::TriggerPending,
             "installed" => Self::Installed,
             _ => {
-                return Err(ExecutionError::StateError("".to_string()));
+                bail!("Malformed package state")
             }
         };
         Ok(res)
@@ -49,44 +49,33 @@ pub struct PkgStatus {
 }
 
 impl TryFrom<&HashMap<&str, String>> for PkgStatus {
-    type Error = ExecutionError;
+    type Error = Error;
 
     #[inline]
-    fn try_from(f: &HashMap<&str, String>) -> Result<PkgStatus, ExecutionError> {
+    fn try_from(f: &HashMap<&str, String>) -> Result<PkgStatus, Self::Error> {
         let name = f
             .get("Package")
             .ok_or_else(|| {
-                ExecutionError::StateError(
-                    "Malformed dpkg status db: no Package name for package".to_string(),
-                )
+                format_err!("Malformed dpkg status db: no Package name for package")
             })?
             .to_string();
         let state_line = f.get("Status").ok_or_else(|| {
-            ExecutionError::StateError(
-                "Malformed dpkg status db: no Status for package".to_string(),
-            )
+                format_err!("Malformed dpkg status db: no Status for package")
         })?;
         let version = f.get("Version").ok_or_else(|| {
-            ExecutionError::StateError(format!(
+            format_err!(
                 "Malformed dpkg status db: no Version for package {}",
                 name
-            ))
+            )
         })?;
 
         let status: Vec<&str> = state_line.split(' ').collect();
         if status.len() != 3 {
-            return Err(ExecutionError::StateError(
-                "Malformed dpkg status db".to_string(),
-            ));
+            bail!("Malformed dpkg status db");
         }
 
         let state = PkgState::try_from(*status.get(2).unwrap())?;
-        let version = PkgVersion::try_from(version.as_str()).map_err(|err| {
-            ExecutionError::StateError(format!(
-                "Malformed dpkg status db, cannot parse version: {}",
-                err
-            ))
-        })?;
+        let version = PkgVersion::try_from(version.as_str()).context("Malformed dpkg status db, cannot parse version")?;
         let res = PkgStatus {
             name,
             version,
@@ -96,4 +85,3 @@ impl TryFrom<&HashMap<&str, String>> for PkgStatus {
         Ok(res)
     }
 }
-

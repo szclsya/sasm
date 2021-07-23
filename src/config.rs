@@ -1,13 +1,13 @@
 use crate::types::VersionRequirement;
 
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Deserialize)]
 pub struct Config {
     pub arch: String,
     #[serde(default = "default_root")]
-    pub root: String,
+    pub root: PathBuf,
     pub purge_on_remove: bool,
     pub repo: HashMap<String, RepoConfig>,
     pub wishlist: HashMap<String, VersionRequirement>,
@@ -21,6 +21,6 @@ pub struct RepoConfig {
 }
 
 #[inline]
-fn default_root() -> String {
-    "/".to_string()
+fn default_root() -> PathBuf {
+    PathBuf::from("/")
 }
