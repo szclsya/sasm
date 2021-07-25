@@ -1,7 +1,7 @@
 use super::download::Downloader;
 use crate::types::PkgActions;
 
-use anyhow::{Result, Context, bail};
+use anyhow::{bail, Context, Result};
 use std::path::Path;
 use std::process::Command;
 
@@ -77,9 +77,7 @@ fn dpkg_run<T: AsRef<std::ffi::OsStr>>(args: &[T], root: &Path) -> Result<()> {
     cmd.args(args);
 
     // Run it!
-    let res = cmd
-        .status()
-        .context("dpkg command execution failed")?;
+    let res = cmd.status().context("dpkg command execution failed")?;
     if res.success() {
         Ok(())
     } else {

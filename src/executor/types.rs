@@ -1,6 +1,6 @@
 use crate::types::PkgVersion;
 
-use anyhow::{Result, Error, format_err, bail, Context};
+use anyhow::{bail, format_err, Context, Error, Result};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
@@ -55,18 +55,13 @@ impl TryFrom<&HashMap<&str, String>> for PkgStatus {
     fn try_from(f: &HashMap<&str, String>) -> Result<PkgStatus, Self::Error> {
         let name = f
             .get("Package")
-            .ok_or_else(|| {
-                format_err!("Malformed dpkg status db: no Package name for package")
-            })?
+            .ok_or_else(|| format_err!("Malformed dpkg status db: no Package name for package"))?
             .to_string();
-        let state_line = f.get("Status").ok_or_else(|| {
-                format_err!("Malformed dpkg status db: no Status for package")
-        })?;
+        let state_line = f
+            .get("Status")
+            .ok_or_else(|| format_err!("Malformed dpkg status db: no Status for package"))?;
         let version = f.get("Version").ok_or_else(|| {
-            format_err!(
-                "Malformed dpkg status db: no Version for package {}",
-                name
-            )
+            format_err!("Malformed dpkg status db: no Version for package {}", name)
         })?;
 
         let status: Vec<&str> = state_line.split(' ').collect();
@@ -75,7 +70,8 @@ impl TryFrom<&HashMap<&str, String>> for PkgStatus {
         }
 
         let state = PkgState::try_from(*status.get(2).unwrap())?;
-        let version = PkgVersion::try_from(version.as_str()).context("Malformed dpkg status db, cannot parse version")?;
+        let version = PkgVersion::try_from(version.as_str())
+            .context("Malformed dpkg status db, cannot parse version")?;
         let res = PkgStatus {
             name,
             version,

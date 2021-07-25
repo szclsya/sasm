@@ -1,12 +1,11 @@
 use crate::msg;
 use anyhow::{format_err, Result};
 use futures::future::select_all;
-use indicatif::{HumanBytes};
+use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use reqwest::Client;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
-    time::Instant,
 };
 use tokio::{fs::File, io::AsyncWriteExt};
 
@@ -25,7 +24,7 @@ impl Downloader {
         }
     }
 
-    /// Download all required stuff in an async manner and show a progress bar (TODO)
+    /// Download all required stuff in an async manner and show a progress bar
     /// to_download: Vec<(URL, Option<DesiredFilename>, Option<size>)
     pub async fn fetch(
         &self,
@@ -41,14 +40,21 @@ impl Downloader {
         // Handles for download processes
         let mut handles = Vec::with_capacity(self.max_concurrent);
 
+        // Show download info
         msg!("", "Downloading {} files...", to_download.len());
+        let multibar = MultiProgress::new();
+        let barsty = ProgressStyle::default_bar()
+            .template(" {msg:<33} {total_bytes:>10} {binary_bytes_per_sec:>10} {eta:>4} [{wide_bar:.white/black}] {percent:<3}%")
+            .progress_chars("=>-");
         while !to_download.is_empty() {
             while handles.len() < self.max_concurrent && !to_download.is_empty() {
                 let (url, filename, len) = to_download.pop().unwrap();
                 let client = self.client.clone();
                 let path = download_path.to_owned();
+                let bar = multibar.insert(0, ProgressBar::new(len.unwrap_or(0)));
+                bar.set_style(barsty.clone());
                 let handle = tokio::spawn(async move {
-                    try_download_file(client, path, url, filename, len, 0).await
+                    try_download_file(client, path, url, filename, len, 0, bar).await
                 });
                 handles.push(handle);
             }
@@ -74,6 +80,7 @@ impl Downloader {
                                 err.filename,
                                 err.len,
                                 err.retry + 1,
+                                err.bar,
                             )
                             .await
                         });
@@ -106,6 +113,7 @@ impl Downloader {
                                 err.filename,
                                 err.len,
                                 err.retry + 1,
+                                err.bar,
                             )
                             .await
                         });
@@ -116,7 +124,6 @@ impl Downloader {
                 }
             }
         }
-
         Ok(res)
     }
 }
@@ -127,6 +134,7 @@ struct DownloadError {
     filename: Option<String>,
     len: Option<u64>,
     retry: usize,
+    bar: ProgressBar,
 }
 
 async fn try_download_file(
@@ -136,15 +144,29 @@ async fn try_download_file(
     filename: Option<String>,
     len: Option<u64>,
     retry: usize,
+    bar: ProgressBar,
 ) -> Result<(String, PathBuf), DownloadError> {
-    match download_file(&client, &path, url.clone(), filename.clone(), len).await {
+    match download_file(
+        &client,
+        &path,
+        url.clone(),
+        filename.clone(),
+        len,
+        bar.clone(),
+    )
+    .await
+    {
         Ok(res) => Ok(res),
-        Err(error) => Err(DownloadError {
-            error,
-            url,
-            filename,
-            len,
-            retry: retry + 1,
+        Err(error) => Err({
+            bar.reset();
+            DownloadError {
+                error,
+                url,
+                filename,
+                len,
+                retry: retry + 1,
+                bar,
+            }
         }),
     }
 }
@@ -155,8 +177,8 @@ async fn download_file(
     url: String,
     filename: Option<String>,
     len: Option<u64>,
+    bar: ProgressBar,
 ) -> Result<(String, PathBuf)> {
-    let start = Instant::now();
     let mut resp = client.get(&url).send().await?;
     resp.error_for_status_ref()?;
     let filename = match filename {
@@ -179,21 +201,22 @@ async fn download_file(
             .ok_or_else(|| format_err!("Cannot determine content length"))?,
     };
 
-    let mut current_len = 0;
+    // Begin the download!
+    let mut msg = filename.clone();
+    if filename.len() > 33 {
+        msg.truncate(30);
+        msg.push_str("...");
+    }
+    bar.set_message(msg);
+    bar.set_length(len);
+    bar.set_position(0);
+    bar.reset();
     while let Some(chunk) = resp.chunk().await? {
         f.write_all(&chunk).await?;
-        current_len += chunk.len();
+        bar.inc(chunk.len() as u64);
     }
+    bar.finish_and_clear();
+    bar.println(format!("{:>9} {:<30}", "FINISHED", &filename));
 
-    // Showcase this download
-    let time = start.elapsed();
-    let rate = HumanBytes((len as f64 / time.as_secs_f64()) as u64);
-    msg!(
-        "",
-        "{:<40} ({} transferred at {}/s)",
-        &filename,
-        HumanBytes(len),
-        rate
-    );
     Ok((url.to_string(), file_path))
 }

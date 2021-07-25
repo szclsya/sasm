@@ -1,5 +1,5 @@
 use crate::{config::RepoConfig, executor::download::Downloader};
-use anyhow::{Result};
+use anyhow::Result;
 use std::path::PathBuf;
 use std::{collections::HashMap, path::Path};
 

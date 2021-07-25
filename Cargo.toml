@@ -16,7 +16,7 @@ rayon = "1"
 debcontrol = "0.1"
 # cli
 console = "0.14.1"
-indicatif = "0.16"
+indicatif = { git = "https://github.com/mitsuhiko/indicatif" }
 dialoguer = "0.8"
 # Dealing with config files
 serde = "1"

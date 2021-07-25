@@ -5,7 +5,7 @@ mod types;
 use crate::types::{PkgActions, PkgMeta};
 pub use types::{PkgState, PkgStatus};
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use debcontrol::{BufParse, Streaming};
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -22,7 +22,8 @@ impl MachineStatus {
         let mut res = HashMap::new();
         // Load dpkg's status db
         let stauts_file_path = root.join("var/lib/dpkg/status");
-        let status_file = fs::File::open(&stauts_file_path).context("Failed to open dpkg status file")?;
+        let status_file =
+            fs::File::open(&stauts_file_path).context("Failed to open dpkg status file")?;
         let mut buf_parse = BufParse::new(status_file, 4096);
         while let Some(result) = buf_parse.try_next().unwrap() {
             match result {

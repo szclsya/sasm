@@ -1,5 +1,5 @@
 /// Utilities to deal with deb package db
-use super::{pool::PackagePool};
+use super::pool::PackagePool;
 use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
 use anyhow::{format_err, Result};
 use debcontrol::{BufParse, Streaming};

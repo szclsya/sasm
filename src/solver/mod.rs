@@ -4,7 +4,7 @@ mod sort;
 
 use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
 use crate::warn;
-use anyhow::{ Result, format_err, bail};
+use anyhow::{bail, format_err, Result};
 use pool::PackagePool;
 use std::collections::HashMap;
 use varisat::{lit::Lit, ExtendFormula};
