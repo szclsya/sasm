@@ -8,7 +8,13 @@ mod types;
 use anyhow::{Context, Result};
 use config::Config;
 use dialoguer::Confirm;
+use lazy_static::lazy_static;
 use std::{fs::File, io::Read, path::PathBuf};
+
+// Initialize writer
+lazy_static! {
+    static ref WRITER: cli::Writer = cli::Writer::new();
+}
 
 /// Exit codes:
 /// 1 => program screwed up
@@ -52,14 +58,18 @@ async fn try_main() -> Result<()> {
     let actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
     if actions.is_empty() {
         success!("There's nothing to do, all wishes has been fulfilled!");
-    } else if Confirm::new()
-        .with_prompt("          Proceed with actions?")
-        .interact()?
-    {
-        // Run it!
-        executor::dpkg::execute_pkg_actions(actions, &config.root, &downloader).await?;
     } else {
-        std::process::exit(2);
+        info!("These following actions will be performed:");
+        actions.show();
+        if Confirm::new()
+            .with_prompt("          Proceed with actions?")
+            .interact()?
+        {
+            // Run it!
+            executor::dpkg::execute_pkg_actions(actions, &config.root, &downloader).await?;
+        } else {
+            std::process::exit(2);
+        }
     }
 
     Ok(())
