@@ -31,7 +31,7 @@ async fn main() {
 }
 
 async fn try_main() -> Result<()> {
-    warn!("apm is still in alpha stage. DO NOT use on production system!");
+    warn!("apm is still in early alpha stage. DO NOT use me on production system!");
     let config_path = PathBuf::from("/etc/apm/config.toml");
     let mut config_file = File::open(&config_path).context("Failed to open config file")?;
     let mut data = String::new();

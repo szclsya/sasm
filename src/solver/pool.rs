@@ -117,6 +117,27 @@ impl PackagePool {
         formula
     }
 
+    pub fn gen_subset_formula(&self, ids: &[usize]) -> CnfFormula {
+        let mut formula = CnfFormula::new();
+        for id in ids {
+            let rules = self.pkg_to_rule(*id);
+            for rule in rules {
+                formula.add_clause(&rule);
+            }
+        }
+        // Generate conflict for different versions of the same package
+        for versions in self.name_to_ids.values() {
+            if versions.len() > 1 {
+                let mut clause = Vec::new();
+                for pkg in versions {
+                    clause.push(!Lit::from_dimacs(pkg.0 as isize));
+                }
+                formula.add_clause(&clause);
+            }
+        }
+        formula
+    }
+
     fn pkg_to_rule(&self, pkgid: usize) -> Vec<Vec<Lit>> {
         let pkg = self.pkgs.get(pkgid - 1).unwrap();
         let mut res = Vec::new();

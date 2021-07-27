@@ -40,7 +40,7 @@ impl Writer {
         while !msg.is_empty() {
             let line_msg = console::truncate_str(&msg, max_len.into(), "\n");
             if first_run {
-                self.write_prefix(&prefix)
+                self.write_prefix(prefix)
                     .context("Failed to write prefix to console")?;
                 first_run = false;
             } else {

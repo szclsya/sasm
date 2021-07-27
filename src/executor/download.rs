@@ -1,7 +1,7 @@
 use crate::msg;
 use anyhow::{format_err, Result};
 use futures::future::select_all;
-use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::Client;
 use std::{
     collections::HashMap,
