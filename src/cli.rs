@@ -14,7 +14,7 @@ impl Writer {
         }
     }
 
-    fn get_max_len(&self) -> u16 {
+    pub fn get_max_len(&self) -> u16 {
         self.term.size_checked().unwrap_or((25, 80)).1 - PREFIX_LEN
     }
 

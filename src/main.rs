@@ -44,7 +44,7 @@ async fn try_main() -> Result<()> {
     let downloader = executor::download::Downloader::new();
     let mut solver = solver::Solver::new();
 
-    let dbs = repo::get_dbs(&config.repo, &config.arch, &config.root, &downloader).await?;
+    let dbs = repo::get_dbs(&config.repo, &config.arch, &config.root, &downloader).await.context("Failed to fetch dpkg databases")?;
     for (baseurl, db) in dbs.into_iter() {
         solver::deb::read_deb_db(&db, &mut solver.pool, &baseurl)?;
     }

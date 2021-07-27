@@ -1,5 +1,5 @@
 use super::download::Downloader;
-use crate::types::PkgActions;
+use crate::{ types::PkgActions, info };
 
 use anyhow::{bail, Context, Result};
 use std::path::Path;
@@ -16,6 +16,7 @@ pub async fn execute_pkg_actions(
         .iter()
         .map(|x| (x.1.clone(), None, Some(x.2)))
         .collect();
+    info!("Fetching required packages...");
     let download_res = downloader
         .fetch(download_info, &root.join("var/cache/apm/pkgs"))
         .await
@@ -34,6 +35,7 @@ pub async fn execute_pkg_actions(
         })
         .collect();
 
+    info!("Processing package changes...");
     // Purge stuff
     if !actions.purge.is_empty() {
         let mut cmd = vec!["--purge".to_string()];

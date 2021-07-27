@@ -36,6 +36,7 @@ impl Downloader {
             tokio::fs::create_dir_all(download_path).await?;
         }
 
+        let mut position = (0, to_download.len(), to_download.len().to_string().len());
         let mut res = HashMap::new();
         // Handles for download processes
         let mut handles = Vec::with_capacity(self.max_concurrent);
@@ -43,8 +44,16 @@ impl Downloader {
         // Show download info
         msg!("", "Downloading {} files...", to_download.len());
         let multibar = MultiProgress::new();
+        let bar_template = {
+            let max_len = crate::WRITER.get_max_len();
+            if max_len < 90 {
+                " {wide_msg} {total_bytes:>10} {binary_bytes_per_sec:>12} {eta:>4} {percent:<3}%"
+            } else {
+                " {msg:<48} {total_bytes:>10} {binary_bytes_per_sec:>12} {eta:>4} [{wide_bar:.white/black}] {percent:<3}%"
+            }
+        };
         let barsty = ProgressStyle::default_bar()
-            .template(" {msg:<33} {total_bytes:>10} {binary_bytes_per_sec:>10} {eta:>4} [{wide_bar:.white/black}] {percent:<3}%")
+            .template(bar_template)
             .progress_chars("=>-");
         while !to_download.is_empty() {
             while handles.len() < self.max_concurrent && !to_download.is_empty() {
@@ -53,8 +62,9 @@ impl Downloader {
                 let path = download_path.to_owned();
                 let bar = multibar.insert(0, ProgressBar::new(len.unwrap_or(0)));
                 bar.set_style(barsty.clone());
+                position.0 += 1;
                 let handle = tokio::spawn(async move {
-                    try_download_file(client, path, url, filename, len, 0, bar).await
+                    try_download_file(client, path, url, filename, len, 0, position, bar).await
                 });
                 handles.push(handle);
             }
@@ -80,6 +90,7 @@ impl Downloader {
                                 err.filename,
                                 err.len,
                                 err.retry + 1,
+                                err.pos,
                                 err.bar,
                             )
                             .await
@@ -113,6 +124,7 @@ impl Downloader {
                                 err.filename,
                                 err.len,
                                 err.retry + 1,
+                                err.pos,
                                 err.bar,
                             )
                             .await
@@ -134,6 +146,7 @@ struct DownloadError {
     filename: Option<String>,
     len: Option<u64>,
     retry: usize,
+    pos: (usize, usize, usize),
     bar: ProgressBar,
 }
 
@@ -144,6 +157,7 @@ async fn try_download_file(
     filename: Option<String>,
     len: Option<u64>,
     retry: usize,
+    pos: (usize, usize, usize),
     bar: ProgressBar,
 ) -> Result<(String, PathBuf), DownloadError> {
     match download_file(
@@ -152,6 +166,7 @@ async fn try_download_file(
         url.clone(),
         filename.clone(),
         len,
+        pos,
         bar.clone(),
     )
     .await
@@ -165,6 +180,7 @@ async fn try_download_file(
                 filename,
                 len,
                 retry: retry + 1,
+                pos,
                 bar,
             }
         }),
@@ -177,6 +193,7 @@ async fn download_file(
     url: String,
     filename: Option<String>,
     len: Option<u64>,
+    pos: (usize, usize, usize),
     bar: ProgressBar,
 ) -> Result<(String, PathBuf)> {
     let mut resp = client.get(&url).send().await?;
@@ -202,10 +219,9 @@ async fn download_file(
     };
 
     // Begin the download!
-    let mut msg = filename.clone();
-    if filename.len() > 33 {
-        msg.truncate(30);
-        msg.push_str("...");
+    let mut msg = format!("({:0width$}/{}) {}", pos.0, pos.1, filename, width = pos.2);
+    if console::measure_text_width(&msg) > 48 {
+        msg = console::truncate_str(&msg, 45, "...").to_string();
     }
     bar.set_message(msg);
     bar.set_length(len);
@@ -216,7 +232,7 @@ async fn download_file(
         bar.inc(chunk.len() as u64);
     }
     bar.finish_and_clear();
-    bar.println(format!("{:>9} {:<30}", "FINISHED", &filename));
+    bar.println(format!("{:>9} {:<30}", "DONE", &filename));
 
     Ok((url.to_string(), file_path))
 }
