@@ -31,7 +31,7 @@ async fn main() {
 }
 
 async fn try_main() -> Result<()> {
-    warn!("apm is still in early alpha stage. DO NOT use me on production system!");
+    warn!("apm is still in early alpha stage. DO NOT use me on production systems!");
     let config_path = PathBuf::from("/etc/apm/config.toml");
     let mut config_file = File::open(&config_path).context("Failed to open config file")?;
     let mut data = String::new();
@@ -44,7 +44,9 @@ async fn try_main() -> Result<()> {
     let downloader = executor::download::Downloader::new();
     let mut solver = solver::Solver::new();
 
-    let dbs = repo::get_dbs(&config.repo, &config.arch, &config.root, &downloader).await.context("Failed to fetch dpkg databases")?;
+    let dbs = repo::get_dbs(&config.repo, &config.arch, &config.root, &downloader)
+        .await
+        .context("Failed to fetch dpkg databases")?;
     for (baseurl, db) in dbs.into_iter() {
         solver::deb::read_deb_db(&db, &mut solver.pool, &baseurl)?;
     }

@@ -1,9 +1,16 @@
-use super::PkgVersion;
+use super::{Checksum, PkgVersion};
 
 #[derive(Default)]
 pub struct PkgActions {
-    /// Vec<(Name, URL, size, ThisVersion, Option<OlderVersion>)
-    pub install: Vec<(String, String, u64, PkgVersion, Option<PkgVersion>)>,
+    /// Vec<(Name, URL, size, Checksum, ThisVersion, Option<OlderVersion>)
+    pub install: Vec<(
+        String,
+        String,
+        u64,
+        Checksum,
+        PkgVersion,
+        Option<PkgVersion>,
+    )>,
     pub remove: Vec<String>,
     pub purge: Vec<String>,
     pub configure: Vec<String>,
@@ -23,10 +30,10 @@ impl PkgActions {
             .iter()
             .filter_map(|pkg| {
                 let mut msg = pkg.0.to_string();
-                match &pkg.4 {
+                match &pkg.5 {
                     Some(_) => None,
                     None => {
-                        let ver_str = format!("({})", pkg.3);
+                        let ver_str = format!("({})", pkg.4);
                         msg.push_str(&console::style(ver_str).dim().to_string());
                         Some(msg)
                     }
@@ -40,9 +47,9 @@ impl PkgActions {
             .iter()
             .filter_map(|pkg| {
                 let mut msg = pkg.0.to_string();
-                match &pkg.4 {
+                match &pkg.5 {
                     Some(oldver) => {
-                        let ver_str = format!("({} -> {})", pkg.3, oldver);
+                        let ver_str = format!("({} -> {})", pkg.4, oldver);
                         msg.push_str(&console::style(ver_str).dim().to_string());
                         Some(msg)
                     }

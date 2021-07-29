@@ -1,0 +1,64 @@
+use anyhow::{bail, Result};
+use bytes::Bytes;
+use sequoia_openpgp::{
+    parse::{stream::*, Parse},
+    policy::StandardPolicy,
+    Cert, KeyHandle,
+};
+use std::io::Read;
+use std::path::Path;
+
+pub fn verify_inrelease<P: AsRef<Path>>(cert_paths: &[P], msg: Bytes) -> Result<String> {
+    let verifier = InReleaseVerifier::new(cert_paths)?;
+    let p = &StandardPolicy::new();
+    let mut v = VerifierBuilder::from_bytes(&msg)?.with_policy(p, None, verifier)?;
+    let mut content = String::new();
+    v.read_to_string(&mut content)?;
+
+    Ok(content)
+}
+
+pub struct InReleaseVerifier {
+    certs: Vec<Cert>,
+}
+
+impl InReleaseVerifier {
+    pub fn new<P: AsRef<Path>>(cert_paths: &[P]) -> Result<Self> {
+        let mut certs: Vec<Cert> = Vec::new();
+        for path in cert_paths.iter() {
+            certs.push(Cert::from_file(path)?);
+        }
+        Ok(InReleaseVerifier { certs })
+    }
+}
+
+impl VerificationHelper for InReleaseVerifier {
+    fn get_certs(&mut self, ids: &[KeyHandle]) -> Result<Vec<Cert>> {
+        let mut certs = Vec::new();
+        for id in ids {
+            for cert in self.certs.iter() {
+                if &cert.key_handle() == id {
+                    certs.push(cert.clone());
+                }
+            }
+        }
+        Ok(certs)
+    }
+
+    fn check(&mut self, structure: MessageStructure) -> Result<()> {
+        for layer in structure.into_iter() {
+            if let MessageLayer::SignatureGroup { results } = layer {
+                for r in results {
+                    r.unwrap();
+                }
+                //if !results.iter().any(|r| r.is_ok()) {
+                //    bail!("InRelease signature is not valid")
+                //}
+            } else {
+                bail!("Malformed PGP signature, InRelease should only be signed")
+            }
+        }
+
+        Ok(())
+    }
+}

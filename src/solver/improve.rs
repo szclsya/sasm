@@ -1,4 +1,4 @@
-use super::{ pool::PackagePool, solve };
+use super::{pool::PackagePool, solve};
 
 use anyhow::Result;
 use varisat::{lit::Lit, ExtendFormula, Solver};
@@ -13,7 +13,11 @@ pub fn improve(pool: &PackagePool, res: &mut Vec<usize>, solver: &mut Solver) ->
 
 /// Construct a subset list of packages that only contains equal or newer versions of existing packages
 /// So that no new packages are included when upgrading packages
-pub fn reduced_upgrade(pool: &PackagePool, res: &mut Vec<usize>, to_install: &[usize]) -> Result<()> {
+pub fn reduced_upgrade(
+    pool: &PackagePool,
+    res: &mut Vec<usize>,
+    to_install: &[usize],
+) -> Result<()> {
     // Generate reduced formula
     let mut ids = Vec::new();
     for pkg in res.iter() {
@@ -42,7 +46,12 @@ pub fn reduced_upgrade(pool: &PackagePool, res: &mut Vec<usize>, to_install: &[u
 
 /// Attempt to use latest possible version of packages via forcing the solver to choose better versions
 /// of packages via banning older versions via solver assume
-fn upgrade(pool: &PackagePool, res: &mut Vec<usize>, solver: &mut Solver, assumes: &mut Vec<Lit>) -> Result<()> {
+fn upgrade(
+    pool: &PackagePool,
+    res: &mut Vec<usize>,
+    solver: &mut Solver,
+    assumes: &mut Vec<Lit>,
+) -> Result<()> {
     loop {
         let mut updates = gen_update_assume(pool, res);
         if !updates.is_empty() {
@@ -66,13 +75,21 @@ fn upgrade(pool: &PackagePool, res: &mut Vec<usize>, solver: &mut Solver, assume
     Ok(())
 }
 
-fn reduce(pool: &PackagePool, res: &mut Vec<usize>, solver: &mut Solver, assumes: &mut Vec<Lit>) -> Result<()> {
+fn reduce(
+    pool: &PackagePool,
+    res: &mut Vec<usize>,
+    solver: &mut Solver,
+    assumes: &mut Vec<Lit>,
+) -> Result<()> {
     let old_badness = get_badness(pool, res);
     // Find all versions of a package
     res.iter().for_each(|pkg| {
         let pkgmeta = &pool.id_to_pkg(*pkg).unwrap();
         let ids = pool.pkg_name_to_ids(&pkgmeta.name).unwrap();
-        let mut no_ids: Vec<Lit> = ids.into_iter().map(|(id, _)| !Lit::from_dimacs(id as isize)).collect();
+        let mut no_ids: Vec<Lit> = ids
+            .into_iter()
+            .map(|(id, _)| !Lit::from_dimacs(id as isize))
+            .collect();
         let mut new_assume = assumes.clone();
         new_assume.append(&mut no_ids);
         solver.assume(&new_assume);
@@ -126,13 +143,9 @@ pub fn gen_update_assume(pool: &PackagePool, ids: &[usize]) -> Vec<Lit> {
 
 #[inline]
 fn get_badness(pool: &PackagePool, pkgs: &[usize]) -> usize {
-    pkgs.iter().map(|pkg| {
-        if is_best(pool, *pkg).unwrap() {
-            1
-        } else {
-            100
-        }
-    }).sum()
+    pkgs.iter()
+        .map(|pkg| if is_best(pool, *pkg).unwrap() { 1 } else { 100 })
+        .sum()
 }
 
 #[inline]

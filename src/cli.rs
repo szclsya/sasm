@@ -3,6 +3,15 @@ use console::Term;
 
 const PREFIX_LEN: u16 = 10;
 
+pub fn gen_prefix(prefix: &str) -> String {
+    // Make sure the real_prefix has desired PREFIX_LEN in console
+    let left_padding_size = (PREFIX_LEN as usize) - 1 - console::measure_text_width(prefix);
+    let mut real_prefix: String = " ".repeat(left_padding_size);
+    real_prefix.push_str(prefix);
+    real_prefix.push(' ');
+    real_prefix
+}
+
 pub struct Writer {
     term: Term,
 }
@@ -19,14 +28,8 @@ impl Writer {
     }
 
     fn write_prefix(&self, prefix: &str) -> Result<()> {
-        // Make sure the real_prefix has desired PREFIX_LEN in console
-        let left_padding_size = (PREFIX_LEN as usize) - 1 - console::measure_text_width(prefix);
-        let mut real_prefix: String = " ".repeat(left_padding_size);
-        real_prefix.push_str(prefix);
-        real_prefix.push(' ');
-
         self.term
-            .write_str(&real_prefix)
+            .write_str(&gen_prefix(prefix))
             .context("Failed to write prefix to console")?;
         Ok(())
     }

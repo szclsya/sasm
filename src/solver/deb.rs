@@ -1,7 +1,7 @@
 /// Utilities to deal with deb package db
 use super::pool::PackagePool;
-use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
-use anyhow::{format_err, Result};
+use crate::types::{Checksum, PkgMeta, PkgVersion, VersionRequirement};
+use anyhow::{bail, format_err, Result};
 use debcontrol::{BufParse, Streaming};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -62,6 +62,15 @@ fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> Result<Pkg
             .ok_or_else(|| format_err!("Package without Size"))?
             .as_str()
             .parse()?,
+        checksum: {
+            if let Some(hex) = f.get("SHA256") {
+                Checksum::from_sha256_str(hex)?
+            } else if let Some(hex) = f.get("SHA512") {
+                Checksum::from_sha512_str(hex)?
+            } else {
+                bail!("Package without checksum (SHA256 or SHA512)")
+            }
+        },
     })
 }
 

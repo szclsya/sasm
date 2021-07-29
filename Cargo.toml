@@ -2,6 +2,7 @@
 name = "apm"
 version = "0.1.0"
 authors = ["Leo Shen <i@szclsya.me>"]
+license = "GPL-2.0-or-later"
 edition = "2018"
 
 [dependencies]
@@ -11,11 +12,14 @@ lazy_static = "1"
 # Solver
 varisat = "0.2"
 petgraph = "0.5"
-rayon = "1"
-# Dealing with deb control files
+# Dealing with deb control files and InRelease
 debcontrol = "0.1"
+sequoia-openpgp = "1"
+sha2 = "0.9"
+hex = "0.4"
 # cli
 console = "0.14.1"
+# 0.16.2 doesn't work with tokio
 indicatif = { git = "https://github.com/mitsuhiko/indicatif" }
 dialoguer = "0.8"
 # Dealing with config files
@@ -23,6 +27,6 @@ serde = "1"
 toml = "0.5"
 # Network stack
 futures = "0.3"
-tokio = { version = "1.8", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
+tokio = { version = "1.8", default_features = false, features = ["rt", "rt-multi-thread", "macros", "fs", "io-util"] }
 bytes = "1"
-reqwest = { version = "0.11", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0.11" }

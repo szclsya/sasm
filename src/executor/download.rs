@@ -1,13 +1,23 @@
-use crate::msg;
-use anyhow::{format_err, Result};
+use crate::{msg, types::Checksum};
+
+use anyhow::{bail, format_err, Result};
 use futures::future::select_all;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::Client;
 use std::{
     collections::HashMap,
+    io::SeekFrom,
     path::{Path, PathBuf},
 };
-use tokio::{fs::File, io::AsyncWriteExt};
+use tokio::{fs::OpenOptions, io::AsyncSeekExt, io::AsyncWriteExt};
+
+#[derive(Clone)]
+pub struct DownloadJob {
+    pub url: String,
+    pub filename: Option<String>,
+    pub size: Option<u64>,
+    pub checksum: Option<Checksum>,
+}
 
 pub struct Downloader {
     client: Client,
@@ -25,10 +35,10 @@ impl Downloader {
     }
 
     /// Download all required stuff in an async manner and show a progress bar
-    /// to_download: Vec<(URL, Option<DesiredFilename>, Option<size>)
+    /// to_download: Vec<(URL, Option<DesiredFilename>, Option<size>, Option<Checksum>)
     pub async fn fetch(
         &self,
-        mut to_download: Vec<(String, Option<String>, Option<u64>)>,
+        mut to_download: Vec<DownloadJob>,
         download_path: &Path,
     ) -> Result<HashMap<String, PathBuf>> {
         // Create download dir
@@ -57,14 +67,14 @@ impl Downloader {
             .progress_chars("=>-");
         while !to_download.is_empty() {
             while handles.len() < self.max_concurrent && !to_download.is_empty() {
-                let (url, filename, len) = to_download.pop().unwrap();
+                let job = to_download.pop().unwrap();
                 let client = self.client.clone();
                 let path = download_path.to_owned();
-                let bar = multibar.insert(0, ProgressBar::new(len.unwrap_or(0)));
+                let bar = multibar.insert(0, ProgressBar::new(job.size.unwrap_or(0)));
                 bar.set_style(barsty.clone());
                 position.0 += 1;
                 let handle = tokio::spawn(async move {
-                    try_download_file(client, path, url, filename, len, 0, position, bar).await
+                    try_download_file(client, path, job, 0, position, bar).await
                 });
                 handles.push(handle);
             }
@@ -80,20 +90,11 @@ impl Downloader {
                     // Handling download errors
                     // If have remaining reties, do it
                     if err.retry < self.max_retry {
-                        let client = self.client.clone();
+                        let c = self.client.clone();
                         let path = download_path.to_owned();
                         let handle = tokio::spawn(async move {
-                            try_download_file(
-                                client,
-                                path,
-                                err.url,
-                                err.filename,
-                                err.len,
-                                err.retry + 1,
-                                err.pos,
-                                err.bar,
-                            )
-                            .await
+                            try_download_file(c, path, err.job, err.retry + 1, err.pos, err.bar)
+                                .await
                         });
                         handles.push(handle);
                     } else {
@@ -114,20 +115,11 @@ impl Downloader {
                     // Handling download errors
                     // If have remaining reties, do it
                     if err.retry < self.max_retry {
-                        let client = self.client.clone();
+                        let c = self.client.clone();
                         let path = download_path.to_owned();
                         let handle = tokio::spawn(async move {
-                            try_download_file(
-                                client,
-                                path,
-                                err.url,
-                                err.filename,
-                                err.len,
-                                err.retry + 1,
-                                err.pos,
-                                err.bar,
-                            )
-                            .await
+                            try_download_file(c, path, err.job, err.retry + 1, err.pos, err.bar)
+                                .await
                         });
                         handles.push(handle);
                     } else {
@@ -142,9 +134,7 @@ impl Downloader {
 
 struct DownloadError {
     error: anyhow::Error,
-    url: String,
-    filename: Option<String>,
-    len: Option<u64>,
+    job: DownloadJob,
     retry: usize,
     pos: (usize, usize, usize),
     bar: ProgressBar,
@@ -153,32 +143,18 @@ struct DownloadError {
 async fn try_download_file(
     client: Client,
     path: PathBuf,
-    url: String,
-    filename: Option<String>,
-    len: Option<u64>,
+    job: DownloadJob,
     retry: usize,
     pos: (usize, usize, usize),
     bar: ProgressBar,
 ) -> Result<(String, PathBuf), DownloadError> {
-    match download_file(
-        &client,
-        &path,
-        url.clone(),
-        filename.clone(),
-        len,
-        pos,
-        bar.clone(),
-    )
-    .await
-    {
+    match download_file(&client, &path, job.clone(), pos, bar.clone()).await {
         Ok(res) => Ok(res),
         Err(error) => Err({
             bar.reset();
             DownloadError {
                 error,
-                url,
-                filename,
-                len,
+                job,
                 retry: retry + 1,
                 pos,
                 bar,
@@ -190,32 +166,62 @@ async fn try_download_file(
 async fn download_file(
     client: &Client,
     path: &Path,
-    url: String,
-    filename: Option<String>,
-    len: Option<u64>,
+    job: DownloadJob,
     pos: (usize, usize, usize),
     bar: ProgressBar,
 ) -> Result<(String, PathBuf)> {
-    let mut resp = client.get(&url).send().await?;
+    let mut resp = client.get(&job.url).send().await?;
     resp.error_for_status_ref()?;
-    let filename = match filename {
+    let filename = match job.filename {
         Some(n) => n,
         None => resp
             .url()
             .path_segments()
             .and_then(|segments| segments.last())
             .and_then(|name| if name.is_empty() { None } else { Some(name) })
-            .ok_or_else(|| format_err!("{} doesn't contain filename", &url))?
+            .ok_or_else(|| format_err!("{} doesn't contain filename", &job.url))?
             .to_string(),
     };
-    let file_path = path.join(&filename);
-    let mut f = File::create(&file_path).await?;
-
-    let len = match len {
+    let len = match job.size {
         Some(len) => len,
         None => resp
             .content_length()
             .ok_or_else(|| format_err!("Cannot determine content length"))?,
+    };
+
+    let file_path = path.join(&filename);
+    let mut f = {
+        if file_path.is_file() {
+            if let Some(checksum) = job.checksum.clone() {
+                let p = file_path.clone();
+                let res = tokio::task::spawn_blocking(move || checksum.cmp_file(&p)).await?;
+                if res.is_ok() && res.unwrap() {
+                    bar.finish_and_clear();
+                    bar.println(format!(
+                        "{}{} (not modified)",
+                        crate::cli::gen_prefix(&console::style("SKIP").dim().to_string()),
+                        &filename
+                    ));
+                    return Ok((job.url, file_path));
+                }
+            }
+            // If checksum DNE/mismatch, purge current content
+            let f = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .truncate(true)
+                .open(&file_path)
+                .await?;
+            f.set_len(0).await?;
+            f
+        } else {
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .open(&file_path)
+                .await?
+        }
     };
 
     // Begin the download!
@@ -231,8 +237,26 @@ async fn download_file(
         f.write_all(&chunk).await?;
         bar.inc(chunk.len() as u64);
     }
-    bar.finish_and_clear();
-    bar.println(format!("{:>9} {:<30}", "DONE", &filename));
+    f.shutdown().await?;
 
-    Ok((url.to_string(), file_path))
+    // Check checksum
+    if let Some(checksum) = job.checksum {
+        f.seek(SeekFrom::Start(0)).await?;
+        let f = f.into_std().await;
+        let res = tokio::task::spawn_blocking(move || {
+            checksum.cmp_read(Box::new(f) as Box<dyn std::io::Read>)
+        })
+        .await??;
+        if !res {
+            bail!("Checksum mismatch for file {}", filename);
+        }
+    }
+
+    bar.finish_and_clear();
+    bar.println(format!(
+        "{}{}",
+        crate::cli::gen_prefix(&console::style("DONE").dim().to_string()),
+        &filename
+    ));
+    Ok((job.url, file_path))
 }

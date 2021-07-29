@@ -1,5 +1,5 @@
 use super::download::Downloader;
-use crate::{ types::PkgActions, info };
+use crate::{executor::download::DownloadJob, info, types::PkgActions};
 
 use anyhow::{bail, Context, Result};
 use std::path::Path;
@@ -11,10 +11,15 @@ pub async fn execute_pkg_actions(
     downloader: &Downloader,
 ) -> Result<()> {
     // Download packages
-    let download_info: Vec<(String, Option<String>, Option<u64>)> = actions
+    let download_info: Vec<DownloadJob> = actions
         .install
         .iter()
-        .map(|x| (x.1.clone(), None, Some(x.2)))
+        .map(|x| DownloadJob {
+            url: x.1.clone(),
+            filename: None,
+            size: Some(x.2),
+            checksum: Some(x.3.clone()),
+        })
         .collect();
     info!("Fetching required packages...");
     let download_res = downloader

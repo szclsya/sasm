@@ -1,9 +1,12 @@
 mod action;
+mod checksum;
 mod version;
 
 pub use action::PkgActions;
-use serde::Deserialize;
+pub use checksum::Checksum;
 pub use version::{PkgVersion, VersionRequirement};
+
+use serde::Deserialize;
 
 #[derive(Deserialize, Default)]
 pub struct PkgRequirement {
@@ -22,4 +25,5 @@ pub struct PkgMeta {
     pub url: String,
     // u64 because reqwest's content length is u64
     pub size: u64,
+    pub checksum: Checksum,
 }

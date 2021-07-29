@@ -18,6 +18,7 @@ pub struct RepoConfig {
     pub url: String,
     pub distribution: String,
     pub components: Vec<String>,
+    pub certs: Vec<PathBuf>,
 }
 
 #[inline]

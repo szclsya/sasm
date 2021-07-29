@@ -2,7 +2,6 @@ use crate::types::{PkgMeta, PkgVersion};
 
 use crate::warn;
 use anyhow::{bail, format_err, Result};
-use rayon::prelude::*;
 use std::collections::HashMap;
 use varisat::{lit::Lit, CnfFormula, ExtendFormula};
 
@@ -40,7 +39,7 @@ impl PackagePool {
     #[inline]
     pub fn finalize(&mut self) {
         // Sort versions
-        self.name_to_ids.par_iter_mut().for_each(|(_, pkgs)| {
+        self.name_to_ids.iter_mut().for_each(|(_, pkgs)| {
             // Sort in descending order
             pkgs.sort_by(|a, b| b.1.cmp(&a.1));
         });

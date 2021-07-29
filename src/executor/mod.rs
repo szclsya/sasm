@@ -55,6 +55,7 @@ impl MachineStatus {
                     newpkg.name.clone(),
                     newpkg.url.clone(),
                     newpkg.size,
+                    newpkg.checksum.clone(),
                     newpkg.version.clone(),
                     None,
                 ));
@@ -69,6 +70,7 @@ impl MachineStatus {
                             newpkg.name.clone(),
                             newpkg.url.clone(),
                             newpkg.size,
+                            newpkg.checksum.clone(),
                             newpkg.version.clone(),
                             None,
                         ));
@@ -81,6 +83,7 @@ impl MachineStatus {
                                 newpkg.name.clone(),
                                 newpkg.url.clone(),
                                 newpkg.size,
+                                newpkg.checksum.clone(),
                                 newpkg.version.clone(),
                                 Some(oldpkg.version),
                             ));
@@ -97,6 +100,7 @@ impl MachineStatus {
                                 newpkg.name.clone(),
                                 newpkg.url.clone(),
                                 newpkg.size,
+                                newpkg.checksum.clone(),
                                 newpkg.version.clone(),
                                 Some(oldpkg.version),
                             ));
