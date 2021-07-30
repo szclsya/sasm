@@ -1,6 +1,17 @@
 # apm: Experimental Package Manager
 `apm` is an experimental package manager that employs the power of modern Boolean satisfiability problem solvers.
 
+## Build
+Install dependencies:
++ `openssl`: for HTTPS connections
++ `nettle`: for OpenPGP support
+
+After that, just do:
+```bash
+cargo build --release
+install -Dm755 target/release/apm /usr/local/bin/apm
+```
+
 ## Try it out
 Currently, apm accepts a rudimentary config file:
 ```toml
@@ -13,6 +24,7 @@ purge_on_remove = true
 url = "https://repo.aosc.io/debs"
 distribution = "stable"
 components = ["main"]
+certs = ["/path/to/publickey.asc"]
 
 [wishlist]
 # Add packages and version you want here.
@@ -32,7 +44,7 @@ Although varisat can find a feasible solution, there's no guarantee that this is
 + have redundant packages, and
 + have non-latest packages, although feasible solutions with latest packages exists.
 
-One way to get around it (without re-implementing an efficient SAT solver, which is not easy), we can try to improve the result by providing some restrictions to the solver. We can force the solver to pick the latest package and find out if the result is better (that is, the new result won't downgrade other packages, or introduce new packages). We can also try to assume all versions of a particular package cannot be used, and if the problem is still solvable, it means that this package is not mandatory.
+One way to get around it (without re-implementing an efficient SAT solver, which is not easy), we can try to improve the result by providing some restrictions to the solver. We can force the solver to pick the latest package and find out if the result is better (that is, the new result won't downgrade other packages, or introduce new packages). We can also try to assume all versions of a particular package cannot be used, and if the problem is still solvable and no packages are downgraded, it means that this package is not mandatory.
 
 ### TODO: Error reporting
 Although solver can tell us the requirements are infeasible, it cannot tell us what went wrong in a idiomatic way. It can only generate a proof, and that's not particularly human readable.
