@@ -49,11 +49,10 @@ impl VerificationHelper for InReleaseVerifier {
         for layer in structure.into_iter() {
             if let MessageLayer::SignatureGroup { results } = layer {
                 for r in results {
-                    r.unwrap();
+                    if let Err(e) = r {
+                        bail!("InRelease has bad signature: {}", e);
+                    }
                 }
-                //if !results.iter().any(|r| r.is_ok()) {
-                //    bail!("InRelease signature is not valid")
-                //}
             } else {
                 bail!("Malformed PGP signature, InRelease should only be signed")
             }
