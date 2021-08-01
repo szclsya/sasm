@@ -1,11 +1,12 @@
 pub mod deb;
 mod improve;
+mod incompatible;
 mod pool;
 mod sort;
 
 use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
 use crate::warn;
-use anyhow::{bail, format_err, Result};
+use anyhow::{bail, format_err, Context, Result};
 use pool::PackagePool;
 use std::collections::HashMap;
 use varisat::{lit::Lit, ExtendFormula};
@@ -54,7 +55,15 @@ impl Solver {
         solver.add_formula(&formula);
 
         // Initial solve
-        let mut res = solve(&mut solver)?;
+        let mut res = match solve(&mut solver) {
+            Ok(r) => r,
+            Err(_) => {
+                return Err(format_err!(incompatible::find_incompatible_friendly(
+                    &self.pool, &ids
+                )))
+                .context("Cannot satisfy package requirements")
+            }
+        };
 
         // Improve the result to remove redundant packages
         // and select best possible packages
