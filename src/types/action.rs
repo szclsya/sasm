@@ -49,7 +49,7 @@ impl PkgActions {
                 let mut msg = pkg.0.to_string();
                 match &pkg.5 {
                     Some(oldver) => {
-                        let ver_str = format!("({} -> {})", pkg.4, oldver);
+                        let ver_str = format!("({} -> {})", oldver, pkg.4);
                         msg.push_str(&console::style(ver_str).dim().to_string());
                         Some(msg)
                     }
