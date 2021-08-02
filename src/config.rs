@@ -1,13 +1,12 @@
 use crate::types::VersionRequirement;
 
+use clap::Clap;
 use serde::Deserialize;
 use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Deserialize)]
 pub struct Config {
     pub arch: String,
-    #[serde(default = "default_root")]
-    pub root: PathBuf,
     pub purge_on_remove: bool,
     pub repo: HashMap<String, RepoConfig>,
     pub wishlist: HashMap<String, VersionRequirement>,
@@ -21,7 +20,16 @@ pub struct RepoConfig {
     pub certs: Vec<PathBuf>,
 }
 
-#[inline]
-fn default_root() -> PathBuf {
-    PathBuf::from("/")
+#[derive(Clap)]
+#[clap(version = "0.1.0", author = "Leo Shen <i@szclsya.me>")]
+pub struct Opts {
+    #[clap(long, default_value = "/")]
+    pub root: PathBuf,
+    #[clap(short, long, default_value = "etc/apm/config.toml")]
+    pub config: String,
+    #[clap(subcommand)]
+    pub subcmd: Option<SubCmd>,
 }
+
+#[derive(Clap)]
+pub enum SubCmd {}

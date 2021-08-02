@@ -19,6 +19,7 @@ sha2 = "0.9"
 hex = "0.4"
 # cli
 console = "0.14.1"
+clap = "3.0.0-beta.2"
 # 0.16.2 doesn't work with tokio
 indicatif = { git = "https://github.com/mitsuhiko/indicatif" }
 dialoguer = "0.8"

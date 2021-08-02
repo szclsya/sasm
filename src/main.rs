@@ -4,12 +4,13 @@ mod executor;
 mod repo;
 mod solver;
 mod types;
+use config::{Config, Opts};
 
 use anyhow::{Context, Result};
-use config::Config;
+use clap::Clap;
 use dialoguer::Confirm;
 use lazy_static::lazy_static;
-use std::{fs::File, io::Read, path::PathBuf};
+use std::{fs::File, io::Read};
 
 // Initialize writer
 lazy_static! {
@@ -31,20 +32,26 @@ async fn main() {
 }
 
 async fn try_main() -> Result<()> {
-    warn!("apm is still in early alpha stage. DO NOT use me on production systems!");
-    let config_path = PathBuf::from("/etc/apm/config.toml");
-    let mut config_file = File::open(&config_path).context("Failed to open config file")?;
+    // Initial setup
+    let opts: Opts = Opts::parse();
+    let config_path = opts.root.join(&opts.config);
+    let mut config_file = File::open(&config_path).context(format!(
+        "Failed to open config file at {}",
+        config_path.display()
+    ))?;
     let mut data = String::new();
     config_file
         .read_to_string(&mut data)
         .context("Failed to read config file")?;
     let config: Config = toml::from_str(&data).context("Failed to parse config file")?;
 
+    // May the work begin!
+    warn!("apm is still in early alpha stage. DO NOT use me on production systems!");
     info!("Synchronizing package databases...");
     let downloader = executor::download::Downloader::new();
     let mut solver = solver::Solver::new();
 
-    let dbs = repo::get_dbs(&config.repo, &config.arch, &config.root, &downloader)
+    let dbs = repo::get_dbs(&config.repo, &config.arch, &opts.root, &downloader)
         .await
         .context("Failed to fetch dpkg databases")?;
     for (baseurl, db) in dbs.into_iter() {
@@ -55,7 +62,7 @@ async fn try_main() -> Result<()> {
     info!("Resolving dependencies...");
     let res = solver.install(config.wishlist)?;
     // Translating result to list of actions
-    let root = PathBuf::from(&config.root);
+    let root = opts.root.clone();
     let machine_status = executor::MachineStatus::new(&root)?;
     let actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
     if actions.is_empty() {
@@ -64,11 +71,11 @@ async fn try_main() -> Result<()> {
         info!("These following actions will be performed:");
         actions.show();
         if Confirm::new()
-            .with_prompt("          Proceed with actions?")
+            .with_prompt(format!("{}{}", cli::gen_prefix(""), "Proceed?"))
             .interact()?
         {
             // Run it!
-            executor::dpkg::execute_pkg_actions(actions, &config.root, &downloader).await?;
+            executor::dpkg::execute_pkg_actions(actions, &opts.root, &downloader).await?;
         } else {
             std::process::exit(2);
         }

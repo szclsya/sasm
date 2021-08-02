@@ -14,7 +14,7 @@ pub fn find_incompatible_friendly(pool: &PackagePool, to_install: &[usize]) -> S
     } else if pkgs.len() == 1 {
         let pkg = pkgs.get(0).unwrap();
         format!(
-            "{}({})cannot be installed",
+            "{}({}) cannot be installed on its own. Please contact package maintainer",
             pkg.name,
             console::style(pkg.version.clone()).dim().to_string()
         )
