@@ -1,10 +1,10 @@
 use crate::types::VersionRequirement;
 
 use clap::Clap;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Config {
     pub arch: String,
     pub purge_on_remove: bool,
@@ -12,7 +12,7 @@ pub struct Config {
     pub wishlist: HashMap<String, VersionRequirement>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct RepoConfig {
     pub url: String,
     pub distribution: String,

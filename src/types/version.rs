@@ -1,7 +1,7 @@
 use anyhow::{bail, format_err, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::fmt;
@@ -85,6 +85,16 @@ impl fmt::Display for PkgVersion {
             write!(f, "-{}", self.revision)?;
         }
         Ok(())
+    }
+}
+
+impl Serialize for PkgVersion {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let res = self.to_string();
+        serializer.serialize_str(&res)
     }
 }
 
@@ -233,31 +243,85 @@ impl TryFrom<&str> for VersionRequirement {
             return Ok(ver_req);
         }
 
-        let segments = VER_REQ
-            .captures(s)
-            .ok_or_else(|| format_err!("Malformed version requirement"))?;
-        let req_type = segments.name("req_type").unwrap().as_str();
-        let ver = PkgVersion::try_from(segments.name("req_ver").unwrap().as_str())?;
-        match req_type {
-            "=" => {
-                ver_req.upper_bond = Some((ver.clone(), true));
-                ver_req.lower_bond = Some((ver, true));
+        for segment in s.split(',') {
+            let segment = segment.trim();
+            let captures = VER_REQ
+                .captures(segment)
+                .ok_or_else(|| format_err!("Malformed version requirement"))?;
+            let req_type = captures.name("req_type").unwrap().as_str();
+            let ver = PkgVersion::try_from(captures.name("req_ver").unwrap().as_str())?;
+            match req_type {
+                "=" => {
+                    ver_req.upper_bond = Some((ver.clone(), true));
+                    ver_req.lower_bond = Some((ver, true));
+                }
+                ">" => {
+                    ver_req.lower_bond = Some((ver, false));
+                }
+                ">=" => {
+                    ver_req.lower_bond = Some((ver, true));
+                }
+                "<" => {
+                    ver_req.upper_bond = Some((ver, false));
+                }
+                "<=" => {
+                    ver_req.upper_bond = Some((ver, true));
+                }
+                _ => {}
             }
-            ">" => {
-                ver_req.lower_bond = Some((ver, false));
-            }
-            ">=" => {
-                ver_req.lower_bond = Some((ver, true));
-            }
-            "<" => {
-                ver_req.upper_bond = Some((ver, false));
-            }
-            "<=" => {
-                ver_req.upper_bond = Some((ver, true));
-            }
-            _ => {}
+        }
+
+        if ver_req.lower_bond.is_some()
+            && ver_req.upper_bond.is_some()
+            && ver_req.lower_bond > ver_req.upper_bond
+        {
+            bail!("Failed to parse version requirement: lower bond is greater than upper bond")
         }
         Ok(ver_req)
+    }
+}
+
+impl fmt::Display for VersionRequirement {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut written = false;
+        if let Some(lower) = &self.lower_bond {
+            // If inclusive
+            if lower.1 {
+                write!(f, ">={}", lower.0)?;
+            } else {
+                write!(f, ">{}", lower.0)?;
+            }
+            written = true;
+        }
+        if let Some(upper) = &self.upper_bond {
+            // Add comma
+            if written {
+                write!(f, ",")?;
+            } else {
+                written = true;
+            }
+            // If inclusive
+            if upper.1 {
+                write!(f, "<={}", upper.0)?;
+            } else {
+                write!(f, "<{}", upper.0)?;
+            }
+        }
+        // No version requirement
+        if !written {
+            write!(f, "any")?;
+        }
+        Ok(())
+    }
+}
+
+impl Serialize for VersionRequirement {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let res = self.to_string();
+        serializer.serialize_str(&res)
     }
 }
 
