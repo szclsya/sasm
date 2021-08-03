@@ -411,7 +411,7 @@ mod test {
         ];
 
         for (pos, e) in source.iter().enumerate() {
-            assert_eq!(PkgVersion::from(e).unwrap(), result[pos]);
+            assert_eq!(PkgVersion::try_from(*e).unwrap(), result[pos]);
         }
     }
 
@@ -450,13 +450,13 @@ mod test {
             println!("Comparing {} vs {}", e.0, e.2);
             println!(
                 "{:#?} vs {:#?}",
-                PkgVersion::from(e.0).unwrap(),
-                PkgVersion::from(e.2).unwrap()
+                PkgVersion::try_from(e.0).unwrap(),
+                PkgVersion::try_from(e.2).unwrap()
             );
             assert_eq!(
-                PkgVersion::from(e.0)
+                PkgVersion::try_from(e.0)
                     .unwrap()
-                    .cmp(&PkgVersion::from(e.2).unwrap()),
+                    .cmp(&PkgVersion::try_from(e.2).unwrap()),
                 e.1
             );
         }
@@ -467,8 +467,8 @@ mod test {
         let source = vec![("1.1+git2021", "1.1+git2021")];
         for e in &source {
             assert_eq!(
-                PkgVersion::from(e.0).unwrap(),
-                PkgVersion::from(e.1).unwrap()
+                PkgVersion::try_from(e.0).unwrap(),
+                PkgVersion::try_from(e.1).unwrap()
             );
         }
     }
