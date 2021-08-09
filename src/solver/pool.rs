@@ -217,7 +217,8 @@ impl PackagePool {
 
 #[cfg(test)]
 mod test {
-    use super::super::version::{PkgVersion, VersionRequirement};
+    use crate::types::{PkgVersion, VersionRequirement, PkgMeta, Checksum};
+    use std::convert::TryFrom;
     use super::*;
 
     #[test]
@@ -225,7 +226,7 @@ mod test {
         let mut pool = PackagePool::new();
         let a_id = pool.add(PkgMeta {
             name: "a".to_string(),
-            version: PkgVersion::from("1").unwrap(),
+            version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "c".to_string(),
                 VersionRequirement {
@@ -240,10 +241,15 @@ mod test {
                     upper_bond: None,
                 },
             )],
+            conflicts: Vec::new(),
+            install_size: 0,
+            url: String::new(),
+            size: 0,
+            checksum: Checksum::from_sha256_str(&str::repeat("a", 64)).unwrap(),
         });
         let b_id = pool.add(PkgMeta {
             name: "b".to_string(),
-            version: PkgVersion::from("1").unwrap(),
+            version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "a".to_string(),
                 VersionRequirement {
@@ -252,10 +258,15 @@ mod test {
                 },
             )],
             breaks: Vec::new(),
+            conflicts: Vec::new(),
+            install_size: 0,
+            url: String::new(),
+            size: 0,
+            checksum: Checksum::from_sha256_str(&str::repeat("a", 64)).unwrap(),
         });
         let c_id = pool.add(PkgMeta {
             name: "c".to_string(),
-            version: PkgVersion::from("1").unwrap(),
+            version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "b".to_string(),
                 VersionRequirement {
@@ -264,10 +275,15 @@ mod test {
                 },
             )],
             breaks: Vec::new(),
+            conflicts: Vec::new(),
+            install_size: 0,
+            url: String::new(),
+            size: 0,
+            checksum: Checksum::from_sha256_str(&str::repeat("a", 64)).unwrap(),
         });
         let e_id = pool.add(PkgMeta {
             name: "e".to_string(),
-            version: PkgVersion::from("1").unwrap(),
+            version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "b".to_string(),
                 VersionRequirement {
@@ -276,6 +292,11 @@ mod test {
                 },
             )],
             breaks: Vec::new(),
+            conflicts: Vec::new(),
+            install_size: 0,
+            url: String::new(),
+            size: 0,
+            checksum: Checksum::from_sha256_str(&str::repeat("a", 64)).unwrap(),
         });
         pool.finalize();
 
