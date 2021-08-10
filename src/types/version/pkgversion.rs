@@ -1,6 +1,11 @@
 use anyhow::{bail, format_err, Result};
 use lazy_static::lazy_static;
-use nom::{character::complete::*, error::ErrorKind, IResult, InputTakeAtPosition};
+use nom::{
+    character::complete::*,
+    error::{context, ErrorKind},
+    sequence::*,
+    IResult, InputTakeAtPosition,
+};
 use regex::Regex;
 use serde::{Deserialize, Serialize, Serializer};
 use std::cmp::Ordering;
@@ -31,23 +36,26 @@ fn upstream_version(i: &str) -> IResult<&str, &str> {
     i.split_at_position1_complete(|item| !is_upstream_version_char(item), ErrorKind::Char)
 }
 
+/// The standard AOSC package version parser
+/// See more at https://wiki.aosc.io/developer/packaging/package-styling-manual/#versioning-variables
 fn standard_parse_version(i: &str) -> IResult<&str, PkgVersion> {
-    let (i, epoch) =
-        match nom::sequence::pair::<_, _, _, nom::error::Error<&str>, _, _>(digit1, char(':'))(i) {
-            Ok((i, (epoch, _))) => (i, epoch.parse().unwrap()),
-            Err(_) => (i, 0),
-        };
-    let (i, upstream_version) = upstream_version(i)?;
-    let (i, revision) = match i.len() {
-        0 => (i, 0),
-        _ => {
-            let (i, (_, revision)) = nom::sequence::pair(char('-'), digit1)(i)?;
-            let revision = revision.parse().unwrap();
-            (i, revision)
-        }
+    let (i, epoch) = match context(
+        "parsing epoch",
+        pair::<_, _, _, nom::error::Error<&str>, _, _>(digit1, char(':')),
+    )(i)
+    {
+        Ok((i, (epoch, _))) => (i, epoch.parse().unwrap()),
+        Err(_) => (i, 0),
     };
-    // Ensure nothing's left
-    nom::combinator::eof(i)?;
+    let (i, upstream_version) = context("parsing upstream_version", upstream_version)(i)?;
+    let (i, revision) = match context(
+        "parsing revision",
+        pair::<_, _, _, nom::error::Error<&str>, _, _>(char('-'), digit1),
+    )(i)
+    {
+        Ok((i, (_, revision))) => (i, revision.parse().unwrap()),
+        Err(_) => (i, 0),
+    };
 
     let res = PkgVersion {
         epoch,
@@ -66,15 +74,15 @@ fn alt_upstream_version(i: &str) -> IResult<&str, &str> {
     i.split_at_position1_complete(|item| !alt_is_upstream_version_char(item), ErrorKind::Char)
 }
 
+/// Alternative version parser, allowing '-' in upstream_version and assume no revision
+/// TODO: For compatibilities only. Remove me!
 fn alt_parse_version(i: &str) -> IResult<&str, PkgVersion> {
     let (i, epoch) =
-        match nom::sequence::pair::<_, _, _, nom::error::Error<&str>, _, _>(digit1, char(':'))(i) {
+        match context("parsing epoch", nom::sequence::pair::<_, _, _, nom::error::Error<&str>, _, _>(digit1, char(':')))(i) {
             Ok((i, (epoch, _))) => (i, epoch.parse().unwrap()),
             Err(_) => (i, 0),
         };
-    let (i, upstream_version) = alt_upstream_version(i)?;
-    // Ensure nothing left
-    nom::combinator::eof(i)?;
+    let (i, upstream_version) = context("parsing upstream_version", alt_upstream_version)(i)?;
 
     let res = PkgVersion {
         epoch,
@@ -85,22 +93,28 @@ fn alt_parse_version(i: &str) -> IResult<&str, PkgVersion> {
     Ok((i, res))
 }
 
+/// A public interface for parsing versions. Will try to parse it with standard first.
+/// If that doesn't work, parse it with compatible method
 pub fn parse_version(i: &str) -> IResult<&str, PkgVersion> {
-        let (i, res) = match standard_parse_version(i) {
-            Ok(res) => res,
-            Err(_) => {
-                use crate::warn;
-                warn!("{}", i);
-                alt_parse_version(i)?
-            }
-        };
-        Ok((i, res ))
+    let (i, res) = match context("parsing PkgVersion", standard_parse_version)(i) {
+        Ok(res) => res,
+        Err(_) => {
+            use crate::warn;
+            warn!(
+                "Version {} cannot be parsed with standard, trying compatible mode",
+                i
+            );
+            context("parsing PkgVersion with compatible mode", alt_parse_version)(i)?
+        }
+    };
+    eprintln!("{}", i);
+    Ok((i, res))
 }
 
 impl TryFrom<&str> for PkgVersion {
     type Error = anyhow::Error;
     fn try_from(s: &str) -> Result<Self> {
-        let (_, res ) = parse_version(s).map_err(|e| format_err!("Malformed version: {}", e))?;
+        let (_, res) = parse_version(s).map_err(|e| format_err!("Malformed version: {}", e))?;
         Ok(res)
     }
 }
@@ -304,6 +318,65 @@ mod test {
 
         for (pos, e) in source.iter().enumerate() {
             assert_eq!(PkgVersion::try_from(*e).unwrap(), result[pos]);
+        }
+    }
+
+    use std::cmp::Ordering::*;
+    #[test]
+    fn pkg_ver_ord() {
+        let source = vec![
+            ("1.1.1", Less, "1.1.2"),
+            ("1b", Greater, "1a"),
+            ("1~~", Less, "1~~a"),
+            ("1~~a", Less, "1~"),
+            ("1", Less, "1.1"),
+            ("1.0", Less, "1.1"),
+            ("1.2", Less, "1.11"),
+            ("1.0-1", Less, "1.1"),
+            ("1.0-1", Less, "1.0-12"),
+            // make them different for sorting
+            ("1:1.0-0", Equal, "1:1.0"),
+            ("1.0", Equal, "1.0"),
+            ("1.0-1", Equal, "1.0-1"),
+            ("1:1.0-1", Equal, "1:1.0-1"),
+            ("1:1.0", Equal, "1:1.0"),
+            ("1.0-1", Less, "1.0-2"),
+            //("1.0final-5sarge1", Greater, "1.0final-5"),
+            ("1.0final-5", Greater, "1.0a7-2"),
+            ("0.9.2-5", Less, "0.9.2+cvs.1.0.dev.2004.07.28-1"),
+            ("1:500", Less, "1:5000"),
+            ("100:500", Greater, "11:5000"),
+            ("1.0.4-2", Greater, "1.0pre7-2"),
+            ("1.5~rc1", Less, "1.5"),
+            ("1.5~rc1", Less, "1.5+1"),
+            ("1.5~rc1", Less, "1.5~rc2"),
+            ("1.5~rc1", Greater, "1.5~dev0"),
+        ];
+
+        for e in source {
+            println!("Comparing {} vs {}", e.0, e.2);
+            println!(
+                "{:#?} vs {:#?}",
+                PkgVersion::try_from(e.0).unwrap(),
+                PkgVersion::try_from(e.2).unwrap()
+            );
+            assert_eq!(
+                PkgVersion::try_from(e.0)
+                    .unwrap()
+                    .cmp(&PkgVersion::try_from(e.2).unwrap()),
+                e.1
+            );
+        }
+    }
+
+    #[test]
+    fn pkg_ver_eq() {
+        let source = vec![("1.1+git2021", "1.1+git2021")];
+        for e in &source {
+            assert_eq!(
+                PkgVersion::try_from(e.0).unwrap(),
+                PkgVersion::try_from(e.1).unwrap()
+            );
         }
     }
 }

@@ -1,7 +1,8 @@
 use super::{parse_version, PkgVersion};
 use anyhow::{bail, format_err, Result};
-use nom::{branch::alt, bytes::complete::tag, IResult, character::complete::*};
+use nom::{branch::alt, bytes::complete::tag, character::complete::*, error::context, IResult};
 use serde::{Deserialize, Serialize, Serializer};
+use std::cmp::Ordering::*;
 use std::convert::TryFrom;
 use std::fmt;
 
@@ -21,6 +22,59 @@ impl VersionRequirement {
         }
     }
 
+    /// Create a new VersionRequirment that satisfies both original requirements
+    pub fn combine(&self, other: &VersionRequirement) -> Result<VersionRequirement> {
+        let mut new = self.clone();
+        if self.lower_bond.is_none() && other.lower_bond.is_some() {
+            new.lower_bond = other.lower_bond.clone();
+        } else if self.lower_bond.is_some() && other.lower_bond.is_some() {
+            let this = self.lower_bond.as_ref().unwrap();
+            let other = other.lower_bond.as_ref().unwrap();
+            if this.0 < other.0 || (this.0 == other.0 && this.1 && !other.1) {
+                // Either other is stricter than this (higher lower-bond),
+                // or same bond but other is not inclusive
+                new.lower_bond = Some(other.clone());
+            }
+        }
+
+        if self.upper_bond.is_none() && other.upper_bond.is_some() {
+            new.upper_bond = other.upper_bond.clone();
+        } else if self.upper_bond.is_some() && other.upper_bond.is_some() {
+            let this = self.upper_bond.as_ref().unwrap();
+            let other = other.upper_bond.as_ref().unwrap();
+            if this.0 > other.0 || (this.0 == other.0 && this.1 && !other.1) {
+                // Either other is stricter than this (lower upper-bond),
+                // or same bond but other is not inclusive
+                new.upper_bond = Some(other.clone());
+            }
+        }
+
+        if !new.valid() {
+            bail!("Cannot merge version requirements {} and {}", self, other);
+        }
+
+        Ok(new)
+    }
+
+    /// Validate if this VersionRequirment can be satisfied for some PkgVersion
+    pub fn valid(&self) -> bool {
+        if self.lower_bond.is_some() && self.upper_bond.is_some() {
+            let lower = self.lower_bond.as_ref().unwrap();
+            let upper = self.upper_bond.as_ref().unwrap();
+            match lower.0.cmp(&upper.0) {
+                Greater => false,
+                Equal => {
+                    // must be both inclusive to be valid
+                    lower.1 && upper.1
+                }
+                Less => true,
+            }
+        } else {
+            true
+        }
+    }
+
+    /// Check if a PkgVersion satisfies this VersionRequirement
     pub fn within(&self, ver: &PkgVersion) -> bool {
         if let Some(lower) = &self.lower_bond {
             // If inclusive
@@ -48,10 +102,14 @@ impl VersionRequirement {
     }
 }
 
+/// Use `nom` to parse a VersionRequirement string
 pub fn parse_version_requirement(i: &str) -> IResult<&str, VersionRequirement> {
-    let (i, compare) = alt((tag(">="), tag("<="), tag("="), tag(">"), tag("<")))(i)?;
+    let (i, compare) = context(
+        "parsing compare literal",
+        alt((tag(">="), tag("<="), tag("="), tag(">"), tag("<"))),
+    )(i)?;
     let (i, _) = space0(i)?;
-    let (i, ver) = parse_version(i)?;
+    let (i, ver) = context("parsing version in VersionRequirement", parse_version)(i)?;
     let mut res = VersionRequirement::default();
     match compare {
         ">" => {
@@ -72,7 +130,6 @@ pub fn parse_version_requirement(i: &str) -> IResult<&str, VersionRequirement> {
         }
         _ => panic!(),
     }
-    nom::combinator::eof(i)?;
 
     Ok((i, res))
 }
@@ -86,10 +143,7 @@ impl TryFrom<&str> for VersionRequirement {
         }
         let (_, ver_req) =
             parse_version_requirement(s).map_err(|e| format_err!("Malformed version: {}", e))?;
-        if ver_req.lower_bond.is_some()
-            && ver_req.upper_bond.is_some()
-            && ver_req.lower_bond > ver_req.upper_bond
-        {
+        if !ver_req.valid() {
             bail!("Failed to parse version requirement: lower bond is greater than upper bond")
         }
         Ok(ver_req)
@@ -143,63 +197,58 @@ impl Serialize for VersionRequirement {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::cmp::Ordering::*;
-
     #[test]
-    fn pkg_ver_ord() {
-        let source = vec![
-            ("1.1.1", Less, "1.1.2"),
-            ("1b", Greater, "1a"),
-            ("1~~", Less, "1~~a"),
-            ("1~~a", Less, "1~"),
-            ("1", Less, "1.1"),
-            ("1.0", Less, "1.1"),
-            ("1.2", Less, "1.11"),
-            ("1.0-1", Less, "1.1"),
-            ("1.0-1", Less, "1.0-12"),
-            // make them different for sorting
-            ("1:1.0-0", Equal, "1:1.0"),
-            ("1.0", Equal, "1.0"),
-            ("1.0-1", Equal, "1.0-1"),
-            ("1:1.0-1", Equal, "1:1.0-1"),
-            ("1:1.0", Equal, "1:1.0"),
-            ("1.0-1", Less, "1.0-2"),
-            //("1.0final-5sarge1", Greater, "1.0final-5"),
-            ("1.0final-5", Greater, "1.0a7-2"),
-            ("0.9.2-5", Less, "0.9.2+cvs.1.0.dev.2004.07.28-1"),
-            ("1:500", Less, "1:5000"),
-            ("100:500", Greater, "11:5000"),
-            ("1.0.4-2", Greater, "1.0pre7-2"),
-            ("1.5~rc1", Less, "1.5"),
-            ("1.5~rc1", Less, "1.5+1"),
-            ("1.5~rc1", Less, "1.5~rc2"),
-            ("1.5~rc1", Greater, "1.5~dev0"),
+    fn merge_ver_rq() {
+        let tests = vec![
+            (
+                VersionRequirement::default(),
+                VersionRequirement::default(),
+                VersionRequirement::default(),
+            ),
+            (
+                VersionRequirement::default(),
+                VersionRequirement::try_from(">1").unwrap(),
+                VersionRequirement::try_from(">1").unwrap(),
+            ),
+            (
+                VersionRequirement::try_from(">1").unwrap(),
+                VersionRequirement::try_from(">=1").unwrap(),
+                VersionRequirement::try_from(">1").unwrap(),
+            ),
+            (
+                VersionRequirement::try_from(">1").unwrap(),
+                VersionRequirement::try_from(">2").unwrap(),
+                VersionRequirement::try_from(">2").unwrap(),
+            ),
+            (
+                VersionRequirement::try_from(">2").unwrap(),
+                VersionRequirement::try_from(">1").unwrap(),
+                VersionRequirement::try_from(">2").unwrap(),
+            ),
+            (
+                VersionRequirement::try_from(">1").unwrap(),
+                VersionRequirement::try_from("<=2").unwrap(),
+                VersionRequirement {
+                    lower_bond: Some((PkgVersion::try_from("1").unwrap(), false)),
+                    upper_bond: Some((PkgVersion::try_from("2").unwrap(), true)),
+                },
+            ),
         ];
 
-        for e in source {
-            println!("Comparing {} vs {}", e.0, e.2);
-            println!(
-                "{:#?} vs {:#?}",
-                PkgVersion::try_from(e.0).unwrap(),
-                PkgVersion::try_from(e.2).unwrap()
-            );
-            assert_eq!(
-                PkgVersion::try_from(e.0)
-                    .unwrap()
-                    .cmp(&PkgVersion::try_from(e.2).unwrap()),
-                e.1
-            );
+        for t in tests {
+            assert_eq!(t.0.combine(&t.1).unwrap(), t.2);
         }
     }
 
     #[test]
-    fn pkg_ver_eq() {
-        let source = vec![("1.1+git2021", "1.1+git2021")];
-        for e in &source {
-            assert_eq!(
-                PkgVersion::try_from(e.0).unwrap(),
-                PkgVersion::try_from(e.1).unwrap()
-            );
+    fn merge_ver_fail() {
+        let tests = vec![(
+            VersionRequirement::try_from(">1").unwrap(),
+            VersionRequirement::try_from("<1").unwrap(),
+        )];
+
+        for t in tests {
+            assert_eq!(t.0.combine(&t.1).is_ok(), false);
         }
     }
 }

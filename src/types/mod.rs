@@ -4,7 +4,7 @@ mod version;
 
 pub use action::PkgActions;
 pub use checksum::Checksum;
-pub use version::{PkgVersion, VersionRequirement};
+pub use version::{parse_version, parse_version_requirement, PkgVersion, VersionRequirement};
 
 use serde::Deserialize;
 
