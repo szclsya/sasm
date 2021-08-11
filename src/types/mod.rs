@@ -1,5 +1,6 @@
 mod action;
 mod checksum;
+pub mod config;
 mod version;
 
 pub use action::PkgActions;

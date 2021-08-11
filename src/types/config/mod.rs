@@ -1,4 +1,5 @@
-use crate::types::VersionRequirement;
+mod wishlist;
+pub use wishlist::{PkgRequest, Wishlist};
 
 use clap::Clap;
 use serde::{Deserialize, Serialize};
@@ -9,7 +10,7 @@ pub struct Config {
     pub arch: String,
     pub purge_on_remove: bool,
     pub repo: HashMap<String, RepoConfig>,
-    pub wishlist: HashMap<String, VersionRequirement>,
+    pub wishlist: PathBuf,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -32,4 +33,17 @@ pub struct Opts {
 }
 
 #[derive(Clap)]
-pub enum SubCmd {}
+pub enum SubCmd {
+    Add(AddPkg),
+    Rm(RmPkg),
+}
+
+#[derive(Clap)]
+pub struct AddPkg {
+    pub name: String,
+}
+
+#[derive(Clap)]
+pub struct RmPkg {
+    pub name: String,
+}

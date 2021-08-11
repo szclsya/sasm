@@ -77,11 +77,14 @@ fn alt_upstream_version(i: &str) -> IResult<&str, &str> {
 /// Alternative version parser, allowing '-' in upstream_version and assume no revision
 /// TODO: For compatibilities only. Remove me!
 fn alt_parse_version(i: &str) -> IResult<&str, PkgVersion> {
-    let (i, epoch) =
-        match context("parsing epoch", nom::sequence::pair::<_, _, _, nom::error::Error<&str>, _, _>(digit1, char(':')))(i) {
-            Ok((i, (epoch, _))) => (i, epoch.parse().unwrap()),
-            Err(_) => (i, 0),
-        };
+    let (i, epoch) = match context(
+        "parsing epoch",
+        nom::sequence::pair::<_, _, _, nom::error::Error<&str>, _, _>(digit1, char(':')),
+    )(i)
+    {
+        Ok((i, (epoch, _))) => (i, epoch.parse().unwrap()),
+        Err(_) => (i, 0),
+    };
     let (i, upstream_version) = context("parsing upstream_version", alt_upstream_version)(i)?;
 
     let res = PkgVersion {
@@ -107,7 +110,6 @@ pub fn parse_version(i: &str) -> IResult<&str, PkgVersion> {
             context("parsing PkgVersion with compatible mode", alt_parse_version)(i)?
         }
     };
-    eprintln!("{}", i);
     Ok((i, res))
 }
 

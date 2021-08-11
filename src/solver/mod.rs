@@ -4,11 +4,13 @@ mod incompatible;
 mod pool;
 mod sort;
 
-use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
+use crate::types::{
+    config::Wishlist,
+    PkgMeta, PkgVersion
+};
 use crate::warn;
 use anyhow::{bail, format_err, Context, Result};
 use pool::PackagePool;
-use std::collections::HashMap;
 use varisat::{lit::Lit, ExtendFormula};
 
 pub struct Solver {
@@ -26,27 +28,24 @@ impl Solver {
         self.pool.finalize();
     }
 
-    pub fn install(
-        &self,
-        to_install: HashMap<String, VersionRequirement>,
-    ) -> Result<Vec<&PkgMeta>> {
+    pub fn install(&self, wishlist: &Wishlist) -> Result<Vec<&PkgMeta>> {
         let mut formula = self.pool.gen_formula();
         // Add requested packages to formula
         let mut ids = Vec::new();
-        for (name, ver_req) in to_install {
-            let choices: Vec<(usize, PkgVersion)> = match self.pool.pkg_name_to_ids(&name) {
+        for req in wishlist.get_pkg_requests() {
+            let choices: Vec<(usize, PkgVersion)> = match self.pool.pkg_name_to_ids(&req.name) {
                 Some(pkgs) => pkgs
                     .iter()
                     .cloned()
-                    .filter(|(_, ver)| ver_req.within(ver))
+                    .filter(|(_, ver)| req.version.within(ver))
                     .collect(),
                 None => {
-                    bail!("Package {} not found", &name);
+                    bail!("Package {} not found", &req.name);
                 }
             };
             let id = choices
                 .get(0)
-                .ok_or_else(|| format_err!("No suitable version for {}", &name))?;
+                .ok_or_else(|| format_err!("No suitable version for {}", &req.name))?;
             formula.add_clause(&[Lit::from_dimacs(id.0 as isize)]);
             ids.push(id.0);
         }

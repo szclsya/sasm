@@ -1,16 +1,19 @@
 mod cli;
-mod config;
 mod executor;
 mod repo;
 mod solver;
 mod types;
-use config::{Config, Opts};
+use types::config::{Config, Opts, SubCmd, Wishlist};
 
 use anyhow::{Context, Result};
 use clap::Clap;
 use dialoguer::Confirm;
 use lazy_static::lazy_static;
-use std::{fs::File, io::Read};
+use std::{
+    fs::{File, OpenOptions},
+    io::Read,
+    os::unix::fs::FileExt,
+};
 
 // Initialize writer
 lazy_static! {
@@ -35,6 +38,9 @@ async fn try_main() -> Result<()> {
     // Initial setup
     let opts: Opts = Opts::parse();
     let config_path = opts.root.join(&opts.config);
+    let mut config_root = config_path.canonicalize()?;
+    config_root.pop();
+
     let mut config_file = File::open(&config_path).context(format!(
         "Failed to open config file at {}",
         config_path.display()
@@ -45,6 +51,42 @@ async fn try_main() -> Result<()> {
         .context("Failed to read config file")?;
     let config: Config = toml::from_str(&data).context("Failed to parse config file")?;
 
+    // Read wishlist
+    let wishlist_path = if config.wishlist.is_relative() {
+        config_root.join(&config.wishlist)
+    } else {
+        config.wishlist.clone()
+    };
+    let mut wishlist = Wishlist::from_file(&wishlist_path)?;
+
+    let mut wishlist_modified = false;
+    match opts.subcmd {
+        None => fullfill_wishs(&config, &opts, &wishlist).await?,
+        Some(subcmd) => {
+            wishlist_modified = fullfill_subcmd(&config, subcmd, &mut wishlist)?;
+        }
+    }
+
+    // Write back config
+    if wishlist_modified {
+        let new_wishlist = wishlist.export();
+        let wishlist_file = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .open(&wishlist_path)?;
+        wishlist_file.set_len(0)?;
+        wishlist_file
+            .write_all_at(&new_wishlist.into_bytes(), 0)
+            .context(format!(
+                "Failed to write to wishlist file at {}",
+                wishlist_path.display()
+            ))?;
+    }
+
+    Ok(())
+}
+
+async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Result<()> {
     // May the work begin!
     warn!("apm is still in early alpha stage. DO NOT use me on production systems!");
     info!("Synchronizing package databases...");
@@ -60,7 +102,7 @@ async fn try_main() -> Result<()> {
     solver.finalize();
 
     info!("Resolving dependencies...");
-    let res = solver.install(config.wishlist)?;
+    let res = solver.install(wishlist)?;
     // Translating result to list of actions
     let root = opts.root.clone();
     let machine_status = executor::MachineStatus::new(&root)?;
@@ -82,4 +124,21 @@ async fn try_main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn fullfill_subcmd(config: &Config, subcmd: SubCmd, wishlist: &mut Wishlist) -> Result<bool> {
+    match subcmd {
+        SubCmd::Add(add) => {
+            wishlist.add(&add.name)?;
+            success!("Package {} added to wishlist", &add.name);
+            info!("To apply changes, re-run apm");
+            Ok(true)
+        }
+        SubCmd::Rm(rm) => {
+            wishlist.remove(&rm.name)?;
+            success!("Package {} removed from wishlist", &rm.name);
+            info!("To apply changes, re-run apm");
+            Ok(true)
+        }
+    }
 }

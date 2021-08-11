@@ -217,9 +217,9 @@ impl PackagePool {
 
 #[cfg(test)]
 mod test {
-    use crate::types::{PkgVersion, VersionRequirement, PkgMeta, Checksum};
-    use std::convert::TryFrom;
     use super::*;
+    use crate::types::{Checksum, PkgMeta, PkgVersion, VersionRequirement};
+    use std::convert::TryFrom;
 
     #[test]
     fn trivial_pool() {

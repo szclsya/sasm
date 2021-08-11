@@ -165,9 +165,7 @@ impl fmt::Display for VersionRequirement {
         if let Some(upper) = &self.upper_bond {
             // Add comma
             if written {
-                write!(f, ",")?;
-            } else {
-                written = true;
+                write!(f, ", ")?;
             }
             // If inclusive
             if upper.1 {
@@ -175,10 +173,6 @@ impl fmt::Display for VersionRequirement {
             } else {
                 write!(f, "<{}", upper.0)?;
             }
-        }
-        // No version requirement
-        if !written {
-            write!(f, "any")?;
         }
         Ok(())
     }
