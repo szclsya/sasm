@@ -9,6 +9,7 @@ pub async fn execute_pkg_actions(
     mut actions: PkgActions,
     root: &Path,
     downloader: &Downloader,
+    unpack_only: bool,
 ) -> Result<()> {
     // Download packages
     let download_info: Vec<DownloadJob> = actions
@@ -53,17 +54,26 @@ pub async fn execute_pkg_actions(
         cmd.append(&mut actions.remove);
         dpkg_run(&cmd, root).context("Remove packages failed")?;
     }
-    // Configure stuff
-    if !actions.configure.is_empty() {
-        let mut cmd = vec!["--configure".to_string()];
-        cmd.append(&mut actions.configure);
-        dpkg_run(&cmd, root).context("Configure packages failed")?;
-    }
-    // Install stuff
-    if !deb_paths.is_empty() {
-        let mut cmd = vec!["--install".to_string()];
-        cmd.append(&mut deb_paths);
-        dpkg_run(&cmd, root).context("Install packages failed")?;
+    if unpack_only {
+        // Install stuff
+        if !deb_paths.is_empty() {
+            let mut cmd = vec!["--unpack".to_string()];
+            cmd.append(&mut deb_paths);
+            dpkg_run(&cmd, root).context("Unpack packages failed")?;
+        }
+    } else {
+        // Configure stuff
+        if !actions.configure.is_empty() {
+            let mut cmd = vec!["--configure".to_string()];
+            cmd.append(&mut actions.configure);
+            dpkg_run(&cmd, root).context("Configure packages failed")?;
+        }
+        // Install stuff
+        if !deb_paths.is_empty() {
+            let mut cmd = vec!["--install".to_string()];
+            cmd.append(&mut deb_paths);
+            dpkg_run(&cmd, root).context("Install packages failed")?;
+        }
     }
 
     Ok(())

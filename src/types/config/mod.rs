@@ -27,6 +27,8 @@ pub struct Opts {
     pub root: PathBuf,
     #[clap(long, default_value = "etc/apm/")]
     pub config_root: PathBuf,
+    #[clap(long)]
+    pub unpack_only: bool,
     #[clap(subcommand)]
     pub subcmd: Option<SubCmd>,
 }

@@ -37,7 +37,7 @@ async fn main() {
 async fn try_main() -> Result<()> {
     // Initial setup
     let opts: Opts = Opts::parse();
-    let config_root = opts.root.join(&opts.config_root).canonicalize()?;
+    let config_root = opts.root.join(&opts.config_root).canonicalize().context("Failed to find config_root")?;
     if !config_root.is_dir() {
         bail!("Config root does not exist or is not a directory at {}", config_root.display());
     }
@@ -118,7 +118,7 @@ async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Re
             .interact()?
         {
             // Run it!
-            executor::dpkg::execute_pkg_actions(actions, &opts.root, &downloader).await?;
+            executor::dpkg::execute_pkg_actions(actions, &opts.root, &downloader, opts.unpack_only).await?;
         } else {
             std::process::exit(2);
         }
