@@ -4,10 +4,7 @@ mod incompatible;
 mod pool;
 mod sort;
 
-use crate::types::{
-    config::Wishlist,
-    PkgMeta, PkgVersion
-};
+use crate::types::{config::Wishlist, PkgMeta, PkgVersion};
 use crate::warn;
 use anyhow::{bail, format_err, Context, Result};
 use pool::PackagePool;

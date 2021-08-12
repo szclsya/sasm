@@ -5,7 +5,7 @@ mod solver;
 mod types;
 use types::config::{Config, Opts, SubCmd, Wishlist};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::Clap;
 use dialoguer::Confirm;
 use lazy_static::lazy_static;
@@ -37,10 +37,15 @@ async fn main() {
 async fn try_main() -> Result<()> {
     // Initial setup
     let opts: Opts = Opts::parse();
-    let config_path = opts.root.join(&opts.config);
-    let mut config_root = config_path.canonicalize()?;
-    config_root.pop();
+    let config_root = opts.root.join(&opts.config_root).canonicalize()?;
+    if !config_root.is_dir() {
+        bail!("Config root does not exist or is not a directory at {}", config_root.display());
+    }
 
+    let config_path = config_root.join("apm.toml");
+    let wishlist_path = config_root.join("wishlist");
+
+    // Read config
     let mut config_file = File::open(&config_path).context(format!(
         "Failed to open config file at {}",
         config_path.display()
@@ -52,13 +57,9 @@ async fn try_main() -> Result<()> {
     let config: Config = toml::from_str(&data).context("Failed to parse config file")?;
 
     // Read wishlist
-    let wishlist_path = if config.wishlist.is_relative() {
-        config_root.join(&config.wishlist)
-    } else {
-        config.wishlist.clone()
-    };
     let mut wishlist = Wishlist::from_file(&wishlist_path)?;
 
+    // Do stuff 
     let mut wishlist_modified = false;
     match opts.subcmd {
         None => fullfill_wishs(&config, &opts, &wishlist).await?,
@@ -67,7 +68,7 @@ async fn try_main() -> Result<()> {
         }
     }
 
-    // Write back config
+    // Write back wishlist, if the operations involves modifying it
     if wishlist_modified {
         let new_wishlist = wishlist.export();
         let wishlist_file = OpenOptions::new()
@@ -126,7 +127,7 @@ async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Re
     Ok(())
 }
 
-fn fullfill_subcmd(config: &Config, subcmd: SubCmd, wishlist: &mut Wishlist) -> Result<bool> {
+fn fullfill_subcmd(_config: &Config, subcmd: SubCmd, wishlist: &mut Wishlist) -> Result<bool> {
     match subcmd {
         SubCmd::Add(add) => {
             wishlist.add(&add.name)?;

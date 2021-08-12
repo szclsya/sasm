@@ -1,5 +1,5 @@
-use crate::types::{parse_version_requirement, VersionRequirement};
 use crate::error;
+use crate::types::{parse_version_requirement, VersionRequirement};
 
 use anyhow::{bail, Result};
 use nom::{
@@ -154,7 +154,11 @@ fn parse_wishlist_lines(reader: impl BufRead) -> Result<Vec<WishlistLine>> {
             }
             Err(e) => {
                 errors += 1;
-                error!("Failed to parse wishlist at line {}: {}\n", no, e.to_string());
+                error!(
+                    "Failed to parse wishlist at line {}: {}\n",
+                    no,
+                    e.to_string()
+                );
             }
         };
     }

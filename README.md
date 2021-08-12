@@ -13,7 +13,11 @@ install -Dm755 target/release/apm /usr/local/bin/apm
 ```
 
 ## Try it out
-Currently, apm accepts a rudimentary config file:
+apm accepts a config folder containing these files:
++ `apm.toml`: main config file folder
++ `wishlist`: a list of desired packages
+
+Here's a basic example of `apm.toml`:
 ```toml
 arch = "amd64"
 # Whether to purge package when it's no longer needed
@@ -24,16 +28,23 @@ purge_on_remove = true
 url = "https://repo.aosc.io/debs"
 distribution = "stable"
 components = ["main"]
+# GPG public key for this repository
 certs = ["/path/to/publickey.asc"]
-
-[wishlist]
-# Add packages and version you want here.
-# Specifying "any" then apm will try to use the latest available package
-# For package names including '+' and '.', double quote the package name
-plasma-desktop = "any"
 ```
 
-Put this file at `/etc/apm/config.toml` and run. apm will download dbs from the specified mirror and find a feasible package installation list, or spill out Unsolvable.
+And here's an example of `wishlist`:
+```
+kernel-base
+util-base
+shadow
+dpkg
+vim
+sudo
+# You can specify the range of version you wish
+alacritty (>0.7, <=1.0)
+```
+
+Put these files at `/etc/apm/` and run. apm will download dbs from the specified mirror and find a feasible package installation list, or spill out Unsolvable.
 
 ## Solver
 apm utilizes [varisat](https://github.com/jix/varisat), a very fast, CDCL based SAT solver. Currently, solver is able to enroll all dependency rules (like package dependencies and breaks) in the db into the solver and try to find a feasible solution, and then try to optimize the result.

@@ -10,7 +10,6 @@ pub struct Config {
     pub arch: String,
     pub purge_on_remove: bool,
     pub repo: HashMap<String, RepoConfig>,
-    pub wishlist: PathBuf,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -26,8 +25,8 @@ pub struct RepoConfig {
 pub struct Opts {
     #[clap(long, default_value = "/")]
     pub root: PathBuf,
-    #[clap(short, long, default_value = "etc/apm/config.toml")]
-    pub config: String,
+    #[clap(long, default_value = "etc/apm/")]
+    pub config_root: PathBuf,
     #[clap(subcommand)]
     pub subcmd: Option<SubCmd>,
 }
