@@ -2,7 +2,7 @@ pub mod download;
 pub mod dpkg;
 mod types;
 
-use crate::types::{PkgActions, PkgMeta};
+use crate::types::{PkgActions, PkgInstallAction, PkgMeta};
 pub use types::{PkgState, PkgStatus};
 
 use anyhow::{Context, Result};
@@ -20,10 +20,14 @@ pub struct MachineStatus {
 impl MachineStatus {
     pub fn new(root: &Path) -> Result<Self> {
         let mut res = HashMap::new();
-        // Load dpkg's status db
+        // Load or create dpkg's status db
         let stauts_file_path = root.join("var/lib/dpkg/status");
-        let status_file =
-            fs::File::open(&stauts_file_path).context("Failed to open dpkg status file")?;
+        let status_file = if stauts_file_path.is_file() {
+            fs::File::open(&stauts_file_path).context("Failed to open dpkg status file")?
+        } else {
+            fs::File::create(&stauts_file_path).context("Failed to initialize dpkg status file")?
+        };
+
         let mut buf_parse = BufParse::new(status_file, 4096);
         while let Some(result) = buf_parse.try_next().unwrap() {
             match result {
@@ -52,11 +56,13 @@ impl MachineStatus {
             if !old_pkgs.contains_key(&newpkg.name) {
                 // New one! Install it
                 res.install.push((
-                    newpkg.name.clone(),
-                    newpkg.url.clone(),
-                    newpkg.size,
-                    newpkg.checksum.clone(),
-                    newpkg.version.clone(),
+                    PkgInstallAction {
+                        name: newpkg.name.clone(),
+                        url: newpkg.url.clone(),
+                        size: newpkg.size,
+                        checksum: newpkg.checksum.clone(),
+                        version: newpkg.version.clone(),
+                    },
                     None,
                 ));
             } else {
@@ -67,11 +73,13 @@ impl MachineStatus {
                     PkgState::NotInstalled | PkgState::ConfigFiles | PkgState::HalfInstalled => {
                         // Just install as normal
                         res.install.push((
-                            newpkg.name.clone(),
-                            newpkg.url.clone(),
-                            newpkg.size,
-                            newpkg.checksum.clone(),
-                            newpkg.version.clone(),
+                            PkgInstallAction {
+                                name: newpkg.name.clone(),
+                                url: newpkg.url.clone(),
+                                size: newpkg.size,
+                                checksum: newpkg.checksum.clone(),
+                                version: newpkg.version.clone(),
+                            },
                             None,
                         ));
                     }
@@ -80,11 +88,13 @@ impl MachineStatus {
                         //   then install the one in the wishlist
                         if oldpkg.version != newpkg.version {
                             res.install.push((
-                                newpkg.name.clone(),
-                                newpkg.url.clone(),
-                                newpkg.size,
-                                newpkg.checksum.clone(),
-                                newpkg.version.clone(),
+                                PkgInstallAction {
+                                    name: newpkg.name.clone(),
+                                    url: newpkg.url.clone(),
+                                    size: newpkg.size,
+                                    checksum: newpkg.checksum.clone(),
+                                    version: newpkg.version.clone(),
+                                },
                                 Some(oldpkg.version),
                             ));
                         }
@@ -97,11 +107,13 @@ impl MachineStatus {
                         res.configure.push(oldpkg.name.clone());
                         if oldpkg.version != newpkg.version {
                             res.install.push((
-                                newpkg.name.clone(),
-                                newpkg.url.clone(),
-                                newpkg.size,
-                                newpkg.checksum.clone(),
-                                newpkg.version.clone(),
+                                PkgInstallAction {
+                                    name: newpkg.name.clone(),
+                                    url: newpkg.url.clone(),
+                                    size: newpkg.size,
+                                    checksum: newpkg.checksum.clone(),
+                                    version: newpkg.version.clone(),
+                                },
                                 Some(oldpkg.version),
                             ));
                         }

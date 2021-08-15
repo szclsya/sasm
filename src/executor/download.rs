@@ -35,7 +35,6 @@ impl Downloader {
     }
 
     /// Download all required stuff in an async manner and show a progress bar
-    /// to_download: Vec<(URL, Option<DesiredFilename>, Option<size>, Option<Checksum>)
     pub async fn fetch(
         &self,
         mut to_download: Vec<DownloadJob>,

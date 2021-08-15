@@ -5,7 +5,7 @@ mod solver;
 mod types;
 use types::config::{Config, Opts, SubCmd, Wishlist};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use clap::Clap;
 use dialoguer::Confirm;
 use lazy_static::lazy_static;
@@ -37,9 +37,16 @@ async fn main() {
 async fn try_main() -> Result<()> {
     // Initial setup
     let opts: Opts = Opts::parse();
-    let config_root = opts.root.join(&opts.config_root).canonicalize().context("Failed to find config_root")?;
+    let config_root = opts
+        .root
+        .join(&opts.config_root)
+        .canonicalize()
+        .context("Failed to find config_root")?;
     if !config_root.is_dir() {
-        bail!("Config root does not exist or is not a directory at {}", config_root.display());
+        bail!(
+            "Config root does not exist or is not a directory at {}",
+            config_root.display()
+        );
     }
 
     let config_path = config_root.join("apm.toml");
@@ -59,7 +66,7 @@ async fn try_main() -> Result<()> {
     // Read wishlist
     let mut wishlist = Wishlist::from_file(&wishlist_path)?;
 
-    // Do stuff 
+    // Do stuff
     let mut wishlist_modified = false;
     match opts.subcmd {
         None => fullfill_wishs(&config, &opts, &wishlist).await?,
@@ -118,7 +125,7 @@ async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Re
             .interact()?
         {
             // Run it!
-            executor::dpkg::execute_pkg_actions(actions, &opts.root, &downloader, opts.unpack_only).await?;
+            executor::dpkg::execute_pkg_actions(actions, &opts.root, &downloader).await?;
         } else {
             std::process::exit(2);
         }

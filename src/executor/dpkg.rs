@@ -9,31 +9,34 @@ pub async fn execute_pkg_actions(
     mut actions: PkgActions,
     root: &Path,
     downloader: &Downloader,
-    unpack_only: bool,
 ) -> Result<()> {
     // Download packages
-    let download_info: Vec<DownloadJob> = actions
-        .install
-        .iter()
-        .map(|x| DownloadJob {
-            url: x.1.clone(),
-            filename: None,
-            size: Some(x.2),
-            checksum: Some(x.3.clone()),
-        })
-        .collect();
+    let download_jobs = get_download_jobs(&actions);
     info!("Fetching required packages...");
     let download_res = downloader
-        .fetch(download_info, &root.join("var/cache/apm/pkgs"))
+        .fetch(download_jobs, &root.join("var/cache/apm/pkgs"))
         .await
         .context("Failed to fetch packages from repository")?;
 
-    let mut deb_paths: Vec<String> = actions
+    let mut install_deb_paths: Vec<String> = actions
         .install
         .iter()
-        .map(|x| {
+        .map(|(install, _)| {
             download_res
-                .get(&x.1)
+                .get(&install.url)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string()
+        })
+        .collect();
+
+    let mut unpack_deb_paths: Vec<String> = actions
+        .unpack
+        .iter()
+        .map(|(install, _)| {
+            download_res
+                .get(&install.url)
                 .unwrap()
                 .to_str()
                 .unwrap()
@@ -54,26 +57,23 @@ pub async fn execute_pkg_actions(
         cmd.append(&mut actions.remove);
         dpkg_run(&cmd, root).context("Remove packages failed")?;
     }
-    if unpack_only {
-        // Install stuff
-        if !deb_paths.is_empty() {
-            let mut cmd = vec!["--unpack".to_string()];
-            cmd.append(&mut deb_paths);
-            dpkg_run(&cmd, root).context("Unpack packages failed")?;
-        }
-    } else {
-        // Configure stuff
-        if !actions.configure.is_empty() {
-            let mut cmd = vec!["--configure".to_string()];
-            cmd.append(&mut actions.configure);
-            dpkg_run(&cmd, root).context("Configure packages failed")?;
-        }
-        // Install stuff
-        if !deb_paths.is_empty() {
-            let mut cmd = vec!["--install".to_string()];
-            cmd.append(&mut deb_paths);
-            dpkg_run(&cmd, root).context("Install packages failed")?;
-        }
+    // Configure stuff
+    if !actions.configure.is_empty() {
+        let mut cmd = vec!["--configure".to_string()];
+        cmd.append(&mut actions.configure);
+        dpkg_run(&cmd, root).context("Configure packages failed")?;
+    }
+    // Install stuff
+    if !install_deb_paths.is_empty() {
+        let mut cmd = vec!["--install".to_string()];
+        cmd.append(&mut install_deb_paths);
+        dpkg_run(&cmd, root).context("Install packages failed")?;
+    }
+    // Unpack stuff
+    if !unpack_deb_paths.is_empty() {
+        let mut cmd = vec!["--unpack".to_string()];
+        cmd.append(&mut unpack_deb_paths);
+        dpkg_run(&cmd, root).context("Unpack packages failed")?;
     }
 
     Ok(())
@@ -103,4 +103,29 @@ fn dpkg_run<T: AsRef<std::ffi::OsStr>>(args: &[T], root: &Path) -> Result<()> {
             None => bail!("dpkg exited by signal"),
         }
     }
+}
+
+fn get_download_jobs(actions: &PkgActions) -> Vec<DownloadJob> {
+    let mut downloads: Vec<DownloadJob> = actions
+        .install
+        .iter()
+        .map(|(install, _)| DownloadJob {
+            url: install.url.clone(),
+            filename: None,
+            size: Some(install.size),
+            checksum: Some(install.checksum.clone()),
+        })
+        .collect();
+    let mut unpack_downloads = actions
+        .install
+        .iter()
+        .map(|(install, _)| DownloadJob {
+            url: install.url.clone(),
+            filename: None,
+            size: Some(install.size),
+            checksum: Some(install.checksum.clone()),
+        })
+        .collect();
+    downloads.append(&mut unpack_downloads);
+    downloads
 }

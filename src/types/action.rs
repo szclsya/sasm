@@ -2,18 +2,24 @@ use super::{Checksum, PkgVersion};
 
 #[derive(Default)]
 pub struct PkgActions {
-    /// Vec<(Name, URL, size, Checksum, ThisVersion, Option<OlderVersion>)
-    pub install: Vec<(
-        String,
-        String,
-        u64,
-        Checksum,
-        PkgVersion,
-        Option<PkgVersion>,
-    )>,
+    pub install: Vec<(PkgInstallAction, Option<PkgVersion>)>,
+    pub unpack: Vec<(PkgInstallAction, Option<PkgVersion>)>,
     pub remove: Vec<String>,
     pub purge: Vec<String>,
     pub configure: Vec<String>,
+}
+
+pub struct PkgInstallAction {
+    pub name: String,
+    pub url: String,
+    pub size: u64,
+    pub checksum: Checksum,
+    pub version: PkgVersion,
+}
+
+/// Alter PkgActions based on user configuration, system state, etc.
+pub trait PkgActionModifier {
+    fn apply(actions: &mut String);
 }
 
 impl PkgActions {
@@ -28,15 +34,13 @@ impl PkgActions {
         let to_install: Vec<String> = self
             .install
             .iter()
-            .filter_map(|pkg| {
-                let mut msg = pkg.0.to_string();
-                match &pkg.5 {
-                    Some(_) => None,
-                    None => {
-                        let ver_str = format!("({})", pkg.4);
-                        msg.push_str(&console::style(ver_str).dim().to_string());
-                        Some(msg)
-                    }
+            .filter_map(|(install, old_ver)| match old_ver {
+                Some(_) => None,
+                None => {
+                    let mut msg = install.name.to_string();
+                    let ver_str = format!("({})", install.version);
+                    msg.push_str(&console::style(ver_str).dim().to_string());
+                    Some(msg)
                 }
             })
             .collect();
@@ -45,19 +49,37 @@ impl PkgActions {
         let to_upgrade: Vec<String> = self
             .install
             .iter()
-            .filter_map(|pkg| {
-                let mut msg = pkg.0.to_string();
-                match &pkg.5 {
-                    Some(oldver) => {
-                        let ver_str = format!("({} -> {})", oldver, pkg.4);
-                        msg.push_str(&console::style(ver_str).dim().to_string());
-                        Some(msg)
-                    }
-                    None => None,
+            .filter_map(|(install, old_ver)| match old_ver {
+                Some(old_ver) => {
+                    let mut msg = install.name.to_string();
+                    let ver_str = format!("({} -> {})", old_ver, install.version);
+                    msg.push_str(&console::style(ver_str).dim().to_string());
+                    Some(msg)
                 }
+                None => None,
             })
             .collect();
         crate::WRITER.write_chunks("UPGRADE", &to_upgrade).unwrap();
+
+        let to_unpack: Vec<String> = self
+            .unpack
+            .iter()
+            .map(|(install, old_ver)| {
+                let mut msg = install.name.to_string();
+                match old_ver {
+                    Some(old_ver) => {
+                        let ver_str = format!("({} -> {})", old_ver, install.version);
+                        msg.push_str(&console::style(ver_str).dim().to_string());
+                    }
+                    None => {
+                        let ver_str = format!("({})", install.version);
+                        msg.push_str(&console::style(ver_str).dim().to_string());
+                    }
+                };
+                msg
+            })
+            .collect();
+        crate::WRITER.write_chunks("UNPACK", &to_unpack).unwrap();
 
         crate::WRITER
             .write_chunks("CONFIGURE", &self.configure)
