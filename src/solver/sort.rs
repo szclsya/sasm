@@ -5,6 +5,22 @@ use std::collections::HashMap;
 
 /// Use trajan algorithm to find out installation order of packages
 pub fn sort_pkgs(pool: &PackagePool, pkgs: &mut Vec<usize>) -> Result<()> {
+    let res = sort_pkgs_to_cycles(pool, pkgs)?;
+    pkgs.clear();
+    for mut pkgids in res {
+        if pkgids.len() == 1 {
+            pkgs.push(pkgids[0]);
+        } else {
+            // Sort via the number of dependencies
+            pkgids.sort_by_key(|id| pool.get_deps(*id).unwrap().len());
+            pkgs.append(&mut pkgids);
+        }
+    }
+
+    Ok(())
+}
+
+pub fn sort_pkgs_to_cycles(pool: &PackagePool, pkgs: &[usize]) -> Result<Vec<Vec<usize>>> {
     let mut g = DiGraph::<usize, ()>::new();
     let mut indexs: HashMap<usize, NodeIndex> = HashMap::new();
     // Add package nodes
@@ -24,16 +40,11 @@ pub fn sort_pkgs(pool: &PackagePool, pkgs: &mut Vec<usize>) -> Result<()> {
     // Find a path
     let solve_res = petgraph::algo::tarjan_scc(&g);
 
-    // Reorder pkgs
-    pkgs.clear();
-    for mut pkg_indexs in solve_res {
-        if pkg_indexs.len() == 1 {
-            pkgs.push(g[pkg_indexs[0]]);
-        } else {
-            pkg_indexs.sort_by_key(|index| pool.get_deps(g[*index]).unwrap().len());
-            pkgs.extend(pkg_indexs.into_iter().map(|index| g[index]));
-        }
+    let mut res = Vec::new();
+    for pkg_indexs in solve_res {
+        let cycle: Vec<usize> = pkg_indexs.into_iter().map(|index| g[index]).collect();
+        res.push(cycle);
     }
 
-    Ok(())
+    Ok(res)
 }

@@ -98,7 +98,7 @@ impl PackagePool {
         let mut formula = CnfFormula::new();
         // Generate rules for each individual package
         for (pos, _) in self.pkgs.iter().enumerate() {
-            let rules = self.pkg_to_rule(pos + 1);
+            let rules = self.pkg_to_rule(pos + 1, None);
             for rule in rules {
                 formula.add_clause(&rule);
             }
@@ -119,17 +119,22 @@ impl PackagePool {
     pub fn gen_subset_formula(&self, ids: &[usize]) -> CnfFormula {
         let mut formula = CnfFormula::new();
         for id in ids {
-            let rules = self.pkg_to_rule(*id);
+            let rules = self.pkg_to_rule(*id, Some(ids));
             for rule in rules {
                 formula.add_clause(&rule);
             }
         }
         // Generate conflict for different versions of the same package
         for versions in self.name_to_ids.values() {
+            let versions: Vec<usize> = versions
+                .iter()
+                .filter(|pkg| ids.contains(&pkg.0))
+                .map(|pkg| pkg.0)
+                .collect();
             if versions.len() > 1 {
                 let mut clause = Vec::new();
-                for pkg in versions {
-                    clause.push(!Lit::from_dimacs(pkg.0 as isize));
+                for pkgid in versions {
+                    clause.push(!Lit::from_dimacs(pkgid as isize));
                 }
                 formula.add_clause(&clause);
             }
@@ -137,13 +142,23 @@ impl PackagePool {
         formula
     }
 
-    fn pkg_to_rule(&self, pkgid: usize) -> Vec<Vec<Lit>> {
+    fn pkg_to_rule(&self, pkgid: usize, subset: Option<&[usize]>) -> Vec<Vec<Lit>> {
         let pkg = self.pkgs.get(pkgid - 1).unwrap();
         let mut res = Vec::new();
         // Enroll dependencies
         for dep in pkg.depends.iter() {
             let available = match self.name_to_ids.get(&dep.0) {
-                Some(d) => d,
+                Some(pkgs) => match subset {
+                    Some(ids) => {
+                        let pkgs: Vec<usize> = pkgs
+                            .iter()
+                            .filter(|(id, _)| ids.contains(id))
+                            .map(|pkg| pkg.0)
+                            .collect();
+                        pkgs
+                    }
+                    None => pkgs.iter().map(|pkg| pkg.0).collect(),
+                },
                 None => {
                     warn!("Cannot find dependency {} for {}", dep.0, pkg.name);
                     continue;
@@ -152,10 +167,10 @@ impl PackagePool {
 
             let mut clause = vec![!Lit::from_dimacs(pkgid as isize)];
 
-            for (dep_pkgid, _) in available {
-                let p = &self.pkgs[*dep_pkgid - 1];
+            for dep_pkgid in available {
+                let p = &self.pkgs[dep_pkgid - 1];
                 if dep.1.within(&p.version) {
-                    clause.push(Lit::from_dimacs(*dep_pkgid as isize));
+                    clause.push(Lit::from_dimacs(dep_pkgid as isize));
                 }
             }
 
@@ -172,18 +187,28 @@ impl PackagePool {
         // Enroll breaks
         for bk in pkg.breaks.iter() {
             let breakable = match self.name_to_ids.get(&bk.0) {
-                Some(b) => b,
+                Some(pkgs) => match subset {
+                    Some(ids) => {
+                        let pkgs: Vec<usize> = pkgs
+                            .iter()
+                            .filter(|(id, _)| ids.contains(id))
+                            .map(|pkg| pkg.0)
+                            .collect();
+                        pkgs
+                    }
+                    None => pkgs.iter().map(|pkg| pkg.0).collect(),
+                },
                 None => {
                     continue;
                 }
             };
 
-            for (bk_pkgid, _) in breakable {
-                let p = &self.pkgs[*bk_pkgid - 1];
+            for bk_pkgid in breakable {
+                let p = &self.pkgs[bk_pkgid - 1];
                 if bk.1.within(&p.version) {
                     let clause = vec![
                         !Lit::from_dimacs(pkgid as isize),
-                        !Lit::from_dimacs(*bk_pkgid as isize),
+                        !Lit::from_dimacs(bk_pkgid as isize),
                     ];
                     res.push(clause);
                 }
@@ -193,18 +218,28 @@ impl PackagePool {
         // Enroll conflicts
         for conflict in pkg.conflicts.iter() {
             let conflicable = match self.name_to_ids.get(&conflict.0) {
-                Some(c) => c,
+                Some(pkgs) => match subset {
+                    Some(ids) => {
+                        let pkgs: Vec<usize> = pkgs
+                            .iter()
+                            .filter(|(id, _)| ids.contains(id))
+                            .map(|pkg| pkg.0)
+                            .collect();
+                        pkgs
+                    }
+                    None => pkgs.iter().map(|pkg| pkg.0).collect(),
+                },
                 None => {
                     continue;
                 }
             };
 
-            for (conflict_pkgid, _) in conflicable {
-                let p = &self.pkgs[*conflict_pkgid - 1];
+            for conflict_pkgid in conflicable {
+                let p = &self.pkgs[conflict_pkgid - 1];
                 if conflict.1.within(&p.version) {
                     let clause = vec![
                         !Lit::from_dimacs(pkgid as isize),
-                        !Lit::from_dimacs(*conflict_pkgid as isize),
+                        !Lit::from_dimacs(conflict_pkgid as isize),
                     ];
                     res.push(clause);
                 }

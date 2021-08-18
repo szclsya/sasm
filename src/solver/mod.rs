@@ -5,7 +5,7 @@ mod pool;
 mod sort;
 
 use crate::types::{config::Wishlist, PkgMeta, PkgVersion};
-use crate::warn;
+use crate::{info, warn};
 use anyhow::{bail, format_err, Context, Result};
 use pool::PackagePool;
 use varisat::{lit::Lit, ExtendFormula};
@@ -63,10 +63,12 @@ impl Solver {
 
         // Improve the result to remove redundant packages
         // and select best possible packages
-        improve::improve(&self.pool, &mut res, &mut solver)?;
-        improve::reduced_upgrade(&self.pool, &mut res, &ids)?;
+        info!("Improving result...");
+        improve::upgrade(&self.pool, &mut res, &mut solver)?;
+        info!("Reducing result...");
+        improve::reduce(&self.pool, &mut res, &ids)?;
         // Sort result
-        sort::sort_pkgs(&self.pool, &mut res).unwrap();
+        sort::sort_pkgs(&self.pool, &mut res).context("Failed to sort packages")?;
 
         // Generate result
         let pkgs: Vec<&PkgMeta> = res
