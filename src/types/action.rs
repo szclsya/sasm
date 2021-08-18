@@ -19,12 +19,13 @@ pub struct PkgInstallAction {
 
 /// Alter PkgActions based on user configuration, system state, etc.
 pub trait PkgActionModifier {
-    fn apply(actions: &mut String);
+    fn apply(actions: &mut PkgActions);
 }
 
 impl PkgActions {
     pub fn is_empty(&self) -> bool {
         self.install.is_empty()
+            && self.unpack.is_empty()
             && self.remove.is_empty()
             && self.purge.is_empty()
             && self.configure.is_empty()

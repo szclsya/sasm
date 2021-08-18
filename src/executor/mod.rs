@@ -1,5 +1,6 @@
 pub mod download;
 pub mod dpkg;
+pub mod modifier;
 mod types;
 
 use crate::types::{PkgActions, PkgInstallAction, PkgMeta};
@@ -21,11 +22,20 @@ impl MachineStatus {
     pub fn new(root: &Path) -> Result<Self> {
         let mut res = HashMap::new();
         // Load or create dpkg's status db
+        let status_file_dir = root.join("var/lib/dpkg");
+        if !status_file_dir.is_dir() {
+            fs::create_dir_all(&status_file_dir).context("Failed to initialize dpkg dir")?;
+        }
         let stauts_file_path = root.join("var/lib/dpkg/status");
         let status_file = if stauts_file_path.is_file() {
             fs::File::open(&stauts_file_path).context("Failed to open dpkg status file")?
         } else {
-            fs::File::create(&stauts_file_path).context("Failed to initialize dpkg status file")?
+            fs::OpenOptions::new()
+                .create(true)
+                .read(true)
+                .write(true)
+                .open(&stauts_file_path)
+                .context("Failed to initialize dpkg status file")?
         };
 
         let mut buf_parse = BufParse::new(status_file, 4096);

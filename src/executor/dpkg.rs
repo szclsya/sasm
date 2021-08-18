@@ -117,7 +117,7 @@ fn get_download_jobs(actions: &PkgActions) -> Vec<DownloadJob> {
         })
         .collect();
     let mut unpack_downloads = actions
-        .install
+        .unpack
         .iter()
         .map(|(install, _)| DownloadJob {
             url: install.url.clone(),

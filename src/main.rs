@@ -3,7 +3,10 @@ mod executor;
 mod repo;
 mod solver;
 mod types;
-use types::config::{Config, Opts, SubCmd, Wishlist};
+use types::{
+    config::{Config, Opts, SubCmd, Wishlist},
+    PkgActionModifier,
+};
 
 use anyhow::{bail, Context, Result};
 use clap::Clap;
@@ -114,7 +117,12 @@ async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Re
     // Translating result to list of actions
     let root = opts.root.clone();
     let machine_status = executor::MachineStatus::new(&root)?;
-    let actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
+    let mut actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
+    // Generate modifiers and apply them
+    if opts.unpack_only {
+        executor::modifier::UnpackOnly::apply(&mut actions);
+    }
+
     if actions.is_empty() {
         success!("There's nothing to do, all wishes has been fulfilled!");
     } else {

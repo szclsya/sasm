@@ -3,7 +3,7 @@ mod checksum;
 pub mod config;
 mod version;
 
-pub use action::{PkgActions, PkgInstallAction};
+pub use action::{PkgActionModifier, PkgActions, PkgInstallAction};
 pub use checksum::Checksum;
 pub use version::{parse_version, parse_version_requirement, PkgVersion, VersionRequirement};
 
