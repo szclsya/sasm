@@ -238,6 +238,15 @@ async fn download_file(
     }
     f.shutdown().await?;
 
+    if let Some(len) = job.size {
+        if bar.length() != len {
+            bail!(
+                "Bad file size when downloading {}. Mirror may be syncing. Try again later.",
+                job.url
+            );
+        }
+    }
+
     // Check checksum
     if let Some(checksum) = job.checksum {
         f.seek(SeekFrom::Start(0)).await?;

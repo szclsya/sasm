@@ -63,9 +63,8 @@ impl Solver {
 
         // Improve the result to remove redundant packages
         // and select best possible packages
-        info!("Improving result...");
+        info!("Improving dependency tree...");
         improve::upgrade(&self.pool, &mut res, &mut solver)?;
-        info!("Reducing result...");
         improve::reduce(&self.pool, &mut res, &ids)?;
         // Sort result
         sort::sort_pkgs(&self.pool, &mut res).context("Failed to sort packages")?;
