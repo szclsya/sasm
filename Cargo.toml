@@ -32,3 +32,5 @@ futures = "0.3"
 tokio = { version = "1.8", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
 bytes = "1"
 reqwest = { version = "0.11" }
+# Actions modifier
+nix = "0.22"

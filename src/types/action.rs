@@ -1,6 +1,6 @@
 use super::{Checksum, PkgVersion};
 
-#[derive(Default)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct PkgActions {
     pub install: Vec<(PkgInstallAction, Option<PkgVersion>)>,
     pub unpack: Vec<(PkgInstallAction, Option<PkgVersion>)>,
@@ -9,6 +9,7 @@ pub struct PkgActions {
     pub configure: Vec<String>,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct PkgInstallAction {
     pub name: String,
     pub url: String,
@@ -19,7 +20,7 @@ pub struct PkgInstallAction {
 
 /// Alter PkgActions based on user configuration, system state, etc.
 pub trait PkgActionModifier {
-    fn apply(actions: &mut PkgActions);
+    fn apply(&self, actions: &mut PkgActions);
 }
 
 impl PkgActions {

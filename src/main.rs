@@ -120,7 +120,8 @@ async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Re
     let mut actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
     // Generate modifiers and apply them
     if opts.unpack_only {
-        executor::modifier::UnpackOnly::apply(&mut actions);
+        let modifier = executor::modifier::UnpackOnly::default();
+        modifier.apply(&mut actions);
     }
 
     if actions.is_empty() {
