@@ -73,9 +73,9 @@ pub fn gen_update_assume(pool: &PackagePool, ids: &[usize]) -> Vec<Lit> {
     for id in ids {
         if !is_best(pool, *id).unwrap() {
             // Find all newer versions of this package
-            let name = &pool.id_to_pkg(*id).unwrap().name;
+            let name = &pool.get_pkg_by_id(*id).unwrap().name;
             let pkgids: Vec<usize> = pool
-                .pkg_name_to_ids(name)
+                .get_pkgs_by_name(name)
                 .unwrap()
                 .into_iter()
                 .map(|pkg| pkg.0)
@@ -99,8 +99,8 @@ pub fn gen_update_assume(pool: &PackagePool, ids: &[usize]) -> Vec<Lit> {
 
 #[inline]
 pub fn is_best(pool: &PackagePool, id: usize) -> Option<bool> {
-    let name = &pool.id_to_pkg(id)?.name;
-    let ids = pool.pkg_name_to_ids(name)?;
+    let name = &pool.get_pkg_by_id(id)?.name;
+    let ids = pool.get_pkgs_by_name(name)?;
     if ids[0].0 != id {
         Some(false)
     } else {

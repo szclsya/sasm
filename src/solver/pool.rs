@@ -46,12 +46,12 @@ impl PackagePool {
     }
 
     #[inline]
-    pub fn pkg_name_to_ids(&self, name: &str) -> Option<Vec<(usize, PkgVersion)>> {
+    pub fn get_pkgs_by_name(&self, name: &str) -> Option<Vec<(usize, PkgVersion)>> {
         self.name_to_ids.get(name).cloned()
     }
 
     #[inline]
-    pub fn id_to_pkg(&self, id: usize) -> Option<&PkgMeta> {
+    pub fn get_pkg_by_id(&self, id: usize) -> Option<&PkgMeta> {
         if id > self.pkgs.len() {
             return None;
         }

@@ -6,7 +6,7 @@ pub fn find_incompatible_friendly(pool: &PackagePool, to_install: &[usize]) -> S
     let incompatible = find_incompatible(pool, to_install);
     let pkgs: Vec<&PkgMeta> = incompatible
         .into_iter()
-        .map(|id| pool.id_to_pkg(id).unwrap())
+        .map(|id| pool.get_pkg_by_id(id).unwrap())
         .collect();
 
     if pkgs.is_empty() {

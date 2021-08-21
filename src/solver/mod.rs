@@ -30,7 +30,7 @@ impl Solver {
         // Add requested packages to formula
         let mut ids = Vec::new();
         for req in wishlist.get_pkg_requests() {
-            let choices: Vec<(usize, PkgVersion)> = match self.pool.pkg_name_to_ids(&req.name) {
+            let choices: Vec<(usize, PkgVersion)> = match self.pool.get_pkgs_by_name(&req.name) {
                 Some(pkgs) => pkgs
                     .iter()
                     .cloned()
@@ -73,7 +73,7 @@ impl Solver {
         let pkgs: Vec<&PkgMeta> = res
             .into_iter()
             .map(|pkgid| {
-                let res = self.pool.id_to_pkg(pkgid).unwrap();
+                let res = self.pool.get_pkg_by_id(pkgid).unwrap();
                 if !improve::is_best(&self.pool, pkgid).unwrap() {
                     warn!("Cannot select best version of {}", res.name);
                 }
