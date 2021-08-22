@@ -4,20 +4,20 @@ mod incompatible;
 mod pool;
 mod sort;
 
-use crate::types::{config::Wishlist, PkgMeta, PkgVersion};
+use crate::types::{config::Wishlist, PkgMeta};
 use crate::{info, warn};
 use anyhow::{bail, format_err, Context, Result};
-use pool::PackagePool;
+use pool::{InMemoryPool, PkgPool};
 use varisat::{lit::Lit, ExtendFormula};
 
 pub struct Solver {
-    pub pool: PackagePool,
+    pub pool: Box<dyn PkgPool>,
 }
 
 impl Solver {
     pub fn new() -> Self {
         Solver {
-            pool: PackagePool::new(),
+            pool: Box::new(InMemoryPool::new()),
         }
     }
 
@@ -26,15 +26,18 @@ impl Solver {
     }
 
     pub fn install(&self, wishlist: &Wishlist) -> Result<Vec<&PkgMeta>> {
-        let mut formula = self.pool.gen_formula();
+        let mut formula = self.pool.gen_formula(None);
         // Add requested packages to formula
         let mut ids = Vec::new();
         for req in wishlist.get_pkg_requests() {
-            let choices: Vec<(usize, PkgVersion)> = match self.pool.get_pkgs_by_name(&req.name) {
+            let choices: Vec<usize> = match self.pool.get_pkgs_by_name(&req.name) {
                 Some(pkgs) => pkgs
                     .iter()
                     .cloned()
-                    .filter(|(_, ver)| req.version.within(ver))
+                    .filter(|pkgid| {
+                        let pkg = self.pool.get_pkg_by_id(*pkgid).unwrap();
+                        req.version.within(&pkg.version)
+                    })
                     .collect(),
                 None => {
                     bail!("Package {} not found", &req.name);
@@ -43,8 +46,8 @@ impl Solver {
             let id = choices
                 .get(0)
                 .ok_or_else(|| format_err!("No suitable version for {}", &req.name))?;
-            formula.add_clause(&[Lit::from_dimacs(id.0 as isize)]);
-            ids.push(id.0);
+            formula.add_clause(&[Lit::from_dimacs(*id as isize)]);
+            ids.push(*id);
         }
         // Add rules to solver
         let mut solver = varisat::Solver::new();
@@ -55,7 +58,8 @@ impl Solver {
             Ok(r) => r,
             Err(_) => {
                 return Err(format_err!(incompatible::find_incompatible_friendly(
-                    &self.pool, &ids
+                    self.pool.as_ref(),
+                    &ids
                 )))
                 .context("Cannot satisfy package requirements")
             }
@@ -64,17 +68,17 @@ impl Solver {
         // Improve the result to remove redundant packages
         // and select best possible packages
         info!("Improving dependency tree...");
-        improve::upgrade(&self.pool, &mut res, &mut solver)?;
-        improve::reduce(&self.pool, &mut res, &ids)?;
+        improve::upgrade(self.pool.as_ref(), &mut res, &mut solver)?;
+        improve::reduce(self.pool.as_ref(), &mut res, &ids)?;
         // Sort result
-        sort::sort_pkgs(&self.pool, &mut res).context("Failed to sort packages")?;
+        sort::sort_pkgs(self.pool.as_ref(), &mut res).context("Failed to sort packages")?;
 
         // Generate result
         let pkgs: Vec<&PkgMeta> = res
             .into_iter()
             .map(|pkgid| {
                 let res = self.pool.get_pkg_by_id(pkgid).unwrap();
-                if !improve::is_best(&self.pool, pkgid).unwrap() {
+                if !improve::is_best(self.pool.as_ref(), pkgid).unwrap() {
                     warn!("Cannot select best version of {}", res.name);
                 }
                 res

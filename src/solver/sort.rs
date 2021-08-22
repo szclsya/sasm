@@ -1,10 +1,10 @@
-use super::PackagePool;
+use super::pool::{get_deps, PkgPool};
 use anyhow::Result;
 use petgraph::graph::{DiGraph, NodeIndex};
 use std::collections::HashMap;
 
 /// Use trajan algorithm to find out installation order of packages
-pub fn sort_pkgs(pool: &PackagePool, pkgs: &mut Vec<usize>) -> Result<()> {
+pub fn sort_pkgs(pool: &dyn PkgPool, pkgs: &mut Vec<usize>) -> Result<()> {
     let res = sort_pkgs_to_cycles(pool, pkgs)?;
     pkgs.clear();
     for mut pkgids in res {
@@ -12,7 +12,10 @@ pub fn sort_pkgs(pool: &PackagePool, pkgs: &mut Vec<usize>) -> Result<()> {
             pkgs.push(pkgids[0]);
         } else {
             // Sort via the number of dependencies
-            pkgids.sort_by_key(|id| pool.get_deps(*id).unwrap().len());
+            pkgids.sort_by_key(|id| {
+                let pkg = pool.get_pkg_by_id(*id).unwrap();
+                pkg.depends.len()
+            });
             pkgs.append(&mut pkgids);
         }
     }
@@ -20,7 +23,7 @@ pub fn sort_pkgs(pool: &PackagePool, pkgs: &mut Vec<usize>) -> Result<()> {
     Ok(())
 }
 
-pub fn sort_pkgs_to_cycles(pool: &PackagePool, pkgs: &[usize]) -> Result<Vec<Vec<usize>>> {
+pub fn sort_pkgs_to_cycles(pool: &dyn PkgPool, pkgs: &[usize]) -> Result<Vec<Vec<usize>>> {
     let mut g = DiGraph::<usize, ()>::new();
     let mut indexs: HashMap<usize, NodeIndex> = HashMap::new();
     // Add package nodes
@@ -29,7 +32,7 @@ pub fn sort_pkgs_to_cycles(pool: &PackagePool, pkgs: &[usize]) -> Result<Vec<Vec
     }
     // Add dependency edges
     for pkgid in pkgs.iter() {
-        let deps: Vec<usize> = pool.get_deps(*pkgid)?.into_iter().flatten().collect();
+        let deps: Vec<usize> = get_deps(pool, *pkgid)?.into_iter().flatten().collect();
         for depid in deps {
             if pkgs.contains(&depid) {
                 // Add a directed edge

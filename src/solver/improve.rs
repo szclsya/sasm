@@ -1,11 +1,11 @@
-use super::{pool::PackagePool, solve, sort::sort_pkgs_to_cycles};
+use super::{pool::PkgPool, solve, sort::sort_pkgs_to_cycles};
 
 use anyhow::Result;
 use varisat::{lit::Lit, ExtendFormula, Solver};
 
 /// Attempt to use latest possible version of packages via forcing the solver to choose better versions
 /// of packages via banning older versions via solver assume
-pub fn upgrade(pool: &PackagePool, res: &mut Vec<usize>, solver: &mut Solver) -> Result<()> {
+pub fn upgrade(pool: &dyn PkgPool, res: &mut Vec<usize>, solver: &mut Solver) -> Result<()> {
     let mut assumes = Vec::new();
     loop {
         let mut updates = gen_update_assume(pool, res);
@@ -30,9 +30,9 @@ pub fn upgrade(pool: &PackagePool, res: &mut Vec<usize>, solver: &mut Solver) ->
 
 /// Construct a subset list of packages that only contains equal version of existing packages
 /// So that no older packages are included when upgrading packages
-pub fn reduce(pool: &PackagePool, res: &mut Vec<usize>, to_install: &[usize]) -> Result<()> {
+pub fn reduce(pool: &dyn PkgPool, res: &mut Vec<usize>, to_install: &[usize]) -> Result<()> {
     // Generate reduced formula
-    let mut formula = pool.gen_subset_formula(res);
+    let mut formula = pool.gen_formula(Some(res));
     for pkgid in to_install {
         formula.add_clause(&[Lit::from_dimacs(*pkgid as isize)]);
     }
@@ -68,18 +68,13 @@ pub fn reduce(pool: &PackagePool, res: &mut Vec<usize>, to_install: &[usize]) ->
 /// Generate a list of Lit of all older packages
 /// The idea is that with these assumptions, the SAT solver must choose more up-to-date
 ///   packages, or give Unsolvable
-pub fn gen_update_assume(pool: &PackagePool, ids: &[usize]) -> Vec<Lit> {
+pub fn gen_update_assume(pool: &dyn PkgPool, ids: &[usize]) -> Vec<Lit> {
     let mut res = Vec::new();
     for id in ids {
         if !is_best(pool, *id).unwrap() {
             // Find all newer versions of this package
             let name = &pool.get_pkg_by_id(*id).unwrap().name;
-            let pkgids: Vec<usize> = pool
-                .get_pkgs_by_name(name)
-                .unwrap()
-                .into_iter()
-                .map(|pkg| pkg.0)
-                .collect();
+            let pkgids: Vec<usize> = pool.get_pkgs_by_name(name).unwrap();
 
             let mut reached = false;
             for pkgid in pkgids {
@@ -98,10 +93,10 @@ pub fn gen_update_assume(pool: &PackagePool, ids: &[usize]) -> Vec<Lit> {
 }
 
 #[inline]
-pub fn is_best(pool: &PackagePool, id: usize) -> Option<bool> {
+pub fn is_best(pool: &dyn PkgPool, id: usize) -> Option<bool> {
     let name = &pool.get_pkg_by_id(id)?.name;
     let ids = pool.get_pkgs_by_name(name)?;
-    if ids[0].0 != id {
+    if ids[0] != id {
         Some(false)
     } else {
         Some(true)

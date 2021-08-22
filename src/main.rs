@@ -108,7 +108,7 @@ async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Re
         .await
         .context("Failed to fetch dpkg databases")?;
     for (baseurl, db) in dbs.into_iter() {
-        solver::deb::read_deb_db(&db, &mut solver.pool, &baseurl)?;
+        solver::deb::read_deb_db(&db, solver.pool.as_mut(), &baseurl)?;
     }
     solver.finalize();
 

@@ -1,8 +1,8 @@
 use crate::types::{PkgActionModifier, PkgActions};
 
+use anyhow::{bail, Result};
 use lazy_static::lazy_static;
-use regex::{ Regex, Captures };
-use anyhow::{Result, bail};
+use regex::{Captures, Regex};
 
 lazy_static! {
     static ref EXPANSION: Regex = Regex::new(r"\{([A-Z_]+)}").unwrap();
@@ -25,25 +25,26 @@ impl DontRemove {
 
 impl PkgActionModifier for DontRemove {
     fn apply(&self, actions: &mut PkgActions) {
-        let pkgnames: Vec<String> =  self.rules.iter().map(|rule| {
-            EXPANSION.replace_all(rule, |caps: &Captures| {
-                match caps.get(1).unwrap().as_str() {
-                    "KERNEL_VERSION" => &self.kernel_version,
-                    _ => "",
-                }
-            }).to_string()
-        }).collect();
+        let pkgnames: Vec<String> = self
+            .rules
+            .iter()
+            .map(|rule| {
+                EXPANSION
+                    .replace_all(rule, |caps: &Captures| {
+                        match caps.get(1).unwrap().as_str() {
+                            "KERNEL_VERSION" => &self.kernel_version,
+                            _ => "",
+                        }
+                    })
+                    .to_string()
+            })
+            .collect();
         println!("{:?}", pkgnames);
 
-        actions.remove.retain(|pkgname| {
-            !pkgnames.contains(pkgname)
-        });
-        actions.remove.retain(|pkgname| {
-            !pkgnames.contains(pkgname)
-        });
+        actions.remove.retain(|pkgname| !pkgnames.contains(pkgname));
+        actions.remove.retain(|pkgname| !pkgnames.contains(pkgname));
     }
 }
-
 
 fn get_kernel_version() -> Result<String> {
     let uname = nix::sys::utsname::uname();

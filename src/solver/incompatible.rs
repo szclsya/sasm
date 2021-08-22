@@ -1,8 +1,8 @@
-use super::pool::PackagePool;
+use super::pool::PkgPool;
 use crate::types::PkgMeta;
 use varisat::{Lit, Solver};
 
-pub fn find_incompatible_friendly(pool: &PackagePool, to_install: &[usize]) -> String {
+pub fn find_incompatible_friendly(pool: &dyn PkgPool, to_install: &[usize]) -> String {
     let incompatible = find_incompatible(pool, to_install);
     let pkgs: Vec<&PkgMeta> = incompatible
         .into_iter()
@@ -36,10 +36,10 @@ pub fn find_incompatible_friendly(pool: &PackagePool, to_install: &[usize]) -> S
     }
 }
 
-fn find_incompatible(pool: &PackagePool, to_install: &[usize]) -> Vec<usize> {
+fn find_incompatible(pool: &dyn PkgPool, to_install: &[usize]) -> Vec<usize> {
     // Set up solver
     let mut solver = Solver::new();
-    let formula = pool.gen_formula();
+    let formula = pool.gen_formula(None);
     solver.add_formula(&formula);
 
     // Check individual packages first
