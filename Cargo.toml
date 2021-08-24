@@ -11,7 +11,7 @@ regex = "1"
 lazy_static = "1"
 # Solver
 varisat = "0.2"
-petgraph = "0.5"
+petgraph = "0.6"
 # Dealing with deb control files and InRelease
 debcontrol = "0.1"
 sequoia-openpgp = "1"
@@ -19,17 +19,17 @@ sha2 = "0.9"
 hex = "0.4"
 # cli
 console = "0.14.1"
-clap = "3.0.0-beta.2"
+clap = "3.0.0-beta.4"
 # 0.16.2 doesn't work with tokio
 indicatif = "0.17.0-beta.1"
 dialoguer = "0.8"
 # Dealing with config files
 serde = "1"
 toml = "0.5"
-nom = "6"
+nom = "7"
 # Network stack
 futures = "0.3"
-tokio = { version = "1.8", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
+tokio = { version = "1.10", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
 bytes = "1"
 reqwest = { version = "0.11" }
 # Actions modifier
