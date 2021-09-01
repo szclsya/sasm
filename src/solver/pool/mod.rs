@@ -157,10 +157,11 @@ mod test {
     use super::*;
     use crate::types::{Checksum, PkgMeta, PkgVersion, VersionRequirement};
     use std::convert::TryFrom;
+    use varisat::ExtendFormula;
 
     #[test]
     fn trivial_pool() {
-        let mut pool = PackagePool::new();
+        let mut pool = InMemoryPool::new();
         let a_id = pool.add(PkgMeta {
             name: "a".to_string(),
             version: PkgVersion::try_from("1").unwrap(),
@@ -238,7 +239,7 @@ mod test {
         pool.finalize();
 
         let mut solver = varisat::Solver::new();
-        let formula = pool.gen_formula();
+        let formula = pool.gen_formula(None);
         solver.add_formula(&formula);
         solver.add_clause(&[Lit::from_dimacs(c_id as isize)]);
 
@@ -249,7 +250,6 @@ mod test {
                 Lit::from_dimacs(a_id as isize),
                 Lit::from_dimacs(b_id as isize),
                 Lit::from_dimacs(c_id as isize),
-                !Lit::from_dimacs(e_id as isize),
             ]
         );
     }
