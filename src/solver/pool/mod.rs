@@ -3,7 +3,6 @@ pub use in_memory::InMemoryPool;
 
 use crate::types::PkgMeta;
 
-use crate::warn;
 use anyhow::{bail, format_err, Result};
 use varisat::{lit::Lit, CnfFormula};
 
@@ -18,6 +17,8 @@ pub trait PkgPool {
     fn get_pkgs_by_name(&self, name: &str) -> Option<Vec<usize>>;
     // Generate formula for SAT solver, optionally use a subset of the packages
     fn gen_formula(&self, subset: Option<&[usize]>) -> CnfFormula;
+    // Search for package name
+    fn serach(&self, keyword: &str) -> Result<Vec<String>>;
 }
 
 pub fn get_deps(pool: &dyn PkgPool, pkgid: usize) -> Result<Vec<Vec<usize>>> {

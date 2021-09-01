@@ -71,10 +71,10 @@ async fn try_main() -> Result<()> {
 
     // Do stuff
     let mut wishlist_modified = false;
-    match opts.subcmd {
+    match &opts.subcmd {
         None => fullfill_wishs(&config, &opts, &wishlist).await?,
-        Some(subcmd) => {
-            wishlist_modified = fullfill_subcmd(&config, subcmd, &mut wishlist)?;
+        Some(_) => {
+            wishlist_modified = fullfill_subcmd(&config, &opts, &mut wishlist)?;
         }
     }
 
@@ -143,8 +143,8 @@ async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Re
     Ok(())
 }
 
-fn fullfill_subcmd(_config: &Config, subcmd: SubCmd, wishlist: &mut Wishlist) -> Result<bool> {
-    match subcmd {
+fn fullfill_subcmd(config: &Config, opts: &Opts, wishlist: &mut Wishlist) -> Result<bool> {
+    match opts.subcmd.as_ref().unwrap() {
         SubCmd::Add(add) => {
             wishlist.add(&add.name)?;
             success!("Package {} added to wishlist", &add.name);
@@ -158,7 +158,17 @@ fn fullfill_subcmd(_config: &Config, subcmd: SubCmd, wishlist: &mut Wishlist) ->
             Ok(true)
         },
         SubCmd::Search(search) => {
-            
+            let localdb = db::LocalDb::new(opts.root.join("var/cache/apm/db"), config.repo.clone(), &config.arch);
+            let dbs = localdb.get_all().context("Invalid local package database")?;
+
+            let mut solver = solver::Solver::new();
+            for (baseurl, db_path) in dbs {
+                solver::deb::read_deb_db(&db_path, solver.pool.as_mut(), &baseurl)?;
+            }
+            solver.finalize();
+
+            let names = solver.pool.serach(&search.keyword)?;
+            crate::WRITER.write_chunks("", &names)?;
             Ok(true)
         }
     }

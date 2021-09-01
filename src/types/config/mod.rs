@@ -37,6 +37,7 @@ pub struct Opts {
 pub enum SubCmd {
     Add(AddPkg),
     Rm(RmPkg),
+    Search(SearchPkg),
 }
 
 #[derive(Clap)]
@@ -47,4 +48,9 @@ pub struct AddPkg {
 #[derive(Clap)]
 pub struct RmPkg {
     pub name: String,
+}
+
+#[derive(Clap)]
+pub struct SearchPkg {
+    pub keyword: String,
 }

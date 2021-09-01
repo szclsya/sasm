@@ -2,8 +2,11 @@ use super::{pkg_to_rule, PkgPool};
 use crate::types::{PkgMeta, PkgVersion};
 use crate::warn;
 
+use anyhow::Result;
 use std::collections::HashMap;
 use varisat::{lit::Lit, CnfFormula, ExtendFormula};
+use regex::Regex;
+use rayon::prelude::*;
 
 pub struct InMemoryPool {
     pkgs: Vec<PkgMeta>,
@@ -100,5 +103,18 @@ impl PkgPool for InMemoryPool {
             }
         }
         formula
+    }
+
+    fn serach(&self, keyword: &str) -> Result<Vec<String>> {
+        let regex = Regex::new(keyword)?;
+        let names: Vec<String> = self.name_to_ids.par_iter().filter_map(|(name, _)| {
+            if regex.is_match(name) {
+                Some(name.clone())
+            } else {
+                None
+            }
+        }).collect();
+
+        Ok(names)
     }
 }

@@ -34,3 +34,5 @@ bytes = "1"
 reqwest = { version = "0.11" }
 # Actions modifier
 nix = "0.22"
+# Parallel searching
+rayon = "1"
