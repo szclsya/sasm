@@ -1,6 +1,6 @@
 mod cli;
 mod executor;
-mod repo;
+mod db;
 mod solver;
 mod types;
 use types::{
@@ -104,11 +104,11 @@ async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Re
     let downloader = executor::download::Downloader::new();
     let mut solver = solver::Solver::new();
 
-    let dbs = repo::get_dbs(&config.repo, &config.arch, &opts.root, &downloader)
-        .await
-        .context("Failed to fetch dpkg databases")?;
-    for (baseurl, db) in dbs.into_iter() {
-        solver::deb::read_deb_db(&db, solver.pool.as_mut(), &baseurl)?;
+    let localdb = db::LocalDb::new(opts.root.join("var/cache/apm/db"), config.repo.clone(), &config.arch);
+    localdb.update(&downloader).await.context("Failed to refresh local package database")?;
+    let dbs = localdb.get_all().context("Invalid local package database")?;
+    for (baseurl, db_path) in dbs {
+        solver::deb::read_deb_db(&db_path, solver.pool.as_mut(), &baseurl)?;
     }
     solver.finalize();
 
@@ -155,6 +155,10 @@ fn fullfill_subcmd(_config: &Config, subcmd: SubCmd, wishlist: &mut Wishlist) ->
             wishlist.remove(&rm.name)?;
             success!("Package {} removed from wishlist", &rm.name);
             info!("To apply changes, re-run apm");
+            Ok(true)
+        },
+        SubCmd::Search(search) => {
+            
             Ok(true)
         }
     }

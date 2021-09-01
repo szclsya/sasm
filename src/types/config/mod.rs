@@ -12,7 +12,7 @@ pub struct Config {
     pub repo: HashMap<String, RepoConfig>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct RepoConfig {
     pub url: String,
     pub distribution: String,
