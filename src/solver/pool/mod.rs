@@ -63,14 +63,11 @@ fn pkg_to_rule(
         let available = match pool.get_pkgs_by_name(&dep.0) {
             Some(pkgs) => match subset {
                 Some(ids) => {
-                    let pkgs: Vec<usize> = pkgs
-                        .iter()
-                        .filter(|id| ids.contains(id))
-                        .map(|pkgid| *pkgid)
-                        .collect();
+                    let pkgs: Vec<usize> =
+                        pkgs.iter().filter(|id| ids.contains(id)).copied().collect();
                     pkgs
                 }
-                None => pkgs.iter().map(|pkg| *pkg).collect(),
+                None => pkgs.iter().copied().collect(),
             },
             None => {
                 bail!(
@@ -107,7 +104,7 @@ fn pkg_to_rule(
                     let pkgs: Vec<usize> = pkgs.into_iter().filter(|id| ids.contains(id)).collect();
                     pkgs
                 }
-                None => pkgs.into_iter().map(|pkg| pkg).collect(),
+                None => pkgs,
             },
             None => {
                 // Nothing to break. Good!
@@ -135,7 +132,7 @@ fn pkg_to_rule(
                     let pkgs: Vec<usize> = pkgs.into_iter().filter(|id| ids.contains(id)).collect();
                     pkgs
                 }
-                None => pkgs.into_iter().map(|pkg| pkg).collect(),
+                None => pkgs,
             },
             None => {
                 continue;
@@ -224,7 +221,7 @@ mod test {
             size: 0,
             checksum: Checksum::from_sha256_str(&str::repeat("a", 64)).unwrap(),
         });
-        let e_id = pool.add(PkgMeta {
+        pool.add(PkgMeta {
             name: "e".to_string(),
             version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(

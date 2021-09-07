@@ -83,9 +83,8 @@ impl LocalDb {
             let bytes = bytes::Bytes::from(inrelease_contents);
             let res = verify::verify_inrelease(&repo.certs, bytes)
                 .context(format!("Failed to verify metadata for repository {}", name))?;
-            let repo_dbs =
-                parse_inrelease(&res, &format!("{}/dists/{}", repo.url, repo.distribution))
-                    .context(format!("Failed to parse metadata for repository {}", name))?;
+            let repo_dbs = parse_inrelease(&res)
+                .context(format!("Failed to parse metadata for repository {}", name))?;
             dbs.extend(repo_dbs);
         }
 
@@ -133,7 +132,7 @@ impl LocalDb {
     }
 }
 
-fn parse_inrelease(s: &str, root: &str) -> Result<HashMap<String, (u64, Checksum)>> {
+fn parse_inrelease(s: &str) -> Result<HashMap<String, (u64, Checksum)>> {
     lazy_static! {
         static ref CHKSUM: Regex =
             Regex::new("^(?P<chksum>[0-9a-z]+) +(?P<size>[0-9]+) +(?P<path>.+)$").unwrap();

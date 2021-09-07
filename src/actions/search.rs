@@ -28,7 +28,8 @@ pub fn search_deb_db(dbs: &[PathBuf], keyword: &str) -> Result<Vec<PkgInfo>> {
                         .collect();
                     if let Some(pkginfo) = match_pkg(&mut fields, &regex)? {
                         if !res.contains_key(pkginfo.name.as_str())
-                            || res[pkginfo.name.as_str()].version < pkginfo.version {
+                            || res[pkginfo.name.as_str()].version < pkginfo.version
+                        {
                             res.insert(pkginfo.name.clone(), pkginfo);
                         }
                     }
