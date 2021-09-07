@@ -17,8 +17,6 @@ pub trait PkgPool {
     fn get_pkgs_by_name(&self, name: &str) -> Option<Vec<usize>>;
     // Generate formula for SAT solver, optionally use a subset of the packages
     fn gen_formula(&self, subset: Option<&[usize]>) -> CnfFormula;
-    // Search for package name
-    fn serach(&self, keyword: &str) -> Result<Vec<String>>;
 }
 
 pub fn get_deps(pool: &dyn PkgPool, pkgid: usize) -> Result<Vec<Vec<usize>>> {
@@ -75,7 +73,10 @@ fn pkg_to_rule(
                 None => pkgs.iter().map(|pkg| *pkg).collect(),
             },
             None => {
-                bail!("Cannot fulfill dependency {} because no package found with this name", dep.0);
+                bail!(
+                    "Cannot fulfill dependency {} because no package found with this name",
+                    dep.0
+                );
             }
         };
 
@@ -91,7 +92,10 @@ fn pkg_to_rule(
         if clause.len() > 1 {
             res.push(clause);
         } else {
-            bail!("Cannot fulfill dependency {} because no applicable version found", dep.0);
+            bail!(
+                "Cannot fulfill dependency {} because no applicable version found",
+                dep.0
+            );
         }
     }
 

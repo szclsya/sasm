@@ -1,10 +1,11 @@
+mod actions;
 mod cli;
-mod executor;
 mod db;
+mod executor;
 mod solver;
 mod types;
 use types::{
-    config::{Config, Opts, SubCmd, Wishlist},
+    config::{Config, Opts, Wishlist},
     PkgActionModifier,
 };
 
@@ -74,7 +75,7 @@ async fn try_main() -> Result<()> {
     match &opts.subcmd {
         None => fullfill_wishs(&config, &opts, &wishlist).await?,
         Some(_) => {
-            wishlist_modified = fullfill_subcmd(&config, &opts, &mut wishlist)?;
+            wishlist_modified = actions::fullfill_command(&config, &opts, &mut wishlist)?;
         }
     }
 
@@ -104,9 +105,18 @@ async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Re
     let downloader = executor::download::Downloader::new();
     let mut solver = solver::Solver::new();
 
-    let localdb = db::LocalDb::new(opts.root.join("var/cache/apm/db"), config.repo.clone(), &config.arch);
-    localdb.update(&downloader).await.context("Failed to refresh local package database")?;
-    let dbs = localdb.get_all().context("Invalid local package database")?;
+    let localdb = db::LocalDb::new(
+        opts.root.join("var/cache/apm/db"),
+        config.repo.clone(),
+        &config.arch,
+    );
+    localdb
+        .update(&downloader)
+        .await
+        .context("Failed to refresh local package database")?;
+    let dbs = localdb
+        .get_all()
+        .context("Invalid local package database")?;
     for (baseurl, db_path) in dbs {
         solver::deb::read_deb_db(&db_path, solver.pool.as_mut(), &baseurl)?;
     }
@@ -141,35 +151,4 @@ async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Re
     }
 
     Ok(())
-}
-
-fn fullfill_subcmd(config: &Config, opts: &Opts, wishlist: &mut Wishlist) -> Result<bool> {
-    match opts.subcmd.as_ref().unwrap() {
-        SubCmd::Add(add) => {
-            wishlist.add(&add.name)?;
-            success!("Package {} added to wishlist", &add.name);
-            info!("To apply changes, re-run apm");
-            Ok(true)
-        }
-        SubCmd::Rm(rm) => {
-            wishlist.remove(&rm.name)?;
-            success!("Package {} removed from wishlist", &rm.name);
-            info!("To apply changes, re-run apm");
-            Ok(true)
-        },
-        SubCmd::Search(search) => {
-            let localdb = db::LocalDb::new(opts.root.join("var/cache/apm/db"), config.repo.clone(), &config.arch);
-            let dbs = localdb.get_all().context("Invalid local package database")?;
-
-            let mut solver = solver::Solver::new();
-            for (baseurl, db_path) in dbs {
-                solver::deb::read_deb_db(&db_path, solver.pool.as_mut(), &baseurl)?;
-            }
-            solver.finalize();
-
-            let names = solver.pool.serach(&search.keyword)?;
-            crate::WRITER.write_chunks("", &names)?;
-            Ok(true)
-        }
-    }
 }

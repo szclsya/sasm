@@ -35,7 +35,10 @@ impl LocalDb {
         let mut files: Vec<(String, PathBuf)> = Vec::new();
         for component in &repo.components {
             for arch in &self.archs {
-                let filename = format!("{}/Packages_{}_{}_{}", &name, &repo.distribution, component, &arch);
+                let filename = format!(
+                    "{}/Packages_{}_{}_{}",
+                    &name, &repo.distribution, component, &arch
+                );
                 files.push((repo.url.clone(), self.root.join(filename)));
             }
         }
@@ -50,7 +53,7 @@ impl LocalDb {
     }
 
     // Get (BaseURL, FilePath) of all configured repos
-    pub fn get_all(&self) -> Result<Vec<(String, PathBuf )>> {
+    pub fn get_all(&self) -> Result<Vec<(String, PathBuf)>> {
         let mut res = Vec::new();
         for repo in &self.repos {
             res.append(&mut self.get(repo.0)?);
@@ -61,14 +64,16 @@ impl LocalDb {
     pub async fn update(&self, downloader: &Downloader) -> Result<()> {
         let mut dbs: HashMap<String, (u64, Checksum)> = HashMap::new();
         // Step 1: Download InRelease for each repo
-        let inrelease_urls: Vec<DownloadJob> = self.repos.iter().map(|(name, repo)| {
-            DownloadJob {
+        let inrelease_urls: Vec<DownloadJob> = self
+            .repos
+            .iter()
+            .map(|(name, repo)| DownloadJob {
                 url: format!("{}/dists/{}/InRelease", repo.url, repo.distribution),
                 filename: Some(format!("InRelease_{}", name)),
                 size: None,
                 checksum: None,
-            }
-        }).collect();
+            })
+            .collect();
         downloader.fetch(inrelease_urls, &self.root).await?;
 
         // Step 2: Verify InRelease with PGP
@@ -78,8 +83,9 @@ impl LocalDb {
             let bytes = bytes::Bytes::from(inrelease_contents);
             let res = verify::verify_inrelease(&repo.certs, bytes)
                 .context(format!("Failed to verify metadata for repository {}", name))?;
-            let repo_dbs = parse_inrelease(&res, &format!("{}/dists/{}", repo.url, repo.distribution))
-                .context(format!("Failed to parse metadata for repository {}", name))?;
+            let repo_dbs =
+                parse_inrelease(&res, &format!("{}/dists/{}", repo.url, repo.distribution))
+                    .context(format!("Failed to parse metadata for repository {}", name))?;
             dbs.extend(repo_dbs);
         }
 
@@ -94,13 +100,19 @@ impl LocalDb {
 
             for component in &repo.components {
                 for arch in &self.archs {
-                    let filename =
-                        format!("{}/Packages_{}_{}_{}", &name, &repo.distribution, &component, &arch);
+                    let filename = format!(
+                        "{}/Packages_{}_{}_{}",
+                        &name, &repo.distribution, &component, &arch
+                    );
                     let rel_url = format!("{}/binary-{}/Packages", component, arch);
                     let db_meta = match dbs.get(&rel_url) {
                         Some(m) => m,
                         None => {
-                            bail!("Repository {} doesn't contain necessary dbs: {}", name, &rel_url);
+                            bail!(
+                                "Repository {} doesn't contain necessary dbs: {}",
+                                name,
+                                &rel_url
+                            );
                         }
                     };
                     dbs_to_download.push(DownloadJob {
@@ -115,9 +127,7 @@ impl LocalDb {
 
         // Step 4: Call Downloader to down them all!
         // The downloader will verify the checksum for us
-        downloader
-            .fetch(dbs_to_download, &self.root)
-            .await?;
+        downloader.fetch(dbs_to_download, &self.root).await?;
 
         Ok(())
     }
