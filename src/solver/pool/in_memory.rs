@@ -2,6 +2,7 @@ use super::{pkg_to_rule, PkgPool};
 use crate::types::{PkgMeta, PkgVersion};
 use crate::warn;
 
+use rayon::prelude::*;
 use std::collections::HashMap;
 use varisat::{lit::Lit, CnfFormula, ExtendFormula};
 
@@ -36,11 +37,12 @@ impl PkgPool for InMemoryPool {
 
         index
     }
+
     fn finalize(&mut self) {
         // Sort versions
         self.name_to_ids.iter_mut().for_each(|(_, pkgs)| {
             // Sort in descending order
-            pkgs.sort_by(|a, b| b.1.cmp(&a.1));
+            pkgs.sort_unstable_by(|a, b| b.1.cmp(&a.1));
         });
     }
 
@@ -65,39 +67,53 @@ impl PkgPool for InMemoryPool {
     }
 
     fn gen_formula(&self, subset: Option<&[usize]>) -> CnfFormula {
-        let mut formula = CnfFormula::new();
         let ids = match subset {
             Some(ids) => ids.to_vec(),
             None => (1..self.pkgs.len()).collect(),
         };
-        for id in &ids {
-            match pkg_to_rule(self, *id, Some(&ids)) {
-                Ok(rules) => {
-                    for rule in rules {
-                        formula.add_clause(&rule);
-                    }
-                }
+        // Generating rules from pool
+        let mut rules: Vec<Vec<Lit>> = ids
+            .par_iter()
+            .filter_map(|id| match pkg_to_rule(self, *id, Some(&ids)) {
+                Ok(rules) => Some(rules),
                 Err(e) => {
                     let pkg = self.get_pkg_by_id(*id).unwrap();
                     warn!("Ignoring package {} due to: {}", pkg.name, e);
+                    None
                 }
-            }
-        }
+            })
+            .flatten()
+            .collect();
 
         // Generate conflict for different versions of the same package
-        for versions in self.name_to_ids.values() {
-            let versions: Vec<usize> = versions
-                .iter()
-                .filter(|pkg| ids.contains(&pkg.0))
-                .map(|pkg| pkg.0)
-                .collect();
-            if versions.len() > 1 {
-                let mut clause = Vec::new();
-                for pkgid in versions {
-                    clause.push(!Lit::from_dimacs(pkgid as isize));
+        let conflict_rules: Vec<Vec<Lit>> = self
+            .name_to_ids
+            .par_iter()
+            .filter_map(|(_, versions)| {
+                let versions: Vec<usize> = versions
+                    .iter()
+                    .filter(|pkg| ids.contains(&pkg.0))
+                    .map(|pkg| pkg.0)
+                    .collect();
+                if versions.len() > 1 {
+                    let clause: Vec<Lit> = versions
+                        .into_iter()
+                        .map(|pkgid| !Lit::from_dimacs(pkgid as isize))
+                        .collect();
+                    Some(clause)
+                } else {
+                    None
                 }
-                formula.add_clause(&clause);
-            }
+            })
+            .collect();
+
+        // Combine rule sets
+        rules.extend(conflict_rules);
+
+        let mut formula = CnfFormula::new();
+        // Add generated rules to formula
+        for rule in rules {
+            formula.add_clause(&rule);
         }
         formula
     }
