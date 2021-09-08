@@ -98,6 +98,15 @@ macro_rules! msg {
 }
 
 #[macro_export]
+macro_rules! debug {
+    ($($arg:tt)+) => {
+        if crate::DEBUG.load(std::sync::atomic::Ordering::Relaxed) {
+            $crate::WRITER.writeln(&console::style("DEBUG").dim().to_string(), &format!($($arg)+)).ok();
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! success {
     ($($arg:tt)+) => {
         $crate::WRITER.writeln(&console::style("SUCCESS").green().bold().to_string(), &format!($($arg)+)).ok();

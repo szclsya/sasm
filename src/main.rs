@@ -17,12 +17,15 @@ use std::{
     fs::{File, OpenOptions},
     io::Read,
     os::unix::fs::FileExt,
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 // Initialize writer
 lazy_static! {
     static ref WRITER: cli::Writer = cli::Writer::new();
 }
+// Debug flag
+static DEBUG: AtomicBool = AtomicBool::new(false);
 
 /// Exit codes:
 /// 1 => program screwed up
@@ -41,6 +44,8 @@ async fn main() {
 async fn try_main() -> Result<()> {
     // Initial setup
     let opts: Opts = Opts::parse();
+    // Set-up debug globally
+    DEBUG.store(opts.debug, Ordering::Relaxed);
     let config_root = opts
         .root
         .join(&opts.config_root)
@@ -117,6 +122,7 @@ async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Re
     let dbs = localdb
         .get_all()
         .context("Invalid local package database")?;
+    debug!("Parsing deb debs...");
     for (baseurl, db_path) in dbs {
         solver::deb::read_deb_db(&db_path, solver.pool.as_mut(), &baseurl)?;
     }

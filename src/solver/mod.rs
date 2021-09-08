@@ -5,7 +5,7 @@ mod pool;
 mod sort;
 
 use crate::types::{config::Wishlist, PkgMeta};
-use crate::{info, warn};
+use crate::{debug, warn};
 use anyhow::{bail, format_err, Context, Result};
 use pool::{InMemoryPool, PkgPool};
 use varisat::{lit::Lit, ExtendFormula};
@@ -27,7 +27,7 @@ impl Solver {
 
     pub fn install(&self, wishlist: &Wishlist) -> Result<Vec<&PkgMeta>> {
         let mut formula = self.pool.gen_formula(None);
-        // Add requested packages to formula
+        debug!("Adding requested packages to formula...");
         let mut ids = Vec::new();
         for req in wishlist.get_pkg_requests() {
             let choices: Vec<usize> = match self.pool.get_pkgs_by_name(&req.name) {
@@ -54,6 +54,7 @@ impl Solver {
         solver.add_formula(&formula);
 
         // Initial solve
+        debug!("Initial solve");
         let mut res = match solve(&mut solver) {
             Ok(r) => r,
             Err(_) => {
@@ -67,7 +68,7 @@ impl Solver {
 
         // Improve the result to remove redundant packages
         // and select best possible packages
-        info!("Improving dependency tree...");
+        debug!("Improving dependency tree...");
         improve::upgrade(self.pool.as_ref(), &mut res, &mut solver)?;
         improve::reduce(self.pool.as_ref(), &mut res, &ids)?;
         // Sort result
