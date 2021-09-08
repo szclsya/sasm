@@ -13,7 +13,7 @@ use std::path::Path;
 #[inline]
 pub fn read_deb_db(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
     let f = File::open(db)?;
-    let mut buf_parse = BufParse::new(f, 4096);
+    let mut buf_parse = BufParse::new(f, 16384);
     while let Some(result) = buf_parse.try_next().unwrap() {
         match result {
             Streaming::Item(paragraph) => {

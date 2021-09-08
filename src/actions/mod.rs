@@ -3,6 +3,7 @@ use search::search_deb_db;
 
 use crate::{
     db::LocalDb,
+    executor::{MachineStatus, PkgState},
     info, success,
     types::config::{Config, Opts, SubCmd, Wishlist},
 };
@@ -27,10 +28,6 @@ pub fn fullfill_command(config: &Config, opts: &Opts, wishlist: &mut Wishlist) -
             Ok(true)
         }
         SubCmd::Search(search) => {
-            info!(
-                "Searching local database for {}",
-                style(&search.keyword).bold()
-            );
             let localdb = LocalDb::new(
                 opts.root.join("var/cache/apm/db"),
                 config.repo.clone(),
@@ -42,16 +39,28 @@ pub fn fullfill_command(config: &Config, opts: &Opts, wishlist: &mut Wishlist) -
                 .into_iter()
                 .map(|(_, path)| path)
                 .collect();
+            let machine_status = MachineStatus::new(&opts.root)?;
 
             for pkginfo in search_deb_db(&dbs, &search.keyword)? {
-                crate::WRITER.writeln(
-                    &style("PKG").dim().to_string(),
-                    &format!(
-                        "{} {}",
-                        &style(&pkginfo.name).bold().to_string(),
-                        &style(pkginfo.version).green().to_string()
-                    ),
-                )?;
+                // Construct prefix
+                let prefix = match machine_status.pkgs.get(&pkginfo.name) {
+                    Some(pkg) => match pkg.state {
+                        PkgState::Installed => style("INSTALLED").green(),
+                        PkgState::Unpacked => style("UNPACKED").yellow(),
+                        _ => style("PACKAGE").dim(),
+                    },
+                    None => style("PACKAGE").dim(),
+                }
+                .to_string();
+                // Construct pkg info line
+                let mut pkg_info_line = style(&pkginfo.name).bold().to_string();
+                pkg_info_line.push(' ');
+                pkg_info_line.push_str(&style(pkginfo.version).green().to_string());
+                if pkginfo.has_dbg_pkg {
+                    pkg_info_line.push(' ');
+                    pkg_info_line.push_str(&style("(debug symbols available)").dim().to_string())
+                }
+                crate::WRITER.writeln(&prefix, &pkg_info_line)?;
                 crate::WRITER.writeln("", &pkginfo.description)?;
             }
 

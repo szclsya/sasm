@@ -7,8 +7,10 @@ use std::{collections::HashMap, convert::TryFrom, fs::File, path::PathBuf};
 
 pub struct PkgInfo {
     pub name: String,
+    pub section: String,
     pub description: String,
     pub version: PkgVersion,
+    pub has_dbg_pkg: bool,
 }
 
 pub fn search_deb_db(dbs: &[PathBuf], keyword: &str) -> Result<Vec<PkgInfo>> {
@@ -39,8 +41,21 @@ pub fn search_deb_db(dbs: &[PathBuf], keyword: &str) -> Result<Vec<PkgInfo>> {
         }
     }
 
+    // Move dbg packages to a separate list
+    let (mut res, dbg_pkgs): (HashMap<String, PkgInfo>, _) = res
+        .into_iter()
+        .partition(|(_, pkginfo)| pkginfo.section != "debug");
+    // Add `has_dbg_pkg` property for corresponding packages
+    for (name, pkginfo) in res.iter_mut() {
+        let dbg_pkg_name = format!("{}-dbg", &name);
+        if dbg_pkgs.contains_key(&dbg_pkg_name) {
+            pkginfo.has_dbg_pkg = true;
+        }
+    }
+
     // Convert to a simple Vec
-    let res: Vec<PkgInfo> = res.into_iter().map(|(_, pkginfo)| pkginfo).collect();
+    let mut res: Vec<PkgInfo> = res.into_iter().map(|(_, pkginfo)| pkginfo).collect();
+    res.sort_unstable_by(|a, b| a.name.cmp(&b.name));
     Ok(res)
 }
 
@@ -59,6 +74,11 @@ fn match_pkg(fields: &mut HashMap<&str, String>, regex: &Regex) -> Result<Option
         None => bail!("Package without Version"),
     };
 
+    let section = match fields.remove("Section") {
+        Some(section) => section,
+        None => bail!("Package without Section"),
+    };
+
     let description = match fields.remove("Description") {
         Some(name) => name,
         None => bail!("Package without Description"),
@@ -66,8 +86,10 @@ fn match_pkg(fields: &mut HashMap<&str, String>, regex: &Regex) -> Result<Option
 
     let res = PkgInfo {
         name,
+        section,
         description,
         version,
+        has_dbg_pkg: false,
     };
 
     Ok(Some(res))

@@ -15,7 +15,7 @@ use std::path::Path;
 
 /// Status of this machine
 pub struct MachineStatus {
-    pkgs: HashMap<String, PkgStatus>,
+    pub pkgs: HashMap<String, PkgStatus>,
 }
 
 impl MachineStatus {
@@ -38,7 +38,7 @@ impl MachineStatus {
                 .context("Failed to initialize dpkg status file")?
         };
 
-        let mut buf_parse = BufParse::new(status_file, 4096);
+        let mut buf_parse = BufParse::new(status_file, 16384);
         while let Some(result) = buf_parse.try_next().unwrap() {
             match result {
                 Streaming::Item(paragraph) => {
