@@ -4,14 +4,10 @@ mod db;
 mod executor;
 mod solver;
 mod types;
-use types::{
-    config::{Config, Opts, Wishlist},
-    PkgActionModifier,
-};
+use types::config::{Config, Opts, Wishlist};
 
 use anyhow::{bail, Context, Result};
 use clap::Clap;
-use dialoguer::Confirm;
 use lazy_static::lazy_static;
 use std::{
     fs::{File, OpenOptions},
@@ -76,13 +72,8 @@ async fn try_main() -> Result<()> {
     let mut wishlist = Wishlist::from_file(&wishlist_path)?;
 
     // Do stuff
-    let mut wishlist_modified = false;
-    match &opts.subcmd {
-        None => fullfill_wishs(&config, &opts, &wishlist).await?,
-        Some(_) => {
-            wishlist_modified = actions::fullfill_command(&config, &opts, &mut wishlist)?;
-        }
-    }
+    warn!("apm is still in early alpha stage. DO NOT use me on production systems!");
+    let wishlist_modified = actions::fullfill_command(&config, &opts, &mut wishlist).await?;
 
     // Write back wishlist, if the operations involves modifying it
     if wishlist_modified {
@@ -98,62 +89,6 @@ async fn try_main() -> Result<()> {
                 "Failed to write to wishlist file at {}",
                 wishlist_path.display()
             ))?;
-    }
-
-    Ok(())
-}
-
-async fn fullfill_wishs(config: &Config, opts: &Opts, wishlist: &Wishlist) -> Result<()> {
-    // May the work begin!
-    warn!("apm is still in early alpha stage. DO NOT use me on production systems!");
-    info!("Synchronizing package databases...");
-    let downloader = executor::download::Downloader::new();
-    let mut solver = solver::Solver::new();
-
-    let localdb = db::LocalDb::new(
-        opts.root.join("var/cache/apm/db"),
-        config.repo.clone(),
-        &config.arch,
-    );
-    localdb
-        .update(&downloader)
-        .await
-        .context("Failed to refresh local package database")?;
-    let dbs = localdb
-        .get_all()
-        .context("Invalid local package database")?;
-    debug!("Parsing deb debs...");
-    for (baseurl, db_path) in dbs {
-        solver::deb::read_deb_db(&db_path, solver.pool.as_mut(), &baseurl)?;
-    }
-    solver.finalize();
-
-    info!("Resolving dependencies...");
-    let res = solver.install(wishlist)?;
-    // Translating result to list of actions
-    let root = opts.root.clone();
-    let machine_status = executor::MachineStatus::new(&root)?;
-    let mut actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
-    // Generate modifiers and apply them
-    if opts.unpack_only {
-        let modifier = executor::modifier::UnpackOnly::default();
-        modifier.apply(&mut actions);
-    }
-
-    if actions.is_empty() {
-        success!("There's nothing to do, all wishes has been fulfilled!");
-    } else {
-        info!("These following actions will be performed:");
-        actions.show();
-        if Confirm::new()
-            .with_prompt(format!("{}{}", cli::gen_prefix(""), "Proceed?"))
-            .interact()?
-        {
-            // Run it!
-            executor::dpkg::execute_pkg_actions(actions, &opts.root, &downloader).await?;
-        } else {
-            std::process::exit(2);
-        }
     }
 
     Ok(())

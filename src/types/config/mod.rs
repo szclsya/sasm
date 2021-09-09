@@ -39,6 +39,8 @@ pub struct Opts {
 pub enum SubCmd {
     Add(AddPkg),
     Rm(RmPkg),
+    UpdateDb,
+    InstallAll,
     Search(SearchPkg),
 }
 

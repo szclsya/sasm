@@ -1,3 +1,4 @@
+mod install_all;
 mod search;
 use search::search_deb_db;
 
@@ -13,8 +14,20 @@ use console::style;
 use std::path::PathBuf;
 
 /// bool in return type indicated whether the wishlist is altered
-pub fn fullfill_command(config: &Config, opts: &Opts, wishlist: &mut Wishlist) -> Result<bool> {
-    match opts.subcmd.as_ref().unwrap() {
+pub async fn fullfill_command(
+    config: &Config,
+    opts: &Opts,
+    wishlist: &mut Wishlist,
+) -> Result<bool> {
+    let downloader = crate::executor::download::Downloader::new();
+    let localdb = LocalDb::new(
+        opts.root.join("var/cache/apm/db"),
+        config.repo.clone(),
+        &config.arch,
+    );
+
+    // Default to InstallAll
+    match opts.subcmd.as_ref().unwrap_or(&SubCmd::InstallAll) {
         SubCmd::Add(add) => {
             wishlist.add(&add.name)?;
             success!("Package {} added to wishlist", &add.name);
@@ -25,6 +38,22 @@ pub fn fullfill_command(config: &Config, opts: &Opts, wishlist: &mut Wishlist) -
             wishlist.remove(&rm.name)?;
             success!("Package {} removed from wishlist", &rm.name);
             info!("To apply changes, re-run apm");
+            Ok(true)
+        }
+        SubCmd::UpdateDb => {
+            info!("Updating local package databases...");
+            localdb.update(&downloader).await?;
+            Ok(false)
+        }
+        SubCmd::InstallAll => {
+            info!("Updating local package databases...");
+            localdb
+                .update(&downloader)
+                .await
+                .context("Failed to refresh local package database")?;
+
+            install_all::install_all(&localdb, &downloader, wishlist, opts, config).await?;
+
             Ok(true)
         }
         SubCmd::Search(search) => {
