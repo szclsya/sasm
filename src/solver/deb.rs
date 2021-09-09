@@ -4,33 +4,62 @@ use crate::types::{Checksum, PkgMeta, PkgVersion, VersionRequirement};
 use anyhow::{bail, format_err, Result};
 use debcontrol::{BufParse, Streaming};
 use lazy_static::lazy_static;
+use rayon::prelude::*;
 use regex::Regex;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fs::File;
 use std::path::Path;
 
+const REQUIRED_FIELDS: &[&str] = &[
+    "Package",
+    "Filename",
+    "Version",
+    "Depends",
+    "Breaks",
+    "Conflicts",
+    "Installed-Size",
+    "Size",
+    "SHA256",
+    "SHA512",
+];
+
 #[inline]
 pub fn read_deb_db(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
     let f = File::open(db)?;
     let mut buf_parse = BufParse::new(f, 16384);
+    let mut pkgs = Vec::new();
+
     while let Some(result) = buf_parse.try_next().unwrap() {
         match result {
             Streaming::Item(paragraph) => {
                 let mut fields = HashMap::new();
                 for field in paragraph.fields {
-                    fields.insert(field.name, field.value);
+                    if REQUIRED_FIELDS.contains(&field.name) {
+                        fields.insert(field.name.to_string(), field.value);
+                    }
                 }
-                pool.add(fields_to_packagemeta(&fields, baseurl)?);
+                pkgs.push(fields);
             }
             Streaming::Incomplete => buf_parse.buffer().unwrap(),
         }
     }
+
+    // Parse fields in parallel
+    let pkgmetas: Vec<PkgMeta> = pkgs
+        .into_par_iter()
+        .filter_map(|fields| fields_to_packagemeta(fields, baseurl).ok())
+        .collect();
+    // Import results into pool
+    for pkgmeta in pkgmetas {
+        pool.add(pkgmeta);
+    }
+
     Ok(())
 }
 
 #[inline]
-fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> Result<PkgMeta> {
+fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Result<PkgMeta> {
     // Generate real url
     let mut path = baseurl.to_string();
     path.push('/');
@@ -40,9 +69,8 @@ fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> Result<Pkg
     );
     Ok(PkgMeta {
         name: f
-            .get("Package")
-            .ok_or_else(|| format_err!("Package without name"))?
-            .to_string(),
+            .remove("Package")
+            .ok_or_else(|| format_err!("Package without name"))?,
         version: PkgVersion::try_from(
             f.get("Version")
                 .ok_or_else(|| format_err!("Package without Version"))?
@@ -52,13 +80,13 @@ fn fields_to_packagemeta(f: &HashMap<&str, String>, baseurl: &str) -> Result<Pkg
         breaks: parse_pkg_list(f.get("Breaks").unwrap_or(&String::new()))?,
         conflicts: parse_pkg_list(f.get("Conflicts").unwrap_or(&String::new()))?,
         install_size: f
-            .get("Installed-Size")
+            .remove("Installed-Size")
             .ok_or_else(|| format_err!("Package without Installed-Size"))?
             .as_str()
             .parse()?,
         url: path,
         size: f
-            .get("Size")
+            .remove("Size")
             .ok_or_else(|| format_err!("Package without Size"))?
             .as_str()
             .parse()?,
