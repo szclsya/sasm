@@ -23,13 +23,13 @@ pub struct RepoConfig {
 #[derive(Clap)]
 #[clap(version = "0.1.0", author = "Leo Shen <i@szclsya.me>")]
 pub struct Opts {
-    #[clap(long, default_value = "/")]
+    #[clap(long, default_value = "/", about = "Root directory for operation")]
     pub root: PathBuf,
-    #[clap(long, default_value = "etc/apm/")]
+    #[clap(long, default_value = "etc/apm/", about = "Position of the config folder")]
     pub config_root: PathBuf,
-    #[clap(long)]
+    #[clap(long, about = "Print additional debug information")]
     pub debug: bool,
-    #[clap(long)]
+    #[clap(long, about = "Unpack but not configure desired packages")]
     pub unpack_only: bool,
     #[clap(subcommand)]
     pub subcmd: Option<SubCmd>,
@@ -37,10 +37,15 @@ pub struct Opts {
 
 #[derive(Clap)]
 pub enum SubCmd {
+    #[clap(about = "Add or modify a package to wishlist")]
     Add(AddPkg),
+    #[clap(about = "Remove a package from wishlist")]
     Rm(RmPkg),
+    #[clap(about = "Update local package databases")]
     UpdateDb,
+    #[clap(about = "Install and upgrade all packages according to wishlist")]
     InstallAll,
+    #[clap(about = "Search packages from package database")]
     Search(SearchPkg),
 }
 
