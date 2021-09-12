@@ -5,7 +5,7 @@ use search::search_deb_db;
 use crate::{
     db::LocalDb,
     executor::{MachineStatus, PkgState},
-    info, success,
+    info,
     types::config::{Config, Opts, SubCmd, Wishlist},
 };
 
@@ -26,34 +26,44 @@ pub async fn fullfill_command(
         &config.arch,
     );
 
-    // Default to InstallAll
-    match opts.subcmd.as_ref().unwrap_or(&SubCmd::InstallAll) {
-        SubCmd::Add(add) => {
-            wishlist.add(&add.name)?;
-            success!("Package {} added to wishlist", &add.name);
-            info!("To apply changes, re-run apm");
+    match &opts.subcmd {
+        SubCmd::Install(add) => {
+            // Modify wishlist
+            for name in &add.names {
+                wishlist.add(name)?;
+            }
+            // Update local db
+            info!("Refreshing local package databases...");
+            localdb.update(&downloader).await?;
+            // Apply stuff
+            install_all::install_all(&localdb, &downloader, wishlist, opts, config).await?;
             Ok(true)
         }
-        SubCmd::Rm(rm) => {
-            wishlist.remove(&rm.name)?;
-            success!("Package {} removed from wishlist", &rm.name);
-            info!("To apply changes, re-run apm");
+        SubCmd::Remove(rm) => {
+            // Modify wishlist
+            for name in &rm.names {
+                wishlist.remove(name)?;
+            }
+            // Update local db
+            info!("Refreshing local package databases...");
+            localdb.update(&downloader).await?;
+            // Apply stuff
+            install_all::install_all(&localdb, &downloader, wishlist, opts, config).await?;
             Ok(true)
         }
-        SubCmd::UpdateDb => {
-            info!("Updating local package databases...");
+        SubCmd::Refresh => {
+            info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             Ok(false)
         }
-        SubCmd::InstallAll => {
-            info!("Updating local package databases...");
+        SubCmd::Execute | SubCmd::Upgrade => {
+            info!("Refreshing local package databases...");
             localdb
                 .update(&downloader)
                 .await
                 .context("Failed to refresh local package database")?;
 
             install_all::install_all(&localdb, &downloader, wishlist, opts, config).await?;
-
             Ok(true)
         }
         SubCmd::Search(search) => {
