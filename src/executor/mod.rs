@@ -56,13 +56,13 @@ impl MachineStatus {
         Ok(MachineStatus { pkgs: res })
     }
 
-    /// Generate a list of actions according to machine status and package wishlist
-    pub fn gen_actions(&self, wishlist: &[&PkgMeta], purge_config: bool) -> PkgActions {
+    /// Generate a list of actions according to machine status and package blueprint
+    pub fn gen_actions(&self, blueprint: &[&PkgMeta], purge_config: bool) -> PkgActions {
         let mut res = PkgActions::default();
         // We will modify the list, so do a clone
         let mut old_pkgs = self.pkgs.clone();
 
-        for newpkg in wishlist {
+        for newpkg in blueprint {
             if !old_pkgs.contains_key(&newpkg.name) {
                 // New one! Install it
                 res.install.push((
@@ -95,7 +95,7 @@ impl MachineStatus {
                     }
                     PkgState::Installed => {
                         // Check version. If installed is different,
-                        //   then install the one in the wishlist
+                        //   then install the one in the blueprint
                         if oldpkg.version != newpkg.version {
                             res.install.push((
                                 PkgInstallAction {

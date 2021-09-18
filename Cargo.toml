@@ -28,10 +28,10 @@ serde = "1"
 toml = "0.5"
 nom = "7"
 # Network stack
-futures = "0.3"
+futures-util = "0.3"
 tokio = { version = "1.10", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
 bytes = "1"
-reqwest = { version = "0.11" }
+reqwest = { version = "0.11", features = ["rustls-tls"], default-features = false }
 # Actions modifier
 nix = "0.22"
 # Parallel searching

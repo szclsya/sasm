@@ -1,7 +1,7 @@
 use crate::{msg, types::Checksum};
 
 use anyhow::{bail, format_err, Result};
-use futures::future::select_all;
+use futures_util::future::select_all;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::Client;
 use std::{

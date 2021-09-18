@@ -1,23 +1,24 @@
-mod install_all;
+mod execute;
 mod search;
 use search::search_deb_db;
+use execute::execute;
 
 use crate::{
     db::LocalDb,
     executor::{MachineStatus, PkgState},
     info,
-    types::config::{Config, Opts, SubCmd, Wishlist},
+    types::config::{Config, Opts, SubCmd, Blueprint},
 };
 
 use anyhow::{Context, Result};
 use console::style;
 use std::path::PathBuf;
 
-/// bool in return type indicated whether the wishlist is altered
+/// bool in return type indicated whether the blueprint is altered
 pub async fn fullfill_command(
     config: &Config,
     opts: &Opts,
-    wishlist: &mut Wishlist,
+    blueprint: &mut Blueprint,
 ) -> Result<bool> {
     let downloader = crate::executor::download::Downloader::new();
     let localdb = LocalDb::new(
@@ -28,27 +29,27 @@ pub async fn fullfill_command(
 
     match &opts.subcmd {
         SubCmd::Install(add) => {
-            // Modify wishlist
+            // Modify blueprint
             for name in &add.names {
-                wishlist.add(name)?;
+                blueprint.add(name)?;
             }
             // Update local db
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
-            // Apply stuff
-            install_all::install_all(&localdb, &downloader, wishlist, opts, config).await?;
+            // Execute blueprint
+            execute(&localdb, &downloader, blueprint, opts, config).await?;
             Ok(true)
         }
         SubCmd::Remove(rm) => {
-            // Modify wishlist
+            // Modify blueprint
             for name in &rm.names {
-                wishlist.remove(name)?;
+                blueprint.remove(name)?;
             }
             // Update local db
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             // Apply stuff
-            install_all::install_all(&localdb, &downloader, wishlist, opts, config).await?;
+            execute(&localdb, &downloader, blueprint, opts, config).await?;
             Ok(true)
         }
         SubCmd::Refresh => {
@@ -63,7 +64,7 @@ pub async fn fullfill_command(
                 .await
                 .context("Failed to refresh local package database")?;
 
-            install_all::install_all(&localdb, &downloader, wishlist, opts, config).await?;
+            execute(&localdb, &downloader, blueprint, opts, config).await?;
             Ok(true)
         }
         SubCmd::Search(search) => {

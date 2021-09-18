@@ -7,7 +7,7 @@ use crate::{
     solver::{deb::read_deb_db, Solver},
     success,
     types::{
-        config::{Config, Opts, Wishlist},
+        config::{Config, Opts, Blueprint},
         PkgActionModifier,
     },
 };
@@ -16,10 +16,10 @@ use anyhow::{Context, Result};
 use dialoguer::Confirm;
 
 #[inline]
-pub async fn install_all(
+pub async fn execute(
     local_db: &LocalDb,
     downloader: &Downloader,
-    wishlist: &Wishlist,
+    blueprint: &Blueprint,
     opts: &Opts,
     config: &Config,
 ) -> Result<()> {
@@ -35,7 +35,7 @@ pub async fn install_all(
     solver.finalize();
 
     info!("Resolving dependencies...");
-    let res = solver.install(wishlist)?;
+    let res = solver.install(blueprint)?;
     // Translating result to list of actions
     let root = opts.root.clone();
     let machine_status = MachineStatus::new(&root)?;

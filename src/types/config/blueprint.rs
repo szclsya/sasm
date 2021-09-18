@@ -17,21 +17,21 @@ use std::{
 };
 
 #[derive(Default)]
-pub struct Wishlist {
-    lines: Vec<WishlistLine>,
+pub struct Blueprint {
+    lines: Vec<BlueprintLine>,
 }
 
-impl Wishlist {
+impl Blueprint {
     pub fn from_file(path: &Path) -> Result<Self> {
-        let mut res = Wishlist::default();
+        let mut res = Blueprint::default();
         let f = File::open(path)?;
         let reader = BufReader::new(f);
 
-        for line in parse_wishlist_lines(reader)? {
-            if let WishlistLine::PkgRequest(req) = &line {
+        for line in parse_blueprint_lines(reader)? {
+            if let BlueprintLine::PkgRequest(req) = &line {
                 if res.contains(&req.name) {
                     // Already contains this package, no good!
-                    bail!("Duplicate package {} in wishlist", req.name)
+                    bail!("Duplicate package {} in blueprint", req.name)
                 }
             }
             res.lines.push(line);
@@ -44,7 +44,7 @@ impl Wishlist {
         self.lines
             .iter()
             .filter_map(|line| match line {
-                WishlistLine::PkgRequest(req) => Some(req),
+                BlueprintLine::PkgRequest(req) => Some(req),
                 _ => None,
             })
             .collect()
@@ -52,7 +52,7 @@ impl Wishlist {
 
     pub fn contains(&self, pkgname: &str) -> bool {
         for line in &self.lines {
-            if let WishlistLine::PkgRequest(req) = line {
+            if let BlueprintLine::PkgRequest(req) = line {
                 if req.name == pkgname {
                     return true;
                 }
@@ -63,7 +63,7 @@ impl Wishlist {
 
     pub fn add(&mut self, pkgname: &str) -> Result<()> {
         if self.contains(pkgname) {
-            bail!("Package {} already exists in wishlist", pkgname);
+            bail!("Package {} already exists in blueprint", pkgname);
         }
 
         let pkgreq = PkgRequest {
@@ -71,14 +71,14 @@ impl Wishlist {
             version: VersionRequirement::default(),
             install_recomm: None,
         };
-        self.lines.push(WishlistLine::PkgRequest(pkgreq));
+        self.lines.push(BlueprintLine::PkgRequest(pkgreq));
         Ok(())
     }
 
     pub fn remove(&mut self, pkgname: &str) -> Result<()> {
         let mut i = 0;
         while i < self.lines.len() {
-            if let WishlistLine::PkgRequest(req) = &self.lines[i] {
+            if let BlueprintLine::PkgRequest(req) = &self.lines[i] {
                 if req.name == pkgname {
                     self.lines.remove(i);
                     return Ok(());
@@ -87,16 +87,16 @@ impl Wishlist {
             i += 1;
         }
 
-        bail!("Package with name {} not found in wishlist", pkgname)
+        bail!("Package with name {} not found in blueprint", pkgname)
     }
 
     pub fn export(&self) -> String {
         let mut res = String::new();
         for l in &self.lines {
             match l {
-                WishlistLine::Comment(content) => res.push_str(&format!("#{}\n", content)),
-                WishlistLine::EmptyLine => res.push('\n'),
-                WishlistLine::PkgRequest(req) => res.push_str(&format!("{}\n", req.to_string())),
+                BlueprintLine::Comment(content) => res.push_str(&format!("#{}\n", content)),
+                BlueprintLine::EmptyLine => res.push('\n'),
+                BlueprintLine::PkgRequest(req) => res.push_str(&format!("{}\n", req.to_string())),
             }
         }
         res
@@ -104,7 +104,7 @@ impl Wishlist {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-enum WishlistLine {
+enum BlueprintLine {
     PkgRequest(PkgRequest),
     Comment(String),
     EmptyLine,
@@ -143,7 +143,7 @@ impl std::fmt::Display for PkgRequest {
     }
 }
 
-fn parse_wishlist_lines(reader: impl BufRead) -> Result<Vec<WishlistLine>> {
+fn parse_blueprint_lines(reader: impl BufRead) -> Result<Vec<BlueprintLine>> {
     let mut res = Vec::new();
     let mut errors = 0;
     for (no, line) in reader.lines().enumerate() {
@@ -155,7 +155,7 @@ fn parse_wishlist_lines(reader: impl BufRead) -> Result<Vec<WishlistLine>> {
             Err(e) => {
                 errors += 1;
                 error!(
-                    "Failed to parse wishlist at line {}: {}\n",
+                    "Failed to parse blueprint at line {}: {}\n",
                     no,
                     e.to_string()
                 );
@@ -166,20 +166,20 @@ fn parse_wishlist_lines(reader: impl BufRead) -> Result<Vec<WishlistLine>> {
     if errors == 0 {
         Ok(res)
     } else {
-        bail!("Failed to parse wishlist due to {} error(s)", errors)
+        bail!("Failed to parse blueprint due to {} error(s)", errors)
     }
 }
 
-fn empty_line(i: &str) -> IResult<&str, WishlistLine> {
+fn empty_line(i: &str) -> IResult<&str, BlueprintLine> {
     match nom::sequence::terminated(nom::character::complete::space0, nom::combinator::eof)(i) {
-        Ok(_) => Ok(("", WishlistLine::EmptyLine)),
+        Ok(_) => Ok(("", BlueprintLine::EmptyLine)),
         Err(e) => Err(e),
     }
 }
 
-fn comment_line(i: &str) -> IResult<&str, WishlistLine> {
+fn comment_line(i: &str) -> IResult<&str, BlueprintLine> {
     match char('#')(i) {
-        Ok((r, _)) => Ok(("", WishlistLine::Comment(r.to_string()))),
+        Ok((r, _)) => Ok(("", BlueprintLine::Comment(r.to_string()))),
         Err(e) => Err(e),
     }
 }
@@ -253,9 +253,9 @@ fn package_line(i: &str) -> IResult<&str, PkgRequest> {
     Ok((i, res))
 }
 
-fn package_line_wrapper(i: &str) -> IResult<&str, WishlistLine> {
+fn package_line_wrapper(i: &str) -> IResult<&str, BlueprintLine> {
     let (i, res) = package_line(i)?;
-    Ok((i, WishlistLine::PkgRequest(res)))
+    Ok((i, BlueprintLine::PkgRequest(res)))
 }
 
 #[cfg(test)]
@@ -266,9 +266,9 @@ mod tests {
     use std::convert::TryFrom;
     #[test]
     fn test_empty_line() {
-        let t: Vec<(&str, IResult<&str, WishlistLine>)> = vec![
-            ("", Ok(("", WishlistLine::EmptyLine))),
-            ("   ", Ok(("", WishlistLine::EmptyLine))),
+        let t: Vec<(&str, IResult<&str, BlueprintLine>)> = vec![
+            ("", Ok(("", BlueprintLine::EmptyLine))),
+            ("   ", Ok(("", BlueprintLine::EmptyLine))),
             (
                 "blah",
                 Err(nom::Err::Error(Error::new(
@@ -292,12 +292,12 @@ mod tests {
 
     #[test]
     fn test_comment_line() {
-        let t: Vec<(&str, IResult<&str, WishlistLine>)> = vec![
-            ("#", Ok(("", WishlistLine::Comment("".to_string())))),
-            ("#   ", Ok(("", WishlistLine::Comment("   ".to_string())))),
+        let t: Vec<(&str, IResult<&str, BlueprintLine>)> = vec![
+            ("#", Ok(("", BlueprintLine::Comment("".to_string())))),
+            ("#   ", Ok(("", BlueprintLine::Comment("   ".to_string())))),
             (
                 "# This is a comment",
-                Ok(("", WishlistLine::Comment(" This is a comment".to_string()))),
+                Ok(("", BlueprintLine::Comment(" This is a comment".to_string()))),
             ),
             (
                 "blah",

@@ -4,7 +4,7 @@ mod db;
 mod executor;
 mod solver;
 mod types;
-use types::config::{Config, Opts, Wishlist};
+use types::config::{Config, Opts, Blueprint};
 
 use anyhow::{bail, Context, Result};
 use clap::Clap;
@@ -55,7 +55,7 @@ async fn try_main() -> Result<()> {
     }
 
     let config_path = config_root.join("apm.toml");
-    let wishlist_path = config_root.join("wishlist");
+    let blueprint_path = config_root.join("blueprint");
 
     // Read config
     let mut config_file = File::open(&config_path).context(format!(
@@ -68,26 +68,26 @@ async fn try_main() -> Result<()> {
         .context("Failed to read config file")?;
     let config: Config = toml::from_str(&data).context("Failed to parse config file")?;
 
-    // Read wishlist
-    let mut wishlist = Wishlist::from_file(&wishlist_path)?;
+    // Read blueprint
+    let mut blueprint = Blueprint::from_file(&blueprint_path)?;
 
     // Do stuff
     warn!("apm is still in early alpha stage. DO NOT use me on production systems!");
-    let wishlist_modified = actions::fullfill_command(&config, &opts, &mut wishlist).await?;
+    let blueprint_modified = actions::fullfill_command(&config, &opts, &mut blueprint).await?;
 
-    // Write back wishlist, if the operations involves modifying it
-    if wishlist_modified {
-        let new_wishlist = wishlist.export();
-        let wishlist_file = OpenOptions::new()
+    // Write back blueprint, if the operations involves modifying it
+    if blueprint_modified {
+        let new_blueprint = blueprint.export();
+        let blueprint_file = OpenOptions::new()
             .write(true)
             .truncate(true)
-            .open(&wishlist_path)?;
-        wishlist_file.set_len(0)?;
-        wishlist_file
-            .write_all_at(&new_wishlist.into_bytes(), 0)
+            .open(&blueprint_path)?;
+        blueprint_file.set_len(0)?;
+        blueprint_file
+            .write_all_at(&new_blueprint.into_bytes(), 0)
             .context(format!(
-                "Failed to write to wishlist file at {}",
-                wishlist_path.display()
+                "Failed to write to blueprint file at {}",
+                blueprint_path.display()
             ))?;
     }
 

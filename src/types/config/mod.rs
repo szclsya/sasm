@@ -1,5 +1,5 @@
-mod wishlist;
-pub use wishlist::{PkgRequest, Wishlist};
+mod blueprint;
+pub use blueprint::{PkgRequest, Blueprint};
 
 use clap::Clap;
 use serde::{Deserialize, Serialize};
@@ -47,7 +47,7 @@ pub enum SubCmd {
     Remove(RemovePkg),
     #[clap(about = "Refresh local package databases")]
     Refresh,
-    #[clap(about = "Install and upgrade all packages according to wishlist")]
+    #[clap(about = "Install and upgrade all packages according to blueprint")]
     Execute,
     #[clap(about = "Alias to Execute")]
     Upgrade,
