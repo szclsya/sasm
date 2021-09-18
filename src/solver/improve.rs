@@ -2,23 +2,31 @@ use super::{pool::PkgPool, solve, sort::sort_pkgs_to_cycles};
 
 use anyhow::Result;
 use varisat::{lit::Lit, ExtendFormula, Solver};
+use std::collections::HashSet;
 
 /// Attempt to use latest possible version of packages via forcing the solver to choose better versions
 /// of packages via banning older versions via solver assume
 pub fn upgrade(pool: &dyn PkgPool, res: &mut Vec<usize>, solver: &mut Solver) -> Result<()> {
     let mut assumes = Vec::new();
+    let mut cant_update: HashSet<String> = HashSet::new();
     loop {
-        let mut updates = gen_update_assume(pool, res);
+        let updates = gen_update_assume(pool, res);
         if !updates.is_empty() {
-            let mut new_assumes = assumes.clone();
-            new_assumes.append(&mut updates);
-            solver.assume(&new_assumes);
-            if solver.solve().unwrap() {
-                *res = solve(solver)?;
-                assumes = new_assumes;
-            } else {
-                // Cannot update any further
-                break;
+            let names: HashSet<String> = updates.iter().map(|(name, _)| name.to_string()).collect();
+            // If the update list only contains packages that can't be upgraded, stop
+            if cant_update == names {
+                break
+            }
+            for update in updates {
+                let mut new_assumes = assumes.clone();
+                new_assumes.append(&mut update.1.clone());
+                solver.assume(&new_assumes);
+                if solver.solve().unwrap() {
+                    *res = solve(solver)?;
+                    assumes = new_assumes;
+                } else {
+                    cant_update.insert(update.0);
+                }
             }
         } else {
             break;
@@ -68,10 +76,11 @@ pub fn reduce(pool: &dyn PkgPool, res: &mut Vec<usize>, to_install: &[usize]) ->
 /// Generate a list of Lit of all older packages
 /// The idea is that with these assumptions, the SAT solver must choose more up-to-date
 ///   packages, or give Unsolvable
-pub fn gen_update_assume(pool: &dyn PkgPool, ids: &[usize]) -> Vec<Lit> {
+pub fn gen_update_assume(pool: &dyn PkgPool, ids: &[usize]) -> Vec<(String, Vec<Lit>)> {
     let mut res = Vec::new();
     for id in ids {
         if !is_best(pool, *id).unwrap() {
+            let mut assume = Vec::new();
             // Find all newer versions of this package
             let name = &pool.get_pkg_by_id(*id).unwrap().name;
             let pkgids: Vec<usize> = pool.get_pkgs_by_name(name).unwrap();
@@ -84,9 +93,10 @@ pub fn gen_update_assume(pool: &dyn PkgPool, ids: &[usize]) -> Vec<Lit> {
                 if reached {
                     reached = true;
                     let lit = !Lit::from_dimacs(pkgid as isize);
-                    res.push(lit);
+                    assume.push(lit);
                 }
             }
+            res.push((name.to_string(), assume));
         }
     }
     res
