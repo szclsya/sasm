@@ -1,8 +1,8 @@
 use super::{pool::PkgPool, solve, sort::sort_pkgs_to_cycles};
 
 use anyhow::Result;
-use varisat::{lit::Lit, ExtendFormula, Solver};
 use std::collections::HashSet;
+use varisat::{lit::Lit, ExtendFormula, Solver};
 
 /// Attempt to use latest possible version of packages via forcing the solver to choose better versions
 /// of packages via banning older versions via solver assume
@@ -15,7 +15,7 @@ pub fn upgrade(pool: &dyn PkgPool, res: &mut Vec<usize>, solver: &mut Solver) ->
             let names: HashSet<String> = updates.iter().map(|(name, _)| name.to_string()).collect();
             // If the update list only contains packages that can't be upgraded, stop
             if cant_update == names {
-                break
+                break;
             }
             for update in updates {
                 let mut new_assumes = assumes.clone();

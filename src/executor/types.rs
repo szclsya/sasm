@@ -45,24 +45,30 @@ impl std::convert::TryFrom<&str> for PkgState {
 pub struct PkgStatus {
     pub name: String,
     pub version: PkgVersion,
+    pub install_size: u64,
     pub state: PkgState,
 }
 
-impl TryFrom<&HashMap<&str, String>> for PkgStatus {
+impl TryFrom<HashMap<&str, String>> for PkgStatus {
     type Error = Error;
 
     #[inline]
-    fn try_from(f: &HashMap<&str, String>) -> Result<PkgStatus, Self::Error> {
+    fn try_from(mut f: HashMap<&str, String>) -> Result<PkgStatus, Self::Error> {
         let name = f
-            .get("Package")
-            .ok_or_else(|| format_err!("Malformed dpkg status db: no Package name for package"))?
-            .to_string();
+            .remove("Package")
+            .ok_or_else(|| format_err!("Malformed dpkg status db: no Package name for package"))?;
         let state_line = f
-            .get("Status")
+            .remove("Status")
             .ok_or_else(|| format_err!("Malformed dpkg status db: no Status for package"))?;
-        let version = f.get("Version").ok_or_else(|| {
+        let version = f.remove("Version").ok_or_else(|| {
             format_err!("Malformed dpkg status db: no Version for package {}", name)
         })?;
+        let install_size: u64 = f
+            .remove("Installed-Size")
+            .ok_or_else(|| {
+                format_err!("Malformed dpkg status db: no Version for package {}", name)
+            })?
+            .parse()?;
 
         let status: Vec<&str> = state_line.split(' ').collect();
         if status.len() != 3 {
@@ -75,6 +81,7 @@ impl TryFrom<&HashMap<&str, String>> for PkgStatus {
         let res = PkgStatus {
             name,
             version,
+            install_size,
             state,
         };
 

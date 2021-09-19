@@ -4,7 +4,7 @@ mod db;
 mod executor;
 mod solver;
 mod types;
-use types::config::{Config, Opts, Blueprint};
+use types::config::{Blueprint, Config, Opts};
 
 use anyhow::{bail, Context, Result};
 use clap::Clap;
@@ -66,7 +66,14 @@ async fn try_main() -> Result<()> {
     config_file
         .read_to_string(&mut data)
         .context("Failed to read config file")?;
-    let config: Config = toml::from_str(&data).context("Failed to parse config file")?;
+    let mut config: Config = toml::from_str(&data).context("Failed to parse config file")?;
+    // Cert paths are relative to config root
+    for repo in config.repo.iter_mut() {
+        for cert_path in repo.1.certs.iter_mut() {
+            let config_root = opts.root.join(&opts.config_root);
+            *cert_path = config_root.join(&cert_path);
+        }
+    }
 
     // Read blueprint
     let mut blueprint = Blueprint::from_file(&blueprint_path)?;

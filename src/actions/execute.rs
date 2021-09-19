@@ -7,7 +7,7 @@ use crate::{
     solver::{deb::read_deb_db, Solver},
     success,
     types::{
-        config::{Config, Opts, Blueprint},
+        config::{Blueprint, Config, Opts},
         PkgActionModifier,
     },
 };
@@ -51,12 +51,14 @@ pub async fn execute(
     } else {
         info!("These following actions will be performed:");
         actions.show();
+        crate::WRITER.writeln("", "")?;
+        actions.show_size_change();
         if Confirm::new()
             .with_prompt(format!("{}{}", cli::gen_prefix(""), "Proceed?"))
             .interact()?
         {
             // Run it!
-            dpkg::execute_pkg_actions(actions, &opts.root, &downloader).await?;
+            dpkg::execute_pkg_actions(actions, &opts.root, downloader).await?;
         } else {
             std::process::exit(2);
         }

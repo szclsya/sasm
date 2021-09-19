@@ -1,13 +1,13 @@
 mod execute;
 mod search;
-use search::search_deb_db;
 use execute::execute;
+use search::search_deb_db;
 
 use crate::{
     db::LocalDb,
     executor::{MachineStatus, PkgState},
-    info,success,
-    types::config::{Config, Opts, SubCmd, Blueprint},
+    info, success,
+    types::config::{Blueprint, Config, Opts, SubCmd},
 };
 
 use anyhow::{Context, Result};

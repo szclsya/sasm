@@ -41,8 +41,12 @@ impl PkgActionModifier for DontRemove {
             .collect();
         println!("{:?}", pkgnames);
 
-        actions.remove.retain(|pkgname| !pkgnames.contains(pkgname));
-        actions.remove.retain(|pkgname| !pkgnames.contains(pkgname));
+        actions
+            .remove
+            .retain(|(pkgname, _)| !pkgnames.contains(pkgname));
+        actions
+            .remove
+            .retain(|(pkgname, _)| !pkgnames.contains(pkgname));
     }
 }
 
@@ -66,7 +70,7 @@ mod test {
 
         let modifier = DontRemove::new(vec!["linux-kernel-{KERNEL_VERSION}".to_string()]).unwrap();
         let mut actions = PkgActions::default();
-        actions.remove.push(result.clone());
+        actions.remove.push((result.clone(), 0));
         modifier.apply(&mut actions);
         assert_eq!(actions, PkgActions::default());
     }

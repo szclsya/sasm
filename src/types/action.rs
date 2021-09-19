@@ -1,11 +1,14 @@
 use super::{Checksum, PkgVersion};
+use console::style;
+use indicatif::HumanBytes;
 
 #[derive(Default, Debug, PartialEq, Eq)]
 pub struct PkgActions {
-    pub install: Vec<(PkgInstallAction, Option<PkgVersion>)>,
-    pub unpack: Vec<(PkgInstallAction, Option<PkgVersion>)>,
-    pub remove: Vec<String>,
-    pub purge: Vec<String>,
+    pub install: Vec<(PkgInstallAction, Option<(PkgVersion, u64)>)>,
+    pub unpack: Vec<(PkgInstallAction, Option<(PkgVersion, u64)>)>,
+    // (Name, InstallSize)
+    pub remove: Vec<(String, u64)>,
+    pub purge: Vec<(String, u64)>,
     pub configure: Vec<String>,
 }
 
@@ -13,7 +16,8 @@ pub struct PkgActions {
 pub struct PkgInstallAction {
     pub name: String,
     pub url: String,
-    pub size: u64,
+    pub download_size: u64,
+    pub install_size: u64,
     pub checksum: Checksum,
     pub version: PkgVersion,
 }
@@ -39,9 +43,9 @@ impl PkgActions {
             .filter_map(|(install, old_ver)| match old_ver {
                 Some(_) => None,
                 None => {
-                    let mut msg = install.name.to_string();
+                    let mut msg = install.name.clone();
                     let ver_str = format!("({})", install.version);
-                    msg.push_str(&console::style(ver_str).dim().to_string());
+                    msg.push_str(&style(ver_str).dim().to_string());
                     Some(msg)
                 }
             })
@@ -51,11 +55,11 @@ impl PkgActions {
         let to_upgrade: Vec<String> = self
             .install
             .iter()
-            .filter_map(|(install, old_ver)| match old_ver {
-                Some(old_ver) => {
-                    let mut msg = install.name.to_string();
-                    let ver_str = format!("({} -> {})", old_ver, install.version);
-                    msg.push_str(&console::style(ver_str).dim().to_string());
+            .filter_map(|(install, oldpkg)| match oldpkg {
+                Some(oldpkg) => {
+                    let mut msg = install.name.clone();
+                    let ver_str = format!("({} -> {})", oldpkg.0, install.version);
+                    msg.push_str(&style(ver_str).dim().to_string());
                     Some(msg)
                 }
                 None => None,
@@ -66,16 +70,16 @@ impl PkgActions {
         let to_unpack: Vec<String> = self
             .unpack
             .iter()
-            .map(|(install, old_ver)| {
-                let mut msg = install.name.to_string();
-                match old_ver {
-                    Some(old_ver) => {
-                        let ver_str = format!("({} -> {})", old_ver, install.version);
-                        msg.push_str(&console::style(ver_str).dim().to_string());
+            .map(|(install, oldpkg)| {
+                let mut msg = install.name.clone();
+                match oldpkg {
+                    Some(oldpkg) => {
+                        let ver_str = format!("({} -> {})", oldpkg.0, install.version);
+                        msg.push_str(&style(ver_str).dim().to_string());
                     }
                     None => {
                         let ver_str = format!("({})", install.version);
-                        msg.push_str(&console::style(ver_str).dim().to_string());
+                        msg.push_str(&style(ver_str).dim().to_string());
                     }
                 };
                 msg
@@ -86,9 +90,94 @@ impl PkgActions {
         crate::WRITER
             .write_chunks("CONFIGURE", &self.configure)
             .unwrap();
-        let purge_header = console::style("PURGE").red().to_string();
-        crate::WRITER.write_chunks(&purge_header, &self.purge).unwrap();
-        let remove_header = console::style("REMOVE").red().to_string();
-        crate::WRITER.write_chunks(&remove_header, &self.remove).unwrap();
+        let purge_header = style("PURGE").red().to_string();
+        let purges: Vec<&str> = self.purge.iter().map(|(name, _)| name.as_str()).collect();
+        crate::WRITER.write_chunks(&purge_header, &purges).unwrap();
+
+        let remove_header = style("REMOVE").red().to_string();
+        let removes: Vec<&str> = self.remove.iter().map(|(name, _)| name.as_str()).collect();
+        crate::WRITER
+            .write_chunks(&remove_header, &removes)
+            .unwrap();
+    }
+
+    pub fn show_size_change(&self) {
+        crate::WRITER
+            .writeln(
+                "",
+                &format!(
+                    "{} {}",
+                    &style("Total download size:").bold().to_string(),
+                    HumanBytes(self.calculate_download_size())
+                ),
+            )
+            .unwrap();
+        let install_size_change = self.calculate_size_change();
+        let abs_install_size_change = install_size_change.abs() as u64;
+        if install_size_change >= 0 {
+            crate::WRITER
+                .writeln(
+                    "",
+                    &format!(
+                        "{} +{}",
+                        &style("Estimated total size change:").bold().to_string(),
+                        HumanBytes(abs_install_size_change)
+                    ),
+                )
+                .unwrap();
+        } else {
+            crate::WRITER
+                .writeln(
+                    "",
+                    &format!(
+                        "{} -{}",
+                        &style("Estimated total size change:").bold().to_string(),
+                        HumanBytes(abs_install_size_change)
+                    ),
+                )
+                .unwrap();
+        }
+    }
+
+    fn calculate_size_change(&self) -> i128 {
+        let mut res: i128 = 0;
+        for install in &self.install {
+            res += i128::from(install.0.install_size);
+            if let Some(oldpkg) = &install.1 {
+                res -= i128::from(oldpkg.1);
+            }
+        }
+
+        for unpack in &self.unpack {
+            res += i128::from(unpack.0.install_size);
+            if let Some(oldpkg) = &unpack.1 {
+                res -= i128::from(oldpkg.1);
+            }
+        }
+
+        for remove in &self.remove {
+            res -= i128::from(remove.1);
+        }
+
+        for purge in &self.purge {
+            res -= i128::from(purge.1);
+        }
+
+        // Installed-Size is in kilobytes
+        res *= 1024;
+        res
+    }
+
+    fn calculate_download_size(&self) -> u64 {
+        let mut res = 0;
+        for install in &self.install {
+            res += install.0.download_size;
+        }
+
+        for unpack in &self.unpack {
+            res += unpack.0.download_size;
+        }
+
+        res
     }
 }

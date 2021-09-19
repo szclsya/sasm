@@ -46,7 +46,7 @@ impl MachineStatus {
                     for field in paragraph.fields {
                         fields.insert(field.name, field.value);
                     }
-                    let pkgstatus = PkgStatus::try_from(&fields)?;
+                    let pkgstatus = PkgStatus::try_from(fields)?;
                     res.insert(pkgstatus.name.clone(), pkgstatus);
                 }
                 Streaming::Incomplete => buf_parse.buffer().unwrap(),
@@ -69,7 +69,8 @@ impl MachineStatus {
                     PkgInstallAction {
                         name: newpkg.name.clone(),
                         url: newpkg.url.clone(),
-                        size: newpkg.size,
+                        download_size: newpkg.size,
+                        install_size: newpkg.install_size,
                         checksum: newpkg.checksum.clone(),
                         version: newpkg.version.clone(),
                     },
@@ -86,7 +87,8 @@ impl MachineStatus {
                             PkgInstallAction {
                                 name: newpkg.name.clone(),
                                 url: newpkg.url.clone(),
-                                size: newpkg.size,
+                                download_size: newpkg.size,
+                                install_size: newpkg.install_size,
                                 checksum: newpkg.checksum.clone(),
                                 version: newpkg.version.clone(),
                             },
@@ -101,11 +103,12 @@ impl MachineStatus {
                                 PkgInstallAction {
                                     name: newpkg.name.clone(),
                                     url: newpkg.url.clone(),
-                                    size: newpkg.size,
+                                    download_size: newpkg.size,
+                                    install_size: newpkg.install_size,
                                     checksum: newpkg.checksum.clone(),
                                     version: newpkg.version.clone(),
                                 },
-                                Some(oldpkg.version),
+                                Some((oldpkg.version, oldpkg.install_size)),
                             ));
                         }
                     }
@@ -120,11 +123,12 @@ impl MachineStatus {
                                 PkgInstallAction {
                                     name: newpkg.name.clone(),
                                     url: newpkg.url.clone(),
-                                    size: newpkg.size,
+                                    download_size: newpkg.size,
+                                    install_size: newpkg.install_size,
                                     checksum: newpkg.checksum.clone(),
                                     version: newpkg.version.clone(),
                                 },
-                                Some(oldpkg.version),
+                                Some((oldpkg.version, oldpkg.install_size)),
                             ));
                         }
                     }
@@ -135,20 +139,17 @@ impl MachineStatus {
         // Now deal with the leftovers
         for oldpkg in old_pkgs {
             match oldpkg.1.state {
-                PkgState::Installed => {
-                    if purge_config {
-                        res.purge.push(oldpkg.0);
-                    } else {
-                        res.remove.push(oldpkg.0);
-                    }
-                }
-                PkgState::HalfConfigured
+                PkgState::Installed
+                | PkgState::HalfConfigured
                 | PkgState::HalfInstalled
                 | PkgState::TriggerAwaited
                 | PkgState::TriggerPending
                 | PkgState::Unpacked => {
-                    // Just purge it
-                    res.purge.push(oldpkg.0);
+                    if purge_config {
+                        res.purge.push((oldpkg.0, oldpkg.1.install_size));
+                    } else {
+                        res.remove.push((oldpkg.0, oldpkg.1.install_size));
+                    }
                 }
                 PkgState::ConfigFiles | PkgState::NotInstalled => {
                     // Not installed in the first place, nothing to do

@@ -1,5 +1,5 @@
 mod blueprint;
-pub use blueprint::{PkgRequest, Blueprint};
+pub use blueprint::{Blueprint, PkgRequest};
 
 use clap::Clap;
 use serde::{Deserialize, Serialize};

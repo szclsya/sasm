@@ -22,7 +22,7 @@ pub struct PkgMeta {
     pub depends: Vec<(String, VersionRequirement)>,
     pub breaks: Vec<(String, VersionRequirement)>,
     pub conflicts: Vec<(String, VersionRequirement)>,
-    pub install_size: usize,
+    pub install_size: u64,
     pub url: String,
     // u64 because reqwest's content length is u64
     pub size: u64,
