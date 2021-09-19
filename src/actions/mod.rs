@@ -6,7 +6,7 @@ use execute::execute;
 use crate::{
     db::LocalDb,
     executor::{MachineStatus, PkgState},
-    info,
+    info,success,
     types::config::{Config, Opts, SubCmd, Blueprint},
 };
 
@@ -55,6 +55,7 @@ pub async fn fullfill_command(
         SubCmd::Refresh => {
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
+            success!("Refresh complete");
             Ok(false)
         }
         SubCmd::Execute | SubCmd::Upgrade => {

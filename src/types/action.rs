@@ -86,7 +86,9 @@ impl PkgActions {
         crate::WRITER
             .write_chunks("CONFIGURE", &self.configure)
             .unwrap();
-        crate::WRITER.write_chunks("PURGE", &self.purge).unwrap();
-        crate::WRITER.write_chunks("REMOVE", &self.remove).unwrap();
+        let purge_header = console::style("PURGE").red().to_string();
+        crate::WRITER.write_chunks(&purge_header, &self.purge).unwrap();
+        let remove_header = console::style("REMOVE").red().to_string();
+        crate::WRITER.write_chunks(&remove_header, &self.remove).unwrap();
     }
 }
