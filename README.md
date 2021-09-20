@@ -32,7 +32,7 @@ components = ["main"]
 certs = ["rel/path/to/publickey.asc"]
 ```
 
-And here's an example of `wishlist`:
+And here's an example of `blueprint`:
 ```
 kernel-base
 util-base
@@ -40,8 +40,8 @@ shadow
 dpkg
 vim
 sudo
-# Comments line are allowed
-# You can also specify the range of version you wish
+# Comment lines are allowed
+# You can also specify the range of version you want
 alacritty (>0.7, <=1.0)
 ```
 
