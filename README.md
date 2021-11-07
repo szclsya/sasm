@@ -2,11 +2,6 @@
 `apm` is an experimental package manager that employs the power of modern Boolean satisfiability problem solvers.
 
 ## Build
-Install dependencies:
-+ `nettle`: for OpenPGP support
-  - `clang` and `pkg-config`: for building and linking nettle
-
-After that, just do:
 ```bash
 cargo build --release
 install -Dm755 target/release/apm /usr/local/bin/apm
