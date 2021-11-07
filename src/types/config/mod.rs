@@ -1,7 +1,7 @@
 mod blueprint;
 pub use blueprint::{Blueprint, PkgRequest};
 
-use clap::Clap;
+use clap::Parser;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 
@@ -20,7 +20,7 @@ pub struct RepoConfig {
     pub certs: Vec<PathBuf>,
 }
 
-#[derive(Clap)]
+#[derive(Parser)]
 #[clap(version = "0.1.0", author = "Leo Shen <i@szclsya.me>")]
 pub struct Opts {
     #[clap(long, default_value = "/", about = "Root directory for operation")]
@@ -39,7 +39,7 @@ pub struct Opts {
     pub subcmd: SubCmd,
 }
 
-#[derive(Clap)]
+#[derive(Parser)]
 pub enum SubCmd {
     #[clap(about = "Install new packages")]
     Install(InstallPkg),
@@ -55,17 +55,17 @@ pub enum SubCmd {
     Search(SearchPkg),
 }
 
-#[derive(Clap)]
+#[derive(Parser)]
 pub struct InstallPkg {
     pub names: Vec<String>,
 }
 
-#[derive(Clap)]
+#[derive(Parser)]
 pub struct RemovePkg {
     pub names: Vec<String>,
 }
 
-#[derive(Clap)]
+#[derive(Parser)]
 pub struct SearchPkg {
     pub keyword: String,
 }

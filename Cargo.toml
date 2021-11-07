@@ -3,7 +3,7 @@ name = "apm"
 version = "0.1.0"
 authors = ["Leo Shen <i@szclsya.me>"]
 license = "GPL-2.0-or-later"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
@@ -14,12 +14,12 @@ varisat = "0.2"
 petgraph = "0.6"
 # Dealing with deb control files and InRelease
 debcontrol = "0.1"
-sequoia-openpgp = "1"
+sequoia-openpgp = { version = "1", default_features = false, features = ["crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"] }
 sha2 = "0.9"
 hex = "0.4"
 # cli
 console = "0.14.1"
-clap = "3.0.0-beta.4"
+clap = "3.0.0-beta.5"
 # 0.16.2 doesn't work with tokio
 indicatif = "0.17.0-beta.1"
 dialoguer = "0.8"

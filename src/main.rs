@@ -7,7 +7,7 @@ mod types;
 use types::config::{Blueprint, Config, Opts};
 
 use anyhow::{bail, Context, Result};
-use clap::Clap;
+use clap::Parser;
 use lazy_static::lazy_static;
 use std::{
     fs::{File, OpenOptions},
