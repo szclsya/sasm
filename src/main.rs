@@ -54,7 +54,7 @@ async fn try_main() -> Result<()> {
         );
     }
 
-    let config_path = config_root.join("apm.toml");
+    let config_path = config_root.join("config.toml");
     let blueprint_path = config_root.join("blueprint");
 
     // Read config
@@ -79,7 +79,7 @@ async fn try_main() -> Result<()> {
     let mut blueprint = Blueprint::from_file(&blueprint_path)?;
 
     // Do stuff
-    warn!("apm is still in early alpha stage. DO NOT use me on production systems!");
+    warn!("Omakase is still in early alpha stage. DO NOT use me on production systems!");
     let blueprint_modified = actions::fullfill_command(&config, &opts, &mut blueprint).await?;
 
     // Write back blueprint, if the operations involves modifying it

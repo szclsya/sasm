@@ -27,7 +27,7 @@ pub struct Opts {
     pub root: PathBuf,
     #[clap(
         long,
-        default_value = "etc/apm/",
+        default_value = "etc/omakase/",
         about = "Position of the config folder"
     )]
     pub config_root: PathBuf,

@@ -14,7 +14,7 @@ pub async fn execute_pkg_actions(
     let download_jobs = get_download_jobs(&actions);
     info!("Fetching required packages...");
     let download_res = downloader
-        .fetch(download_jobs, &root.join("var/cache/apm/pkgs"))
+        .fetch(download_jobs, &root.join("var/cache/omakase/pkgs"))
         .await
         .context("Failed to fetch packages from repository")?;
 

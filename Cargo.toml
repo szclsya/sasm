@@ -1,9 +1,13 @@
 [package]
-name = "apm"
+name = "omakase"
 version = "0.1.0"
 authors = ["Leo Shen <i@szclsya.me>"]
 license = "GPL-2.0-or-later"
 edition = "2021"
+
+[[bin]]
+name = "oma"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"

@@ -22,7 +22,7 @@ pub async fn fullfill_command(
 ) -> Result<bool> {
     let downloader = crate::executor::download::Downloader::new();
     let localdb = LocalDb::new(
-        opts.root.join("var/cache/apm/db"),
+        opts.root.join("var/cache/omakase/db"),
         config.repo.clone(),
         &config.arch,
     );
@@ -70,7 +70,7 @@ pub async fn fullfill_command(
         }
         SubCmd::Search(search) => {
             let localdb = LocalDb::new(
-                opts.root.join("var/cache/apm/db"),
+                opts.root.join("var/cache/omakase/db"),
                 config.repo.clone(),
                 &config.arch,
             );
