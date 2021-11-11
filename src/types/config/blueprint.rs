@@ -20,6 +20,8 @@ use std::{
 /// A collection of 
 pub struct Blueprints {
     user_blueprint_path: PathBuf,
+    // If we need to export the blueprint back to disk
+    user_blueprint_modified: bool,
     user: Vec<BlueprintLine>,
     vendor: Vec<Vec<BlueprintLine>>,
 }
@@ -34,6 +36,7 @@ impl Blueprints {
 
         Ok(Blueprints {
             user_blueprint_path: user,
+            user_blueprint_modified: false,
             user: user_blueprint,
             vendor: vendor_blueprints,
         })
@@ -74,6 +77,7 @@ impl Blueprints {
             install_recomm: None,
         };
         self.user.push(BlueprintLine::PkgRequest(pkgreq));
+        self.user_blueprint_modified = true;
         Ok(())
     }
 
@@ -85,12 +89,18 @@ impl Blueprints {
                 BlueprintLine::PkgRequest(req) => req.name == pkgname,
                 _ => false,
             });
+            self.user_blueprint_modified = true;
             Ok(())
         }
     }
 
     // Write back user blueprint
-    pub fn export(&self) -> Result<()> {
+    pub fn export(&self) -> Result<bool> {
+        if !self.user_blueprint_modified {
+            // If not modified, nothing to do here.
+            return Ok(false)
+        }
+
         let mut res = String::new();
         for l in &self.user {
             match l {
@@ -113,7 +123,7 @@ impl Blueprints {
                 self.user_blueprint_path.display()
             ))?;
 
-        Ok(())
+        Ok(true)
     }
 
     fn user_list_contains(&self, pkgname: &str) -> bool {

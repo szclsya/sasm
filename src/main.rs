@@ -91,12 +91,10 @@ async fn try_main() -> Result<()> {
 
     // Do stuff
     warn!("Omakase is still in early alpha stage. DO NOT use me on production systems!");
-    let blueprint_modified = actions::fullfill_command(&config, &opts, &mut blueprint).await?;
-
-    // Write back blueprint, if the operations involves modifying it
-    if blueprint_modified {
-        blueprint.export()?;
-    }
+    actions::fullfill_command(&config, &opts, &mut blueprint).await?;
+    // Write back blueprint.
+    // The Blueprints instance will determine if it really need to write back user blueprint
+    blueprint.export()?;
 
     Ok(())
 }

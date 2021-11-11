@@ -19,7 +19,7 @@ pub async fn fullfill_command(
     config: &Config,
     opts: &Opts,
     blueprints: &mut Blueprints,
-) -> Result<bool> {
+) -> Result<()> {
     let downloader = crate::executor::download::Downloader::new();
     let localdb = LocalDb::new(
         opts.root.join("var/cache/omakase/db"),
@@ -38,7 +38,7 @@ pub async fn fullfill_command(
             localdb.update(&downloader).await?;
             // Execute blueprint
             execute(&localdb, &downloader, blueprints, opts, config).await?;
-            Ok(true)
+            Ok(())
         }
         SubCmd::Remove(rm) => {
             // Modify blueprint
@@ -50,13 +50,13 @@ pub async fn fullfill_command(
             localdb.update(&downloader).await?;
             // Apply stuff
             execute(&localdb, &downloader, blueprints, opts, config).await?;
-            Ok(true)
+            Ok(())
         }
         SubCmd::Refresh => {
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             success!("Refresh complete");
-            Ok(false)
+            Ok(())
         }
         SubCmd::Execute | SubCmd::Upgrade => {
             info!("Refreshing local package databases...");
@@ -66,7 +66,7 @@ pub async fn fullfill_command(
                 .context("Failed to refresh local package database")?;
 
             execute(&localdb, &downloader, blueprints, opts, config).await?;
-            Ok(true)
+            Ok(())
         }
         SubCmd::Search(search) => {
             let localdb = LocalDb::new(
@@ -105,7 +105,7 @@ pub async fn fullfill_command(
                 crate::WRITER.writeln("", &pkginfo.description)?;
             }
 
-            Ok(true)
+            Ok(())
         }
     }
 }
