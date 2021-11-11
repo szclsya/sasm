@@ -4,7 +4,7 @@ mod incompatible;
 mod pool;
 mod sort;
 
-use crate::types::{config::Blueprint, PkgMeta};
+use crate::types::{config::Blueprints, PkgMeta};
 use crate::{debug, warn};
 use anyhow::{bail, format_err, Context, Result};
 use pool::{InMemoryPool, PkgPool};
@@ -25,11 +25,11 @@ impl Solver {
         self.pool.finalize();
     }
 
-    pub fn install(&self, blueprint: &Blueprint) -> Result<Vec<&PkgMeta>> {
+    pub fn install(&self, blueprints: &Blueprints) -> Result<Vec<&PkgMeta>> {
         let mut formula = self.pool.gen_formula(None);
         debug!("Adding requested packages to formula...");
         let mut ids = Vec::new();
-        for req in blueprint.get_pkg_requests() {
+        for req in blueprints.get_pkg_requests() {
             let choices: Vec<usize> = match self.pool.get_pkgs_by_name(&req.name) {
                 Some(pkgs) => pkgs
                     .iter()

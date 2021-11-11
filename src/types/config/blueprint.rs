@@ -1,7 +1,7 @@
 use crate::error;
 use crate::types::{parse_version_requirement, VersionRequirement};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Result, Context};
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -11,47 +11,113 @@ use nom::{
     IResult, InputTakeAtPosition,
 };
 use std::{
-    fs::File,
+    fs::{ File, OpenOptions },
+    os::unix::fs::FileExt,
     io::{BufRead, BufReader},
-    path::Path,
+    path::{ Path, PathBuf },
 };
 
-#[derive(Default)]
-pub struct Blueprint {
-    lines: Vec<BlueprintLine>,
+/// A collection of 
+pub struct Blueprints {
+    user_blueprint_path: PathBuf,
+    user: Vec<BlueprintLine>,
+    vendor: Vec<Vec<BlueprintLine>>,
 }
 
-impl Blueprint {
-    pub fn from_file(path: &Path) -> Result<Self> {
-        let mut res = Blueprint::default();
-        let f = File::open(path)?;
-        let reader = BufReader::new(f);
-
-        for line in parse_blueprint_lines(reader)? {
-            if let BlueprintLine::PkgRequest(req) = &line {
-                if res.contains(&req.name) {
-                    // Already contains this package, no good!
-                    bail!("Duplicate package {} in blueprint", req.name)
-                }
-            }
-            res.lines.push(line);
+impl Blueprints {
+    pub fn from_files(user: PathBuf, vendor: &[PathBuf]) -> Result<Self> {
+        let user_blueprint = read_blueprint_from_file(&user)?;
+        let mut vendor_blueprints = Vec::with_capacity(vendor.len());
+        for path in vendor {
+            vendor_blueprints.push(read_blueprint_from_file(path)?);
         }
 
-        Ok(res)
+        Ok(Blueprints {
+            user_blueprint_path: user,
+            user: user_blueprint,
+            vendor: vendor_blueprints,
+        })
     }
 
     pub fn get_pkg_requests(&self) -> Vec<&PkgRequest> {
-        self.lines
+        // Add user blueprint first
+        let mut res: Vec<&PkgRequest> = self.user
             .iter()
             .filter_map(|line| match line {
                 BlueprintLine::PkgRequest(req) => Some(req),
                 _ => None,
             })
-            .collect()
+            .collect();
+
+        // Then add vendor blueprint
+        for vendor in &self.vendor {
+            for line in vendor {
+                if let BlueprintLine::PkgRequest(req) = line {
+                    res.push(req);
+                }
+            }
+        }
+
+        // Duplicates are allowed, so we shall dedup here
+        res.dedup();
+        res
     }
 
-    pub fn contains(&self, pkgname: &str) -> bool {
-        for line in &self.lines {
+    pub fn add(&mut self, pkgname: &str) -> Result<()> {
+        if self.user_list_contains(pkgname) {
+            bail!("Package {} already exists in user blueprint", pkgname);
+        }
+
+        let pkgreq = PkgRequest {
+            name: pkgname.to_string(),
+            version: VersionRequirement::default(),
+            install_recomm: None,
+        };
+        self.user.push(BlueprintLine::PkgRequest(pkgreq));
+        Ok(())
+    }
+
+    pub fn remove(&mut self, pkgname: &str) -> Result<()> {
+        if !self.user_list_contains(pkgname) {
+            bail!("Package with name {} not found in user blueprint", pkgname)
+        } else {
+            self.user.retain(|line| match line {
+                BlueprintLine::PkgRequest(req) => req.name == pkgname,
+                _ => false,
+            });
+            Ok(())
+        }
+    }
+
+    // Write back user blueprint
+    pub fn export(&self) -> Result<()> {
+        let mut res = String::new();
+        for l in &self.user {
+            match l {
+                BlueprintLine::Comment(content) => res.push_str(&format!("#{}\n", content)),
+                BlueprintLine::EmptyLine => res.push('\n'),
+                BlueprintLine::PkgRequest(req) => res.push_str(&format!("{}\n", req.to_string())),
+            }
+        }
+
+        // Open user blueprint
+        let blueprint_file = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .open(&self.user_blueprint_path)?;
+        blueprint_file.set_len(0)?;
+        blueprint_file
+            .write_all_at(&res.into_bytes(), 0)
+            .context(format!(
+                "Failed to write to blueprint file at {}",
+                self.user_blueprint_path.display()
+            ))?;
+
+        Ok(())
+    }
+
+    fn user_list_contains(&self, pkgname: &str) -> bool {
+        for line in &self.user {
             if let BlueprintLine::PkgRequest(req) = line {
                 if req.name == pkgname {
                     return true;
@@ -60,47 +126,18 @@ impl Blueprint {
         }
         false
     }
+}
 
-    pub fn add(&mut self, pkgname: &str) -> Result<()> {
-        if self.contains(pkgname) {
-            bail!("Package {} already exists in blueprint", pkgname);
-        }
-
-        let pkgreq = PkgRequest {
-            name: pkgname.to_string(),
-            version: VersionRequirement::default(),
-            install_recomm: None,
-        };
-        self.lines.push(BlueprintLine::PkgRequest(pkgreq));
-        Ok(())
+fn read_blueprint_from_file(path: &Path) -> Result<Vec<BlueprintLine>> {
+    // Read lines from blueprint file
+    let mut lines = Vec::new();
+    let f = File::open(path)?;
+    let reader = BufReader::new(f);
+    for line in parse_blueprint_lines(reader)? {
+        lines.push(line);
     }
 
-    pub fn remove(&mut self, pkgname: &str) -> Result<()> {
-        let mut i = 0;
-        while i < self.lines.len() {
-            if let BlueprintLine::PkgRequest(req) = &self.lines[i] {
-                if req.name == pkgname {
-                    self.lines.remove(i);
-                    return Ok(());
-                }
-            }
-            i += 1;
-        }
-
-        bail!("Package with name {} not found in blueprint", pkgname)
-    }
-
-    pub fn export(&self) -> String {
-        let mut res = String::new();
-        for l in &self.lines {
-            match l {
-                BlueprintLine::Comment(content) => res.push_str(&format!("#{}\n", content)),
-                BlueprintLine::EmptyLine => res.push('\n'),
-                BlueprintLine::PkgRequest(req) => res.push_str(&format!("{}\n", req.to_string())),
-            }
-        }
-        res
-    }
+    Ok(lines)
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

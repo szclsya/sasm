@@ -7,7 +7,7 @@ use crate::{
     solver::{deb::read_deb_db, Solver},
     success,
     types::{
-        config::{Blueprint, Config, Opts},
+        config::{Blueprints, Config, Opts},
         PkgActionModifier,
     },
 };
@@ -19,7 +19,7 @@ use dialoguer::Confirm;
 pub async fn execute(
     local_db: &LocalDb,
     downloader: &Downloader,
-    blueprint: &Blueprint,
+    blueprint: &Blueprints,
     opts: &Opts,
     config: &Config,
 ) -> Result<()> {

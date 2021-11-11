@@ -4,15 +4,14 @@ mod db;
 mod executor;
 mod solver;
 mod types;
-use types::config::{Blueprint, Config, Opts};
+use types::config::{Blueprints, Config, Opts};
 
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use lazy_static::lazy_static;
 use std::{
-    fs::{File, OpenOptions},
+    fs::{File, read_dir},
     io::Read,
-    os::unix::fs::FileExt,
     sync::atomic::{AtomicBool, Ordering},
 };
 
@@ -55,9 +54,24 @@ async fn try_main() -> Result<()> {
     }
 
     let config_path = config_root.join("config.toml");
-    let blueprint_path = config_root.join("blueprint");
+    // Compose blueprints
+    let mut vendor_blueprint_paths = Vec::new();
+    let blueprint_d_path = config_root.join("blueprint.d");
+    if blueprint_d_path.is_dir() {
+        let paths = read_dir(blueprint_d_path).context("Failed to load blueprint directory")?;
+        for path in paths {
+            let path = path?;
+            let filename = path.file_name().to_str()
+                .context(format!("Bad filename in config folder: {}", path.path().display()))?.to_owned();
+            if filename.ends_with(".blueprint") {
+                vendor_blueprint_paths.push(path.path());
+            }
+        }
+    }
 
-    // Read config
+    let mut blueprint = Blueprints::from_files(config_root.join("blueprint"), &vendor_blueprint_paths)?;
+
+    // Read configs
     let mut config_file = File::open(&config_path).context(format!(
         "Failed to open config file at {}",
         config_path.display()
@@ -75,27 +89,13 @@ async fn try_main() -> Result<()> {
         }
     }
 
-    // Read blueprint
-    let mut blueprint = Blueprint::from_file(&blueprint_path)?;
-
     // Do stuff
     warn!("Omakase is still in early alpha stage. DO NOT use me on production systems!");
     let blueprint_modified = actions::fullfill_command(&config, &opts, &mut blueprint).await?;
 
     // Write back blueprint, if the operations involves modifying it
     if blueprint_modified {
-        let new_blueprint = blueprint.export();
-        let blueprint_file = OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .open(&blueprint_path)?;
-        blueprint_file.set_len(0)?;
-        blueprint_file
-            .write_all_at(&new_blueprint.into_bytes(), 0)
-            .context(format!(
-                "Failed to write to blueprint file at {}",
-                blueprint_path.display()
-            ))?;
+        blueprint.export()?;
     }
 
     Ok(())

@@ -7,7 +7,7 @@ use crate::{
     db::LocalDb,
     executor::{MachineStatus, PkgState},
     info, success,
-    types::config::{Blueprint, Config, Opts, SubCmd},
+    types::config::{Blueprints, Config, Opts, SubCmd},
 };
 
 use anyhow::{Context, Result};
@@ -18,7 +18,7 @@ use std::path::PathBuf;
 pub async fn fullfill_command(
     config: &Config,
     opts: &Opts,
-    blueprint: &mut Blueprint,
+    blueprints: &mut Blueprints,
 ) -> Result<bool> {
     let downloader = crate::executor::download::Downloader::new();
     let localdb = LocalDb::new(
@@ -31,25 +31,25 @@ pub async fn fullfill_command(
         SubCmd::Install(add) => {
             // Modify blueprint
             for name in &add.names {
-                blueprint.add(name)?;
+                blueprints.add(name)?;
             }
             // Update local db
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             // Execute blueprint
-            execute(&localdb, &downloader, blueprint, opts, config).await?;
+            execute(&localdb, &downloader, blueprints, opts, config).await?;
             Ok(true)
         }
         SubCmd::Remove(rm) => {
             // Modify blueprint
             for name in &rm.names {
-                blueprint.remove(name)?;
+                blueprints.remove(name)?;
             }
             // Update local db
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             // Apply stuff
-            execute(&localdb, &downloader, blueprint, opts, config).await?;
+            execute(&localdb, &downloader, blueprints, opts, config).await?;
             Ok(true)
         }
         SubCmd::Refresh => {
@@ -65,7 +65,7 @@ pub async fn fullfill_command(
                 .await
                 .context("Failed to refresh local package database")?;
 
-            execute(&localdb, &downloader, blueprint, opts, config).await?;
+            execute(&localdb, &downloader, blueprints, opts, config).await?;
             Ok(true)
         }
         SubCmd::Search(search) => {
