@@ -1,4 +1,5 @@
 mod blueprint;
+mod ignorerule;
 pub use blueprint::{Blueprints, PkgRequest};
 
 use anyhow::{bail, Result};
