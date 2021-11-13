@@ -21,8 +21,11 @@ pub async fn fullfill_command(
     blueprints: &mut Blueprints,
 ) -> Result<()> {
     let downloader = crate::executor::download::Downloader::new();
+    // Directory that stores trusted public keys for repos
+    let key_root = opts.root.join("etc/omakase/keys");
     let localdb = LocalDb::new(
         opts.root.join("var/cache/omakase/db"),
+        key_root,
         config.repo.clone(),
         &config.arch,
     );
@@ -69,11 +72,6 @@ pub async fn fullfill_command(
             Ok(())
         }
         SubCmd::Search(search) => {
-            let localdb = LocalDb::new(
-                opts.root.join("var/cache/omakase/db"),
-                config.repo.clone(),
-                &config.arch,
-            );
             let dbs: Vec<PathBuf> = localdb
                 .get_all()
                 .context("Invalid local package database")?

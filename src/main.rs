@@ -10,7 +10,7 @@ use anyhow::{bail, Context, Result};
 use clap::Parser;
 use lazy_static::lazy_static;
 use std::{
-    fs::{File, read_dir},
+    fs::{read_dir, File},
     io::Read,
     sync::atomic::{AtomicBool, Ordering},
 };
@@ -61,15 +61,22 @@ async fn try_main() -> Result<()> {
         let paths = read_dir(blueprint_d_path).context("Failed to load blueprint directory")?;
         for path in paths {
             let path = path?;
-            let filename = path.file_name().to_str()
-                .context(format!("Bad filename in config folder: {}", path.path().display()))?.to_owned();
+            let filename = path
+                .file_name()
+                .to_str()
+                .context(format!(
+                    "Bad filename in config folder: {}",
+                    path.path().display()
+                ))?
+                .to_owned();
             if filename.ends_with(".blueprint") {
                 vendor_blueprint_paths.push(path.path());
             }
         }
     }
 
-    let mut blueprint = Blueprints::from_files(config_root.join("blueprint"), &vendor_blueprint_paths)?;
+    let mut blueprint =
+        Blueprints::from_files(config_root.join("blueprint"), &vendor_blueprint_paths)?;
 
     // Read configs
     let mut config_file = File::open(&config_path).context(format!(
@@ -80,14 +87,8 @@ async fn try_main() -> Result<()> {
     config_file
         .read_to_string(&mut data)
         .context("Failed to read config file")?;
-    let mut config: Config = toml::from_str(&data).context("Failed to parse config file")?;
-    // Cert paths are relative to config root
-    for repo in config.repo.iter_mut() {
-        for cert_path in repo.1.certs.iter_mut() {
-            let config_root = opts.root.join(&opts.config_root);
-            *cert_path = config_root.join(&cert_path);
-        }
-    }
+    let config: Config = toml::from_str(&data).context("Failed to parse config file")?;
+    config.check_sanity()?;
 
     // Do stuff
     warn!("Omakase is still in early alpha stage. DO NOT use me on production systems!");

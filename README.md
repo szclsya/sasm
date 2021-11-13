@@ -23,8 +23,8 @@ purge_on_remove = true
 url = "https://repo.aosc.io/debs"
 distribution = "stable"
 components = ["main"]
-# GPG public key for this repository, path relative to root of the config folder
-certs = ["rel/path/to/publickey.asc"]
+# GPG public key for this repository. Should be filenames relative to $CONFIG_ROOT/keys
+keys = ["main.asc"]
 ```
 
 And here's an example of `blueprint`:

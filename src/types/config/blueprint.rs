@@ -1,7 +1,7 @@
 use crate::error;
 use crate::types::{parse_version_requirement, VersionRequirement};
 
-use anyhow::{bail, Result, Context};
+use anyhow::{bail, Context, Result};
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -11,13 +11,13 @@ use nom::{
     IResult, InputTakeAtPosition,
 };
 use std::{
-    fs::{ File, OpenOptions },
-    os::unix::fs::FileExt,
+    fs::{File, OpenOptions},
     io::{BufRead, BufReader},
-    path::{ Path, PathBuf },
+    os::unix::fs::FileExt,
+    path::{Path, PathBuf},
 };
 
-/// A collection of 
+/// A collection of
 pub struct Blueprints {
     user_blueprint_path: PathBuf,
     // If we need to export the blueprint back to disk
@@ -44,7 +44,8 @@ impl Blueprints {
 
     pub fn get_pkg_requests(&self) -> Vec<&PkgRequest> {
         // Add user blueprint first
-        let mut res: Vec<&PkgRequest> = self.user
+        let mut res: Vec<&PkgRequest> = self
+            .user
             .iter()
             .filter_map(|line| match line {
                 BlueprintLine::PkgRequest(req) => Some(req),
@@ -98,7 +99,7 @@ impl Blueprints {
     pub fn export(&self) -> Result<bool> {
         if !self.user_blueprint_modified {
             // If not modified, nothing to do here.
-            return Ok(false)
+            return Ok(false);
         }
 
         let mut res = String::new();

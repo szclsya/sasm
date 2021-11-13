@@ -13,14 +13,22 @@ use std::{collections::HashMap, path::PathBuf};
 pub struct LocalDb {
     // root directory for dbs
     root: PathBuf,
+    // directory that stores repo public keys
+    key_root: PathBuf,
     archs: Vec<String>,
     repos: HashMap<String, RepoConfig>,
 }
 
 impl LocalDb {
-    pub fn new(root: PathBuf, repos: HashMap<String, RepoConfig>, arch: &str) -> Self {
+    pub fn new(
+        root: PathBuf,
+        key_root: PathBuf,
+        repos: HashMap<String, RepoConfig>,
+        arch: &str,
+    ) -> Self {
         LocalDb {
             root,
+            key_root,
             archs: vec![arch.to_string(), "all".to_string()],
             repos,
         }
@@ -81,7 +89,7 @@ impl LocalDb {
             let inrelease_path = self.root.join(format!("InRelease_{}", name));
             let inrelease_contents = std::fs::read(inrelease_path)?;
             let bytes = bytes::Bytes::from(inrelease_contents);
-            let res = verify::verify_inrelease(&repo.certs, bytes)
+            let res = verify::verify_inrelease(&self.key_root, &repo.keys, bytes)
                 .context(format!("Failed to verify metadata for repository {}", name))?;
             let repo_dbs = parse_inrelease(&res)
                 .context(format!("Failed to parse metadata for repository {}", name))?;
