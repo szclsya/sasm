@@ -7,7 +7,7 @@ use crate::{
     solver::{deb::read_deb_db, Solver},
     success,
     types::{
-        config::{Blueprints, Config, Opts},
+        config::{Blueprints, Config, Opts, IgnoreRules},
         PkgActionModifier,
     },
 };
@@ -20,6 +20,7 @@ pub async fn execute(
     local_db: &LocalDb,
     downloader: &Downloader,
     blueprint: &Blueprints,
+    ignorerules: &IgnoreRules,
     opts: &Opts,
     config: &Config,
 ) -> Result<()> {
@@ -41,6 +42,8 @@ pub async fn execute(
     let machine_status = MachineStatus::new(&root)?;
     let mut actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
     // Generate modifiers and apply them
+    let ignore_modifier = modifier::IgnorePkgs::new(&ignorerules)?;
+    ignore_modifier.apply(&mut actions);
     if opts.unpack_only {
         let modifier = modifier::UnpackOnly::default();
         modifier.apply(&mut actions);

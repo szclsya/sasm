@@ -7,7 +7,7 @@ use crate::{
     db::LocalDb,
     executor::{MachineStatus, PkgState},
     info, success,
-    types::config::{Blueprints, Config, Opts, SubCmd},
+    types::config::{Blueprints, Config, Opts, SubCmd, IgnoreRules},
 };
 
 use anyhow::{Context, Result};
@@ -19,6 +19,7 @@ pub async fn fullfill_command(
     config: &Config,
     opts: &Opts,
     blueprints: &mut Blueprints,
+    ignorerules: &mut IgnoreRules,
 ) -> Result<()> {
     let downloader = crate::executor::download::Downloader::new();
     // Directory that stores trusted public keys for repos
@@ -40,7 +41,7 @@ pub async fn fullfill_command(
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             // Execute blueprint
-            execute(&localdb, &downloader, blueprints, opts, config).await?;
+            execute(&localdb, &downloader, blueprints, ignorerules, opts, config).await?;
             Ok(())
         }
         SubCmd::Remove(rm) => {
@@ -52,7 +53,7 @@ pub async fn fullfill_command(
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             // Apply stuff
-            execute(&localdb, &downloader, blueprints, opts, config).await?;
+            execute(&localdb, &downloader, blueprints, ignorerules, opts, config).await?;
             Ok(())
         }
         SubCmd::Refresh => {
@@ -68,7 +69,8 @@ pub async fn fullfill_command(
                 .await
                 .context("Failed to refresh local package database")?;
 
-            execute(&localdb, &downloader, blueprints, opts, config).await?;
+            execute(&localdb, &downloader, blueprints, ignorerules, opts, config).await?;
+            
             Ok(())
         }
         SubCmd::Search(search) => {

@@ -1,6 +1,7 @@
 mod blueprint;
 mod ignorerule;
 pub use blueprint::{Blueprints, PkgRequest};
+pub use ignorerule::IgnoreRules;
 
 use anyhow::{bail, Result};
 use clap::Parser;
