@@ -8,6 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[derive(Debug)]
 pub struct IgnoreRules {
     user_ignorerules_path: PathBuf,
     user_ignorerules_modified: bool,
@@ -15,6 +16,7 @@ pub struct IgnoreRules {
     vendor: Vec<Vec<IgnoreRuleLine>>,
 }
 
+#[derive(Debug)]
 enum IgnoreRuleLine {
     Rule(String),
     EmptyLine,
@@ -146,7 +148,7 @@ fn parse_ignorerule_line(line: String) -> Result<IgnoreRuleLine> {
 
 fn sanitize_ignore_rule(rule: &str) -> Result<()> {
     lazy_static! {
-        static ref IGNORE_RULE: Regex = Regex::new("^[a-z0-9-.+{A-Z_}]+$").unwrap();
+        static ref IGNORE_RULE: Regex = Regex::new("^[a-z0-9-.*+{A-Z_}]+$").unwrap();
     }
     if IGNORE_RULE.is_match(rule) {
         Ok(())

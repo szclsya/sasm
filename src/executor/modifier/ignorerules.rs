@@ -21,18 +21,18 @@ impl PkgActionModifier for IgnorePkgs {
         actions.remove.retain(|pkg| {
             for rule in &self.rules {
                 if rule.is_match(&pkg.0) {
-                    return true;
+                    return false;
                 }
             }
-            false
+            true
         });
         actions.purge.retain(|pkg| {
             for rule in &self.rules {
                 if rule.is_match(&pkg.0) {
-                    return true;
+                    return false;
                 }
             }
-            false
+            true
         });
     }
 }
