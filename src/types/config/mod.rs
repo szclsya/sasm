@@ -1,7 +1,7 @@
 mod blueprint;
-mod ignorerule;
+mod ignorerules;
 pub use blueprint::{Blueprints, PkgRequest};
-pub use ignorerule::IgnoreRules;
+pub use ignorerules::IgnoreRules;
 
 use anyhow::{bail, Result};
 use clap::Parser;
@@ -73,7 +73,7 @@ pub enum SubCmd {
     Remove(RemovePkg),
     #[clap(about = "Refresh local package databases")]
     Refresh,
-    #[clap(about = "Install and upgrade all packages according to blueprint")]
+    #[clap(about = "Install and upgrade all packages according to Blueprint")]
     Execute,
     #[clap(about = "Alias to Execute")]
     Upgrade,

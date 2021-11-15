@@ -54,11 +54,23 @@ async fn try_main() -> Result<()> {
     }
 
     let config_path = config_root.join("config.toml");
-    // Compose blueprints
+    // Set-up main config file
+    let mut config_file = File::open(&config_path).context(format!(
+        "Failed to open config file at {}",
+        config_path.display()
+    ))?;
+    let mut data = String::new();
+    config_file
+        .read_to_string(&mut data)
+        .context("Failed to read config file")?;
+    let config: Config = toml::from_str(&data).context("Failed to parse config file")?;
+    config.check_sanity()?;
+
+    // Set-up blueprints
     let mut vendor_blueprint_paths = Vec::new();
     let blueprint_d_path = config_root.join("blueprint.d");
     if blueprint_d_path.is_dir() {
-        let paths = read_dir(blueprint_d_path).context("Failed to load blueprint directory")?;
+        let paths = read_dir(blueprint_d_path).context("Failed to load Blueprint directory")?;
         for path in paths {
             let path = path?;
             let filename = path
@@ -76,7 +88,8 @@ async fn try_main() -> Result<()> {
     }
     let mut blueprint =
         Blueprints::from_files(config_root.join("blueprint"), &vendor_blueprint_paths)?;
-    // Compose IgnoreRules
+
+    // Set-up IgnoreRules
     let mut vendor_ignorerules_paths = Vec::new();
     let ignorerules_d_path = config_root.join("ignorerules.d");
     if ignorerules_d_path.is_dir() {
@@ -99,23 +112,11 @@ async fn try_main() -> Result<()> {
     let mut ignorerules =
         IgnoreRules::from_files(config_root.join("ignorerules"), &vendor_ignorerules_paths)?;
 
-    // Read configs
-    let mut config_file = File::open(&config_path).context(format!(
-        "Failed to open config file at {}",
-        config_path.display()
-    ))?;
-    let mut data = String::new();
-    config_file
-        .read_to_string(&mut data)
-        .context("Failed to read config file")?;
-    let config: Config = toml::from_str(&data).context("Failed to parse config file")?;
-    config.check_sanity()?;
-
     // Do stuff
     warn!("Omakase is still in early alpha stage. DO NOT use me on production systems!");
     actions::fullfill_command(&config, &opts, &mut blueprint, &mut ignorerules).await?;
-    // Write back blueprint.
-    // The Blueprints instance will determine if it really need to write back user blueprint
+    // Write back blueprint and IgnoreRules.
+    // They will determine if it really need to write back user blueprint
     blueprint.export()?;
     ignorerules.export()?;
 
