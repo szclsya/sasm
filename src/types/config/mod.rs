@@ -57,8 +57,8 @@ pub struct Opts {
         about = "Position of the config folder"
     )]
     pub config_root: PathBuf,
-    #[clap(long, about = "Print additional debug information")]
-    pub debug: bool,
+    #[clap(short, long, about = "Print additional debug information")]
+    pub verbose: bool,
     #[clap(long, about = "Unpack but not configure desired packages")]
     pub unpack_only: bool,
     #[clap(subcommand)]

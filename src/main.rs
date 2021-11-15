@@ -40,7 +40,7 @@ async fn try_main() -> Result<()> {
     // Initial setup
     let opts: Opts = Opts::parse();
     // Set-up debug globally
-    DEBUG.store(opts.debug, Ordering::Relaxed);
+    DEBUG.store(opts.verbose, Ordering::Relaxed);
     let config_root = opts
         .root
         .join(&opts.config_root)
