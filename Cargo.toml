@@ -18,7 +18,7 @@ varisat = "0.2"
 petgraph = "0.6"
 # Dealing with deb control files and InRelease
 debcontrol = "0.1"
-sequoia-openpgp = { version = "1", default_features = false, features = ["crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"] }
+sequoia-openpgp = "1.5"
 sha2 = "0.9"
 hex = "0.4"
 # cli
