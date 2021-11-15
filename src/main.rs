@@ -45,7 +45,7 @@ async fn try_main() -> Result<()> {
         .root
         .join(&opts.config_root)
         .canonicalize()
-        .context("Failed to find config_root")?;
+        .context(format!("Failed to find config_root at {}", opts.config_root.display()))?;
     if !config_root.is_dir() {
         bail!(
             "Config root does not exist or is not a directory at {}",

@@ -115,7 +115,7 @@ impl IgnoreRules {
 
 fn read_ignorerules_from_file(path: &Path) -> Result<Vec<IgnoreRuleLine>> {
     let mut lines = Vec::new();
-    let f = File::open(path)?;
+    let f = File::open(path).context(format!("Failed to open IgnoreRules at {}", path.display()))?;
     let reader = BufReader::new(f);
     let mut line_no = 0;
     for line in reader.lines() {

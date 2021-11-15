@@ -142,7 +142,7 @@ impl Blueprints {
 fn read_blueprint_from_file(path: &Path) -> Result<Vec<BlueprintLine>> {
     // Read lines from blueprint file
     let mut lines = Vec::new();
-    let f = File::open(path)?;
+    let f = File::open(path).context(format!("Failed to open IgnoreRules at {}", path.display()))?;
     let reader = BufReader::new(f);
     for line in parse_blueprint_lines(reader)? {
         lines.push(line);
