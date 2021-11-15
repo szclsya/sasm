@@ -41,14 +41,16 @@ impl IgnoreRules {
         let mut res = Vec::new();
         for line in &self.user {
             if let IgnoreRuleLine::Rule(rule) = line {
-                res.push(Regex::new(rule)?);
+                let rule = format!("^{}$", fill_variables(rule)?);
+                res.push(Regex::new(&rule)?);
             }
         }
 
         for ruleset in &self.vendor {
             for line in ruleset {
                 if let IgnoreRuleLine::Rule(rule) = line {
-                    res.push(Regex::new(rule)?);
+                    let rule = format!("^{}$", fill_variables(rule)?);
+                    res.push(Regex::new(&rule)?);
                 }
             }
         }
@@ -124,7 +126,7 @@ fn read_ignorerules_from_file(path: &Path) -> Result<Vec<IgnoreRuleLine>> {
     Ok(lines)
 }
 
-fn parse_ignorerule_line(mut line: String) -> Result<IgnoreRuleLine> {
+fn parse_ignorerule_line(line: String) -> Result<IgnoreRuleLine> {
     lazy_static! {
         static ref COMMENT_LINE: Regex = Regex::new(r"^#.*$").unwrap();
         static ref EMPTY_LINE: Regex = Regex::new(r"^ *$").unwrap();
@@ -137,8 +139,6 @@ fn parse_ignorerule_line(mut line: String) -> Result<IgnoreRuleLine> {
     } else {
         // Check input sanity
         sanitize_ignore_rule(&line)?;
-        // Fill variables
-        fill_variables(&mut line)?;
         // Generate Regex
         Ok(IgnoreRuleLine::Rule(line))
     }
