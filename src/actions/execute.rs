@@ -2,14 +2,15 @@ use crate::{
     cli,
     db::LocalDb,
     debug,
-    executor::{download::Downloader, dpkg, modifier, MachineStatus},
+    executor::{dpkg, modifier, MachineStatus},
     info,
     solver::{deb::read_deb_db, Solver},
     success,
     types::{
-        config::{Blueprints, Config, Opts, IgnoreRules},
+        config::{Blueprints, Config, IgnoreRules, Opts},
         PkgActionModifier,
     },
+    utils::downloader::Downloader,
 };
 
 use anyhow::{Context, Result};

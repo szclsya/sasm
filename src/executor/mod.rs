@@ -1,4 +1,3 @@
-pub mod download;
 pub mod dpkg;
 pub mod modifier;
 mod types;

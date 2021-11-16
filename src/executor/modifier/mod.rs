@@ -1,5 +1,5 @@
-mod unpack_only;
 mod ignorerules;
+mod unpack_only;
 
-pub use unpack_only::UnpackOnly;
 pub use ignorerules::IgnorePkgs;
+pub use unpack_only::UnpackOnly;

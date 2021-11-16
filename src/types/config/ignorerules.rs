@@ -1,8 +1,8 @@
 use anyhow::{bail, Context, Result};
 use lazy_static::lazy_static;
-use regex::{Captures, Regex };
+use regex::{Captures, Regex};
 use std::{
-    fs::{ File, OpenOptions },
+    fs::{File, OpenOptions},
     io::{BufRead, BufReader},
     os::unix::fs::FileExt,
     path::{Path, PathBuf},
@@ -20,7 +20,7 @@ pub struct IgnoreRules {
 enum IgnoreRuleLine {
     Rule(String),
     EmptyLine,
-    Comment(String)
+    Comment(String),
 }
 
 impl IgnoreRules {
@@ -88,11 +88,15 @@ impl IgnoreRules {
         if !self.user_ignorerules_modified {
             return Ok(false);
         }
-        let new_lines: Vec<String> = self.user.iter().map(|line| match line {
-            IgnoreRuleLine::EmptyLine => "".to_string(),
-            IgnoreRuleLine::Comment(comment) => comment.to_owned(),
-            IgnoreRuleLine::Rule(rule) => rule.to_owned(),
-        }).collect();
+        let new_lines: Vec<String> = self
+            .user
+            .iter()
+            .map(|line| match line {
+                IgnoreRuleLine::EmptyLine => "".to_string(),
+                IgnoreRuleLine::Comment(comment) => comment.to_owned(),
+                IgnoreRuleLine::Rule(rule) => rule.to_owned(),
+            })
+            .collect();
 
         let new_user_ignorerules = new_lines.join("\n");
 
@@ -115,14 +119,18 @@ impl IgnoreRules {
 
 fn read_ignorerules_from_file(path: &Path) -> Result<Vec<IgnoreRuleLine>> {
     let mut lines = Vec::new();
-    let f = File::open(path).context(format!("Failed to open IgnoreRules at {}", path.display()))?;
+    let f =
+        File::open(path).context(format!("Failed to open IgnoreRules at {}", path.display()))?;
     let reader = BufReader::new(f);
     let mut line_no = 0;
     for line in reader.lines() {
         let line = line?;
         line_no += 1;
-        let line = parse_ignorerule_line(line)
-            .context(format!("Invalid rule in {} at line {}", path.display(), line_no))?;
+        let line = parse_ignorerule_line(line).context(format!(
+            "Invalid rule in {} at line {}",
+            path.display(),
+            line_no
+        ))?;
         lines.push(line);
     }
     Ok(lines)
@@ -189,8 +197,10 @@ mod test {
 
     #[test]
     fn test_ignorerule_parse() {
-        let tests = vec![("linux-kernel-{KERNEL_VERSION}",
-                          format!("^linux-kernel-{}$", get_kernel_version().unwrap()))];
+        let tests = vec![(
+            "linux-kernel-{KERNEL_VERSION}",
+            format!("^linux-kernel-{}$", get_kernel_version().unwrap()),
+        )];
 
         for (input, output) in tests {
             assert_eq!(parse_ignorerule_line(input.to_string()).unwrap(), output);

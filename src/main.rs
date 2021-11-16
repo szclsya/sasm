@@ -4,7 +4,8 @@ mod db;
 mod executor;
 mod solver;
 mod types;
-use types::config::{Blueprints, Config, Opts, IgnoreRules};
+mod utils;
+use types::config::{Blueprints, Config, IgnoreRules, Opts};
 
 use anyhow::{bail, Context, Result};
 use clap::Parser;
@@ -45,7 +46,10 @@ async fn try_main() -> Result<()> {
         .root
         .join(&opts.config_root)
         .canonicalize()
-        .context(format!("Failed to find config_root at {}", opts.config_root.display()))?;
+        .context(format!(
+            "Failed to find config_root at {}",
+            opts.config_root.display()
+        ))?;
     if !config_root.is_dir() {
         bail!(
             "Config root does not exist or is not a directory at {}",

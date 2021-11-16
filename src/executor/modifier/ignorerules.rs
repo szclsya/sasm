@@ -1,6 +1,6 @@
-use crate::types::{PkgActionModifier, PkgActions, config::IgnoreRules};
-use regex::Regex;
+use crate::types::{config::IgnoreRules, PkgActionModifier, PkgActions};
 use anyhow::Result;
+use regex::Regex;
 
 // Apply IgnoreRules so that packages with corresponding names won't be removed
 pub struct IgnorePkgs {

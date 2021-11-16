@@ -7,7 +7,7 @@ use crate::{
     db::LocalDb,
     executor::{MachineStatus, PkgState},
     info, success,
-    types::config::{Blueprints, Config, Opts, SubCmd, IgnoreRules},
+    types::config::{Blueprints, Config, IgnoreRules, Opts, SubCmd},
 };
 
 use anyhow::{Context, Result};
@@ -21,7 +21,7 @@ pub async fn fullfill_command(
     blueprints: &mut Blueprints,
     ignorerules: &mut IgnoreRules,
 ) -> Result<()> {
-    let downloader = crate::executor::download::Downloader::new();
+    let downloader = crate::utils::downloader::Downloader::new();
     // Directory that stores trusted public keys for repos
     let key_root = opts.root.join("etc/omakase/keys");
     let localdb = LocalDb::new(
@@ -70,7 +70,7 @@ pub async fn fullfill_command(
                 .context("Failed to refresh local package database")?;
 
             execute(&localdb, &downloader, blueprints, ignorerules, opts, config).await?;
-            
+
             Ok(())
         }
         SubCmd::Search(search) => {

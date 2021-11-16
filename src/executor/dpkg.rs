@@ -1,5 +1,8 @@
-use super::download::Downloader;
-use crate::{executor::download::DownloadJob, info, types::PkgActions};
+use crate::{
+    info,
+    types::PkgActions,
+    utils::downloader::{DownloadJob, Downloader},
+};
 
 use anyhow::{bail, Context, Result};
 use std::path::Path;

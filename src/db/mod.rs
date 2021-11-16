@@ -1,8 +1,8 @@
 mod verify;
 
 use crate::{
-    executor::download::{DownloadJob, Downloader},
     types::{config::RepoConfig, Checksum},
+    utils::downloader::{DownloadJob, Downloader},
 };
 use anyhow::{bail, Context, Result};
 use lazy_static::lazy_static;
