@@ -3,6 +3,7 @@ mod verify;
 use crate::{
     types::{config::RepoConfig, Checksum},
     utils::downloader::{DownloadJob, Downloader},
+    warn
 };
 use anyhow::{bail, Context, Result};
 use lazy_static::lazy_static;
@@ -15,7 +16,7 @@ pub struct LocalDb {
     root: PathBuf,
     // directory that stores repo public keys
     key_root: PathBuf,
-    archs: Vec<String>,
+    arch: String,
     repos: HashMap<String, RepoConfig>,
 }
 
@@ -29,7 +30,7 @@ impl LocalDb {
         LocalDb {
             root,
             key_root,
-            archs: vec![arch.to_string(), "all".to_string()],
+            arch: arch.to_owned(),
             repos,
         }
     }
@@ -42,18 +43,22 @@ impl LocalDb {
 
         let mut files: Vec<(String, PathBuf)> = Vec::new();
         for component in &repo.components {
-            for arch in &self.archs {
-                let filename = format!(
-                    "{}/Packages_{}_{}_{}",
-                    &name, &repo.distribution, component, &arch
-                );
-                files.push((repo.url.clone(), self.root.join(filename)));
+            // First prepare arch-specific repo
+            let arch = self.root.join(format!(
+                "{}/Packages_{}_{}_{}",
+                &name, &repo.distribution, component, &self.arch
+            ));
+            if !arch.is_file() {
+                bail!("Local database is corrupted or out-of-date");
             }
-        }
-
-        for (_, file) in &files {
-            if !file.is_file() {
-                bail!("Local database is corrupted or out-of-date")
+            files.push((repo.url.clone(), self.root.join(arch)));
+            // Then prepare noarch repo, if exists
+            let noarch = self.root.join(format!(
+                "{}/Packages_{}_{}_{}",
+                &name, &repo.distribution, component, "all"
+            ));
+            if noarch.is_file() {
+                files.push((repo.url.clone(), self.root.join(noarch)));
             }
         }
 
@@ -70,7 +75,8 @@ impl LocalDb {
     }
 
     pub async fn update(&self, downloader: &Downloader) -> Result<()> {
-        let mut dbs: HashMap<String, (u64, Checksum)> = HashMap::new();
+        // HashMap<RepoName, HashMap<url, (size, checksum)>>
+        let mut dbs: HashMap<String, HashMap<String, (u64, Checksum)>> = HashMap::new();
         // Step 1: Download InRelease for each repo
         let inrelease_urls: Vec<DownloadJob> = self
             .repos
@@ -93,7 +99,7 @@ impl LocalDb {
                 .context(format!("Failed to verify metadata for repository {}", name))?;
             let repo_dbs = parse_inrelease(&res)
                 .context(format!("Failed to parse metadata for repository {}", name))?;
-            dbs.extend(repo_dbs);
+            dbs.insert(name.to_owned(), repo_dbs);
         }
 
         // Step 3: Download deb dbs
@@ -106,28 +112,27 @@ impl LocalDb {
             }
 
             for component in &repo.components {
-                for arch in &self.archs {
-                    let filename = format!(
-                        "{}/Packages_{}_{}_{}",
-                        &name, &repo.distribution, &component, &arch
-                    );
+                let pre_download_count = dbs_to_download.len();
+                let possible_archs = vec![self.arch.to_owned(), "all".to_owned()];
+                for arch in possible_archs {
                     let rel_url = format!("{}/binary-{}/Packages", component, arch);
-                    let db_meta = match dbs.get(&rel_url) {
-                        Some(m) => m,
-                        None => {
-                            bail!(
-                                "Repository {} doesn't contain necessary dbs: {}",
-                                name,
-                                &rel_url
-                            );
-                        }
-                    };
-                    dbs_to_download.push(DownloadJob {
-                        url: format!("{}/dists/{}/{}", repo.url, repo.distribution, rel_url),
-                        filename: Some(filename),
-                        size: Some(db_meta.0),
-                        checksum: Some(db_meta.1.clone()),
-                    });
+                    if let Some(db_meta) = dbs.get(name).unwrap().get(&rel_url) {
+                        let filename = format!(
+                            "{}/Packages_{}_{}_{}",
+                            &name, &repo.distribution, &component, arch
+                        );
+                        dbs_to_download.push(DownloadJob {
+                            url: format!("{}/dists/{}/{}", repo.url, repo.distribution, rel_url),
+                            filename: Some(filename),
+                            size: Some(db_meta.0),
+                            checksum: Some(db_meta.1.clone()),
+                        });
+                    }
+                }
+
+                if pre_download_count == dbs_to_download.len() {
+                    warn!("No repository available for {}/{}", name, component);
+                    warn!("Please check if this repo have packages for {} architecture", self.arch);
                 }
             }
         }
