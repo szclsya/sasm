@@ -42,6 +42,15 @@ async fn try_main() -> Result<()> {
     let opts: Opts = Opts::parse();
     // Set-up debug globally
     DEBUG.store(opts.verbose, Ordering::Relaxed);
+    // Check if another instance is runing
+    if let Some(pid) = utils::lock::check_lock(&opts.root)? {
+        bail!("Another instance of Omakase is currently running at PID {}", pid);
+    } else {
+        // Lock
+        utils::lock::lock(&opts.root)?;
+    }
+
+    // Start reading configs
     let config_root = opts
         .root
         .join(&opts.config_root)
@@ -124,5 +133,7 @@ async fn try_main() -> Result<()> {
     blueprint.export()?;
     ignorerules.export()?;
 
+    // Unlock
+    utils::lock::unlock(&opts.root)?;
     Ok(())
 }
