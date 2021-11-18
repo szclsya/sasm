@@ -22,21 +22,21 @@ sequoia-openpgp = "1.5"
 sha2 = "0.9"
 hex = "0.4"
 # cli
-console = "0.14.1"
+console = "0.15"
 clap = "3.0.0-beta.5"
 # 0.16.2 doesn't work with tokio
 indicatif = "0.17.0-beta.1"
-dialoguer = "0.8"
+dialoguer = "0.9"
 # Dealing with config files
 serde = "1"
 toml = "0.5"
 nom = "7"
 # Network stack
 futures-util = "0.3"
-tokio = { version = "1.10", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
+tokio = { version = "1.14", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
 bytes = "1"
 reqwest = { version = "0.11", features = ["rustls-tls"], default-features = false }
 # Actions modifier
-nix = "0.22"
+nix = "0.23"
 # Parallel searching
 rayon = "1"
