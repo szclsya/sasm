@@ -39,20 +39,18 @@ impl IgnoreRules {
         })
     }
 
-    pub fn gen_rules(&self) -> Result<Vec<Regex>> {
+    pub fn gen_rules(&self) -> Result<Vec<String>> {
         let mut res = Vec::new();
         for line in &self.user {
             if let IgnoreRuleLine::Rule(rule) = line {
-                let rule = format!("^{}$", fill_variables(rule)?);
-                res.push(Regex::new(&rule)?);
+                res.push(fill_variables(rule)?);
             }
         }
 
         for ruleset in &self.vendor {
             for line in ruleset {
                 if let IgnoreRuleLine::Rule(rule) = line {
-                    let rule = format!("^{}$", fill_variables(rule)?);
-                    res.push(Regex::new(&rule)?);
+                    res.push(fill_variables(rule)?);
                 }
             }
         }
@@ -156,7 +154,7 @@ fn parse_ignorerule_line(line: String) -> Result<IgnoreRuleLine> {
 
 fn sanitize_ignore_rule(rule: &str) -> Result<()> {
     lazy_static! {
-        static ref IGNORE_RULE: Regex = Regex::new("^[a-z0-9-.*+{A-Z_}]+$").unwrap();
+        static ref IGNORE_RULE: Regex = Regex::new("^[a-z0-9-{A-Z_}]+$").unwrap();
     }
     if IGNORE_RULE.is_match(rule) {
         Ok(())

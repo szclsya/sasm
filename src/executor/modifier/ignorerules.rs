@@ -1,10 +1,9 @@
 use crate::types::{config::IgnoreRules, PkgActionModifier, PkgActions};
 use anyhow::Result;
-use regex::Regex;
 
 // Apply IgnoreRules so that packages with corresponding names won't be removed
 pub struct IgnorePkgs {
-    rules: Vec<Regex>,
+    rules: Vec<String>,
 }
 
 impl IgnorePkgs {
@@ -20,7 +19,8 @@ impl PkgActionModifier for IgnorePkgs {
     fn apply(&self, actions: &mut PkgActions) {
         actions.remove.retain(|pkg| {
             for rule in &self.rules {
-                if rule.is_match(&pkg.0) {
+                let pkgname = &pkg.0;
+                if rule == pkgname {
                     return false;
                 }
             }
@@ -28,7 +28,8 @@ impl PkgActionModifier for IgnorePkgs {
         });
         actions.purge.retain(|pkg| {
             for rule in &self.rules {
-                if rule.is_match(&pkg.0) {
+                let pkgname = &pkg.0;
+                if rule == pkgname {
                     return false;
                 }
             }
