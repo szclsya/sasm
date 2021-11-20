@@ -50,22 +50,48 @@ impl PkgActions {
                 }
             })
             .collect();
-        crate::WRITER.write_chunks("INSTALL", &to_install).unwrap();
+        let install_prefix = style("INSTALL").on_blue().bold().to_string();
+        crate::WRITER.write_chunks(&install_prefix, &to_install).unwrap();
 
         let to_upgrade: Vec<String> = self
             .install
             .iter()
             .filter_map(|(install, oldpkg)| match oldpkg {
                 Some(oldpkg) => {
-                    let mut msg = install.name.clone();
-                    let ver_str = format!("({} -> {})", oldpkg.0, install.version);
-                    msg.push_str(&style(ver_str).dim().to_string());
-                    Some(msg)
+                    if install.version > oldpkg.0 {
+                        let mut msg = install.name.clone();
+                        let ver_str = format!("({} -> {})", oldpkg.0, install.version);
+                        msg.push_str(&style(ver_str).dim().to_string());
+                        Some(msg)
+                    } else {
+                        None
+                    }
                 }
                 None => None,
             })
             .collect();
-        crate::WRITER.write_chunks("UPGRADE", &to_upgrade).unwrap();
+        let upgrade_prefix = style("UPGRADE").on_green().bold().to_string();
+        crate::WRITER.write_chunks(&upgrade_prefix, &to_upgrade).unwrap();
+
+        let to_downgrade: Vec<String> = self
+             .install
+            .iter()
+            .filter_map(|(install, oldpkg)| match oldpkg {
+                Some(oldpkg) => {
+                    if install.version < oldpkg.0 {
+                        let mut msg = install.name.clone();
+                        let ver_str = format!("({} -> {})", oldpkg.0, install.version);
+                        msg.push_str(&style(ver_str).dim().to_string());
+                        Some(msg)
+                    } else {
+                        None
+                    }
+                }
+                None => None,
+            })
+            .collect();
+        let downgrade_prefix = style("DOWNGRADE").on_yellow().white().bold().to_string();
+        crate::WRITER.write_chunks(&downgrade_prefix, &to_downgrade).unwrap();
 
         let to_unpack: Vec<String> = self
             .unpack
@@ -85,20 +111,23 @@ impl PkgActions {
                 msg
             })
             .collect();
-        crate::WRITER.write_chunks("UNPACK", &to_unpack).unwrap();
+        let unpack_prefix = style("UNPACK").on_blue().bold().to_string();
+        crate::WRITER.write_chunks(&unpack_prefix, &to_unpack).unwrap();
 
+        let configure_prefix = style("CONFIGURE").on_white().bold().to_string();
         crate::WRITER
-            .write_chunks("CONFIGURE", &self.configure)
+            .write_chunks(&configure_prefix, &self.configure)
             .unwrap();
-        let purge_header = style("PURGE").red().to_string();
-        let purges: Vec<&str> = self.purge.iter().map(|(name, _)| name.as_str()).collect();
-        crate::WRITER.write_chunks(&purge_header, &purges).unwrap();
 
-        let remove_header = style("REMOVE").red().to_string();
         let removes: Vec<&str> = self.remove.iter().map(|(name, _)| name.as_str()).collect();
+        let remove_prefix = style("REMOVE").on_red().bold().white().to_string();
         crate::WRITER
-            .write_chunks(&remove_header, &removes)
+            .write_chunks(&remove_prefix, &removes)
             .unwrap();
+
+        let purge_prefix = style("PURGE").on_red().white().bold().to_string();
+        let purges: Vec<&str> = self.purge.iter().map(|(name, _)| name.as_str()).collect();
+        crate::WRITER.write_chunks(&purge_prefix, &purges).unwrap();
     }
 
     pub fn show_size_change(&self) {
