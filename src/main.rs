@@ -14,6 +14,7 @@ use std::{
     fs::{read_dir, File},
     io::Read,
     sync::atomic::{AtomicBool, Ordering},
+    process::exit,
 };
 
 // Initialize writer
@@ -28,28 +29,45 @@ static DEBUG: AtomicBool = AtomicBool::new(false);
 /// 2 => user cancelled operation
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    if let Err(err) = try_main().await {
-        error!("{}", err.to_string());
-        err.chain().skip(1).for_each(|cause| {
-            due_to!("{}", cause);
-        });
-        std::process::exit(1);
-    }
-}
-
-async fn try_main() -> Result<()> {
     // Initial setup
     let opts: Opts = Opts::parse();
     // Set-up debug globally
     DEBUG.store(opts.verbose, Ordering::Relaxed);
     // Check if another instance is runing
-    if let Some(pid) = utils::lock::check_lock(&opts.root)? {
-        bail!("Another instance of Omakase is currently running at PID {}", pid);
-    } else {
-        // Lock
-        utils::lock::lock(&opts.root)?;
-    }
+    match utils::lock::check_lock(&opts.root) {
+        Ok(Some(pid)) => {
+            error!("Another instance of Omakase is currently running at PID {}", pid);
+            exit(1);
+        },
+        Ok(None) => {
+            if let Err(e) = utils::lock::lock(&opts.root) {
+                error!("Cannot lock omakase: {}", e);
+                exit(1);
+            }
+        },
+        Err(e) => {
+            error!("Failed to check lock status: {}", e.to_string());
+        }
+    };
 
+    if let Err(err) = try_main(&opts).await {
+        error!("{}", err.to_string());
+        err.chain().skip(1).for_each(|cause| {
+            due_to!("{}", cause);
+        });
+        if let Err(e) = utils::lock::unlock(&opts.root) {
+            warn!("Failed to unlock omakase: {}", e.to_string());
+        }
+        std::process::exit(1);
+    } else {
+        if let Err(e) = utils::lock::unlock(&opts.root) {
+            warn!("Failed to unlock omakase: {}", e.to_string());
+        }
+        std::process::exit(0);
+    }
+}
+
+async fn try_main(opts: &Opts) -> Result<()> {
     // Start reading configs
     let config_root = opts
         .root
@@ -133,7 +151,5 @@ async fn try_main() -> Result<()> {
     blueprint.export()?;
     ignorerules.export()?;
 
-    // Unlock
-    utils::lock::unlock(&opts.root)?;
     Ok(())
 }
