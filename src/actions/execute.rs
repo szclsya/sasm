@@ -64,6 +64,7 @@ pub async fn execute(
             // Run it!
             dpkg::execute_pkg_actions(actions, &opts.root, downloader).await?;
         } else {
+            crate::utils::lock::unlock(&opts.root)?;
             std::process::exit(2);
         }
     }
