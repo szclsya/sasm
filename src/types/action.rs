@@ -70,7 +70,7 @@ impl PkgActions {
                 None => None,
             })
             .collect();
-        let upgrade_prefix = style("UPGRADE").on_green().bold().to_string();
+        let upgrade_prefix = style("UPGRADE").on_green().black().bold().to_string();
         crate::WRITER.write_chunks(&upgrade_prefix, &to_upgrade).unwrap();
 
         let to_downgrade: Vec<String> = self
