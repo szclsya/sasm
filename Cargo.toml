@@ -40,3 +40,6 @@ reqwest = { version = "0.11", features = ["rustls-tls"], default-features = fals
 nix = "0.23"
 # Parallel searching
 rayon = "1"
+
+[profile.release]
+lto = true
