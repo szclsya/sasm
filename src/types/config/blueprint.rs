@@ -87,8 +87,8 @@ impl Blueprints {
             bail!("Package with name {} not found in user blueprint", pkgname)
         } else {
             self.user.retain(|line| match line {
-                BlueprintLine::PkgRequest(req) => req.name == pkgname,
-                _ => false,
+                BlueprintLine::PkgRequest(req) => !(req.name == pkgname),
+                _ => true,
             });
             self.user_blueprint_modified = true;
             Ok(())
