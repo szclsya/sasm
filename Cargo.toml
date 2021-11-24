@@ -1,6 +1,6 @@
 [package]
 name = "omakase"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 authors = ["Leo Shen <i@szclsya.me>"]
 license = "GPL-2.0-or-later"
 edition = "2021"
