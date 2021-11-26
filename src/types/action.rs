@@ -51,7 +51,9 @@ impl PkgActions {
             })
             .collect();
         let install_prefix = style("INSTALL").on_blue().bold().to_string();
-        crate::WRITER.write_chunks(&install_prefix, &to_install).unwrap();
+        crate::WRITER
+            .write_chunks(&install_prefix, &to_install)
+            .unwrap();
 
         let to_upgrade: Vec<String> = self
             .install
@@ -71,10 +73,12 @@ impl PkgActions {
             })
             .collect();
         let upgrade_prefix = style("UPGRADE").on_green().black().bold().to_string();
-        crate::WRITER.write_chunks(&upgrade_prefix, &to_upgrade).unwrap();
+        crate::WRITER
+            .write_chunks(&upgrade_prefix, &to_upgrade)
+            .unwrap();
 
         let to_downgrade: Vec<String> = self
-             .install
+            .install
             .iter()
             .filter_map(|(install, oldpkg)| match oldpkg {
                 Some(oldpkg) => {
@@ -91,7 +95,9 @@ impl PkgActions {
             })
             .collect();
         let downgrade_prefix = style("DOWNGRADE").on_yellow().white().bold().to_string();
-        crate::WRITER.write_chunks(&downgrade_prefix, &to_downgrade).unwrap();
+        crate::WRITER
+            .write_chunks(&downgrade_prefix, &to_downgrade)
+            .unwrap();
 
         let to_unpack: Vec<String> = self
             .unpack
@@ -112,7 +118,9 @@ impl PkgActions {
             })
             .collect();
         let unpack_prefix = style("UNPACK").on_blue().bold().to_string();
-        crate::WRITER.write_chunks(&unpack_prefix, &to_unpack).unwrap();
+        crate::WRITER
+            .write_chunks(&unpack_prefix, &to_unpack)
+            .unwrap();
 
         let configure_prefix = style("CONFIGURE").on_white().bold().to_string();
         crate::WRITER

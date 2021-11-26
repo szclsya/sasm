@@ -2,8 +2,8 @@ mod verify;
 
 use crate::{
     types::{config::RepoConfig, Checksum},
-    utils::downloader::{DownloadJob, Downloader, Compression},
-    warn
+    utils::downloader::{Compression, DownloadJob, Downloader},
+    warn,
 };
 use anyhow::{bail, Context, Result};
 use lazy_static::lazy_static;
@@ -85,8 +85,7 @@ impl LocalDb {
                 url: format!("{}/dists/{}/InRelease", repo.url, repo.distribution),
                 filename: Some(format!("InRelease_{}", name)),
                 size: None,
-                checksum: None,
-                compression: Compression::None,
+                compression: Compression::None(None),
             })
             .collect();
         downloader.fetch(inrelease_urls, &self.root).await?;
@@ -116,25 +115,65 @@ impl LocalDb {
                 let pre_download_count = dbs_to_download.len();
                 let possible_archs = vec![self.arch.to_owned(), "all".to_owned()];
                 for arch in possible_archs {
-                    let rel_url = format!("{}/binary-{}/Packages.xz", component, arch);
-                    if let Some(db_meta) = dbs.get(name).unwrap().get(&rel_url) {
+                    // 1. Download Packages db
+                    let compressed_rel_url = format!("{}/binary-{}/Packages.xz", component, arch);
+                    let decompressed_rel_url = format!("{}/binary-{}/Packages", component, arch);
+
+                    if let Some(compressed_meta) = dbs.get(name).unwrap().get(&compressed_rel_url) {
                         let filename = format!(
                             "{}/Packages_{}_{}_{}",
                             &name, &repo.distribution, &component, arch
                         );
+                        let decompressed_meta = match dbs.get(name).unwrap().get(&decompressed_rel_url) {
+                            Some(meta) => meta,
+                            None => bail!("Packages.xz exists but Packages does not, remote repository issue?")
+                        };
                         dbs_to_download.push(DownloadJob {
-                            url: format!("{}/dists/{}/{}", repo.url, repo.distribution, rel_url),
+                            url: format!(
+                                "{}/dists/{}/{}",
+                                repo.url, repo.distribution, compressed_rel_url
+                            ),
                             filename: Some(filename),
-                            size: Some(db_meta.0),
-                            checksum: Some(db_meta.1.clone()),
-                            compression: Compression::Xz,
+                            size: Some(compressed_meta.0),
+                            compression: Compression::Xz((
+                                Some(compressed_meta.1.clone()),
+                                Some(decompressed_meta.1.clone()),
+                            )),
+                        });
+                    }
+                    // 2. Download Contents db
+                    let compressed_rel_url = format!("{}/Contents-{}.gz", component, arch);
+                    let decompressed_rel_url = format!("{}/Contents-{}", component, arch);
+                    if let Some(compressed_meta) = dbs.get(name).unwrap().get(&compressed_rel_url) {
+                        let filename = format!(
+                            "{}/Contents_{}_{}_{}",
+                            &name, &repo.distribution, &component, arch
+                        );
+                        let decompressed_meta = match dbs.get(name).unwrap().get(&decompressed_rel_url) {
+                            Some(meta) => meta,
+                            None => bail!("Contents.gz exists but Contents does not, remote repository issue?")
+                        };
+                        dbs_to_download.push(DownloadJob {
+                            url: format!(
+                                "{}/dists/{}/{}",
+                                repo.url, repo.distribution, &compressed_rel_url
+                            ),
+                            filename: Some(filename),
+                            size: Some(compressed_meta.0),
+                            compression: Compression::Gzip((
+                                Some(compressed_meta.1.clone()),
+                                Some(decompressed_meta.1.clone()),
+                            )),
                         });
                     }
                 }
 
                 if pre_download_count == dbs_to_download.len() {
                     warn!("No repository available for {}/{}", name, component);
-                    warn!("Please check if this repo have packages for {} architecture", self.arch);
+                    warn!(
+                        "Please check if this repo have packages for {} architecture",
+                        self.arch
+                    );
                 }
             }
         }

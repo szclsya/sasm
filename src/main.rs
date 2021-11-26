@@ -13,8 +13,8 @@ use lazy_static::lazy_static;
 use std::{
     fs::{read_dir, File},
     io::Read,
-    sync::atomic::{AtomicBool, Ordering},
     process::exit,
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 // Initialize writer
@@ -36,15 +36,18 @@ async fn main() {
     // Check if another instance is runing
     match utils::lock::check_lock(&opts.root) {
         Ok(Some(pid)) => {
-            error!("Another instance of Omakase is currently running at PID {}", pid);
+            error!(
+                "Another instance of Omakase is currently running at PID {}",
+                pid
+            );
             exit(1);
-        },
+        }
         Ok(None) => {
             if let Err(e) = utils::lock::lock(&opts.root) {
                 error!("Cannot lock omakase: {}", e);
                 exit(1);
             }
-        },
+        }
         Err(e) => {
             error!("Failed to check lock status: {}", e.to_string());
         }

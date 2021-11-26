@@ -1,7 +1,7 @@
 use crate::{
     info,
     types::PkgActions,
-    utils::downloader::{DownloadJob, Downloader, Compression},
+    utils::downloader::{Compression, DownloadJob, Downloader},
 };
 
 use anyhow::{bail, Context, Result};
@@ -118,8 +118,7 @@ fn get_download_jobs(actions: &PkgActions) -> Vec<DownloadJob> {
             url: install.url.clone(),
             filename: None,
             size: Some(install.download_size),
-            checksum: Some(install.checksum.clone()),
-            compression: Compression::None,
+            compression: Compression::None(Some(install.checksum.clone())),
         })
         .collect();
     let mut unpack_downloads = actions
@@ -129,8 +128,7 @@ fn get_download_jobs(actions: &PkgActions) -> Vec<DownloadJob> {
             url: install.url.clone(),
             filename: None,
             size: Some(install.download_size),
-            checksum: Some(install.checksum.clone()),
-            compression: Compression::None,
+            compression: Compression::None(Some(install.checksum.clone())),
         })
         .collect();
     downloads.append(&mut unpack_downloads);

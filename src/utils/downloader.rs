@@ -1,6 +1,7 @@
 use crate::{msg, types::Checksum};
 
 use anyhow::{bail, format_err, Result};
+use async_compression::tokio::write::{GzipDecoder, XzDecoder};
 use futures_util::future::select_all;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::Client;
@@ -8,23 +9,42 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
 };
-use tokio::{fs::OpenOptions, io::{AsyncWriteExt, AsyncWrite}};
-use async_compression::tokio::write::{ GzipDecoder, XzDecoder };
+use tokio::{
+    fs::OpenOptions,
+    io::{AsyncWrite, AsyncWriteExt},
+};
 
 #[derive(Clone)]
 pub struct DownloadJob {
     pub url: String,
     pub filename: Option<String>,
     pub size: Option<u64>,
-    pub checksum: Option<Checksum>,
     pub compression: Compression,
 }
 
 #[derive(Clone)]
 pub enum Compression {
-    Gzip,
-    Xz,
-    None
+    Gzip((Option<Checksum>, Option<Checksum>)),
+    Xz((Option<Checksum>, Option<Checksum>)),
+    None(Option<Checksum>),
+}
+
+impl Compression {
+    pub fn get_extracted_checksum(&self) -> Option<Checksum> {
+        match self {
+            Compression::Gzip((_, c)) => c,
+            Compression::Xz((_, c)) => c,
+            Compression::None(c) => c,
+        }.clone()
+    }
+
+    pub fn get_download_checksum(&self) -> Option<Checksum> {
+        match self {
+            Compression::Gzip((c, _)) => c,
+            Compression::Xz((c, _)) => c,
+            Compression::None(c) => c,
+        }.clone()
+    }
 }
 
 pub struct Downloader {
@@ -199,7 +219,7 @@ async fn download_file(
     let file_path = path.join(&filename);
     let mut f = {
         if file_path.is_file() {
-            if let Some(checksum) = job.checksum.clone() {
+            if let Some(checksum) = job.compression.get_extracted_checksum() {
                 let p = file_path.clone();
                 let res = tokio::task::spawn_blocking(move || checksum.cmp_file(&p)).await?;
                 if res.is_ok() && res.unwrap() {
@@ -240,14 +260,18 @@ async fn download_file(
     bar.set_length(len);
     bar.set_position(0);
     bar.reset();
-    
+
     // Download!
     {
-        let mut validator = job.checksum.as_ref().map(|c| c.get_validator());
-        let mut writer: Box<dyn AsyncWrite + Unpin + Send> =  match job.compression {
-            Compression::Gzip => Box::new(GzipDecoder::new(&mut f)),
-            Compression::Xz => Box::new(XzDecoder::new(&mut f)),
-            Compression::None => Box::new(&mut f),
+        let mut validator = job
+            .compression
+            .get_download_checksum()
+            .as_ref()
+            .map(|c| c.get_validator());
+        let mut writer: Box<dyn AsyncWrite + Unpin + Send> = match job.compression {
+            Compression::Gzip(_) => Box::new(GzipDecoder::new(&mut f)),
+            Compression::Xz(_) => Box::new(XzDecoder::new(&mut f)),
+            Compression::None(_) => Box::new(&mut f),
         };
         while let Some(chunk) = resp.chunk().await? {
             writer.write_all(&chunk).await?;
