@@ -2,7 +2,7 @@ mod verify;
 
 use crate::{
     types::{config::RepoConfig, Checksum},
-    utils::downloader::{DownloadJob, Downloader},
+    utils::downloader::{DownloadJob, Downloader, Compression},
     warn
 };
 use anyhow::{bail, Context, Result};
@@ -86,6 +86,7 @@ impl LocalDb {
                 filename: Some(format!("InRelease_{}", name)),
                 size: None,
                 checksum: None,
+                compression: Compression::None,
             })
             .collect();
         downloader.fetch(inrelease_urls, &self.root).await?;
@@ -115,7 +116,7 @@ impl LocalDb {
                 let pre_download_count = dbs_to_download.len();
                 let possible_archs = vec![self.arch.to_owned(), "all".to_owned()];
                 for arch in possible_archs {
-                    let rel_url = format!("{}/binary-{}/Packages", component, arch);
+                    let rel_url = format!("{}/binary-{}/Packages.xz", component, arch);
                     if let Some(db_meta) = dbs.get(name).unwrap().get(&rel_url) {
                         let filename = format!(
                             "{}/Packages_{}_{}_{}",
@@ -126,6 +127,7 @@ impl LocalDb {
                             filename: Some(filename),
                             size: Some(db_meta.0),
                             checksum: Some(db_meta.1.clone()),
+                            compression: Compression::Xz,
                         });
                     }
                 }

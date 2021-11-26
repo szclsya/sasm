@@ -9,7 +9,8 @@ use std::{
     io::SeekFrom,
     path::{Path, PathBuf},
 };
-use tokio::{fs::OpenOptions, io::AsyncSeekExt, io::AsyncWriteExt};
+use tokio::{fs::OpenOptions, io::{AsyncSeekExt, AsyncWriteExt, AsyncWrite}};
+use async_compression::tokio::write::{ GzipDecoder, XzDecoder };
 
 #[derive(Clone)]
 pub struct DownloadJob {
@@ -17,6 +18,14 @@ pub struct DownloadJob {
     pub filename: Option<String>,
     pub size: Option<u64>,
     pub checksum: Option<Checksum>,
+    pub compression: Compression,
+}
+
+#[derive(Clone)]
+pub enum Compression {
+    Gzip,
+    Xz,
+    None
 }
 
 pub struct Downloader {
@@ -223,7 +232,7 @@ async fn download_file(
         }
     };
 
-    // Begin the download!
+    // Prepare progress bar
     let mut msg = format!("({:0width$}/{}) {}", pos.0, pos.1, filename, width = pos.2);
     if console::measure_text_width(&msg) > 48 {
         msg = console::truncate_str(&msg, 45, "...").to_string();
@@ -232,31 +241,41 @@ async fn download_file(
     bar.set_length(len);
     bar.set_position(0);
     bar.reset();
-    while let Some(chunk) = resp.chunk().await? {
-        f.write_all(&chunk).await?;
-        bar.inc(chunk.len() as u64);
-    }
-    f.shutdown().await?;
-
-    if let Some(len) = job.size {
-        if bar.length() != len {
-            bail!(
-                "Bad file size when downloading {}. Mirror may be syncing. Try again later.",
-                job.url
-            );
+    
+    // Download!
+    {
+        let mut validator = match &job.checksum {
+            Some(c) => Some(c.get_validator()),
+            None => None,
+        };
+        let mut writer: Box<dyn AsyncWrite + Unpin + Send> =  match job.compression {
+            Compression::Gzip => Box::new(GzipDecoder::new(&mut f)),
+            Compression::Xz => Box::new(XzDecoder::new(&mut f)),
+            Compression::None => Box::new(&mut f),
+        };
+        while let Some(chunk) = resp.chunk().await? {
+            writer.write_all(&chunk).await?;
+            bar.inc(chunk.len() as u64);
+            if let Some(ref mut validator) = validator {
+                validator.update(&chunk);
+            }
         }
-    }
+        writer.shutdown().await?;
 
-    // Check checksum
-    if let Some(checksum) = job.checksum {
-        f.seek(SeekFrom::Start(0)).await?;
-        let f = f.into_std().await;
-        let res = tokio::task::spawn_blocking(move || {
-            checksum.cmp_read(Box::new(f) as Box<dyn std::io::Read>)
-        })
-        .await??;
-        if !res {
-            bail!("Checksum mismatch for file {}", filename);
+        if let Some(len) = job.size {
+            if bar.length() != len {
+                bail!(
+                    "Bad file size when downloading {}. Mirror may be syncing. Try again later.",
+                    job.url
+                );
+            }
+        }
+
+        if let Some(validator) = validator {
+            // finish() returns false if validate failed
+            if !validator.finish() {
+                bail!("Checksum mismatch for file {}", filename);
+            }
         }
     }
 
