@@ -18,7 +18,7 @@ varisat = "0.2"
 petgraph = "0.6"
 # Dealing with deb control files and InRelease
 debcontrol = "0.1"
-sequoia-openpgp = "1.5"
+sequoia-openpgp = "1.6"
 sha2 = "0.9"
 hex = "0.4"
 # cli
@@ -35,7 +35,7 @@ nom = "7"
 futures-util = "0.3"
 tokio = { version = "1.14", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
 bytes = "1"
-reqwest = { version = "0.11", features = ["rustls-tls", "stream"], default-features = false }
+reqwest = { version = "0.11", features = ["rustls-tls"], default-features = false }
 async-compression = { version = "0.3", features = ["tokio", "gzip", "xz"] }
 # Actions modifier
 nix = "0.23"

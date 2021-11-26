@@ -145,7 +145,7 @@ async fn try_main(opts: &Opts) -> Result<()> {
 
     // Do stuff
     warn!("Omakase is still in early alpha stage. DO NOT use me on production systems!");
-    actions::fullfill_command(&config, &opts, &mut blueprint, &mut ignorerules).await?;
+    actions::fullfill_command(&config, opts, &mut blueprint, &mut ignorerules).await?;
     // Write back blueprint and IgnoreRules.
     // They will determine if it really need to write back user blueprint
     blueprint.export()?;

@@ -6,10 +6,9 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::Client;
 use std::{
     collections::HashMap,
-    io::SeekFrom,
     path::{Path, PathBuf},
 };
-use tokio::{fs::OpenOptions, io::{AsyncSeekExt, AsyncWriteExt, AsyncWrite}};
+use tokio::{fs::OpenOptions, io::{AsyncWriteExt, AsyncWrite}};
 use async_compression::tokio::write::{ GzipDecoder, XzDecoder };
 
 #[derive(Clone)]
@@ -244,10 +243,7 @@ async fn download_file(
     
     // Download!
     {
-        let mut validator = match &job.checksum {
-            Some(c) => Some(c.get_validator()),
-            None => None,
-        };
+        let mut validator = job.checksum.as_ref().map(|c| c.get_validator());
         let mut writer: Box<dyn AsyncWrite + Unpin + Send> =  match job.compression {
             Compression::Gzip => Box::new(GzipDecoder::new(&mut f)),
             Compression::Xz => Box::new(XzDecoder::new(&mut f)),
