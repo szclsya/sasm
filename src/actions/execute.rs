@@ -28,7 +28,7 @@ pub async fn execute(
     let mut solver = Solver::new();
 
     let dbs = local_db
-        .get_all()
+        .get_all_package_db()
         .context("Invalid local package database")?;
     debug!("Parsing deb debs...");
     for (baseurl, db_path) in dbs {

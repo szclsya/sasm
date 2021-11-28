@@ -35,7 +35,7 @@ impl LocalDb {
         }
     }
 
-    pub fn get(&self, name: &str) -> Result<Vec<(String, PathBuf)>> {
+    pub fn get_package_db(&self, name: &str) -> Result<Vec<(String, PathBuf)>> {
         let repo = match self.repos.get(name) {
             Some(repo) => repo,
             None => bail!("Repo with name {} not found", name),
@@ -66,10 +66,49 @@ impl LocalDb {
     }
 
     // Get (BaseURL, FilePath) of all configured repos
-    pub fn get_all(&self) -> Result<Vec<(String, PathBuf)>> {
+    pub fn get_all_package_db(&self) -> Result<Vec<(String, PathBuf)>> {
         let mut res = Vec::new();
         for repo in &self.repos {
-            res.append(&mut self.get(repo.0)?);
+            res.append(&mut self.get_package_db(repo.0)?);
+        }
+        Ok(res)
+    }
+
+    pub fn get_contents_db(&self, name: &str) -> Result<Vec<(String, PathBuf)>> {
+        let repo = match self.repos.get(name) {
+            Some(repo) => repo,
+            None => bail!("Repo with name {} not found", name),
+        };
+
+        let mut files: Vec<(String, PathBuf)> = Vec::new();
+        for component in &repo.components {
+            // First prepare arch-specific repo
+            let arch = self.root.join(format!(
+                "{}/Contents_{}_{}_{}",
+                &name, &repo.distribution, component, &self.arch
+            ));
+            if !arch.is_file() {
+                bail!("Local database is corrupted or out-of-date");
+            }
+            files.push((repo.url.clone(), self.root.join(arch)));
+            // Then prepare noarch repo, if exists
+            let noarch = self.root.join(format!(
+                "{}/Contents_{}_{}_{}",
+                &name, &repo.distribution, component, "all"
+            ));
+            if noarch.is_file() {
+                files.push((repo.url.clone(), self.root.join(noarch)));
+            }
+        }
+
+        Ok(files)
+    }
+
+    // Get (BaseURL, FilePath) of all configured repos
+    pub fn get_all_contents_db(&self) -> Result<Vec<(String, PathBuf)>> {
+        let mut res = Vec::new();
+        for repo in &self.repos {
+            res.append(&mut self.get_contents_db(repo.0)?);
         }
         Ok(res)
     }

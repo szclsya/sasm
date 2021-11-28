@@ -35,7 +35,8 @@ impl Compression {
             Compression::Gzip((_, c)) => c,
             Compression::Xz((_, c)) => c,
             Compression::None(c) => c,
-        }.clone()
+        }
+        .clone()
     }
 
     pub fn get_download_checksum(&self) -> Option<Checksum> {
@@ -43,7 +44,8 @@ impl Compression {
             Compression::Gzip((c, _)) => c,
             Compression::Xz((c, _)) => c,
             Compression::None(c) => c,
-        }.clone()
+        }
+        .clone()
     }
 }
 

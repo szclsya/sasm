@@ -1,17 +1,10 @@
+use super::PkgInfo;
 use crate::types::PkgVersion;
 
 use anyhow::{bail, Result};
 use debcontrol::{BufParse, Streaming};
 use regex::Regex;
 use std::{collections::HashMap, convert::TryFrom, fs::File, path::PathBuf};
-
-pub struct PkgInfo {
-    pub name: String,
-    pub section: String,
-    pub description: String,
-    pub version: PkgVersion,
-    pub has_dbg_pkg: bool,
-}
 
 pub fn search_deb_db(dbs: &[PathBuf], keyword: &str) -> Result<Vec<PkgInfo>> {
     let regex = Regex::new(keyword)?;

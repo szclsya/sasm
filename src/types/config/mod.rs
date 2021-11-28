@@ -79,6 +79,8 @@ pub enum SubCmd {
     Upgrade,
     #[clap(about = "Search packages from package database")]
     Search(SearchPkg),
+    #[clap(about = "Search what packages provide a certain file")]
+    Provide(ProvideFile),
 }
 
 #[derive(Parser)]
@@ -94,4 +96,9 @@ pub struct RemovePkg {
 #[derive(Parser)]
 pub struct SearchPkg {
     pub keyword: String,
+}
+
+#[derive(Parser)]
+pub struct ProvideFile {
+    pub file: String,
 }

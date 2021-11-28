@@ -1,17 +1,17 @@
 mod execute;
+mod provide;
 mod search;
 use execute::execute;
-use search::search_deb_db;
+//use search::search_deb_db;
 
 use crate::{
     db::LocalDb,
-    executor::{MachineStatus, PkgState},
+    executor::MachineStatus,
     info, success,
     types::config::{Blueprints, Config, IgnoreRules, Opts, SubCmd},
 };
 
 use anyhow::{Context, Result};
-use console::style;
 use std::path::PathBuf;
 
 /// bool in return type indicated whether the blueprint is altered
@@ -75,36 +75,30 @@ pub async fn fullfill_command(
         }
         SubCmd::Search(search) => {
             let dbs: Vec<PathBuf> = localdb
-                .get_all()
+                .get_all_contents_db()
                 .context("Invalid local package database")?
                 .into_iter()
                 .map(|(_, path)| path)
                 .collect();
             let machine_status = MachineStatus::new(&opts.root)?;
 
-            for pkginfo in search_deb_db(&dbs, &search.keyword)? {
-                // Construct prefix
-                let prefix = match machine_status.pkgs.get(&pkginfo.name) {
-                    Some(pkg) => match pkg.state {
-                        PkgState::Installed => style("INSTALLED").green(),
-                        PkgState::Unpacked => style("UNPACKED").yellow(),
-                        _ => style("PACKAGE").dim(),
-                    },
-                    None => style("PACKAGE").dim(),
-                }
-                .to_string();
-                // Construct pkg info line
-                let mut pkg_info_line = style(&pkginfo.name).bold().to_string();
-                pkg_info_line.push(' ');
-                pkg_info_line.push_str(&style(pkginfo.version).green().to_string());
-                if pkginfo.has_dbg_pkg {
-                    pkg_info_line.push(' ');
-                    pkg_info_line.push_str(&style("(debug symbols available)").dim().to_string())
-                }
-                crate::WRITER.writeln(&prefix, &pkg_info_line)?;
-                crate::WRITER.writeln("", &pkginfo.description)?;
+            for pkginfo in search::search_deb_db(&dbs, &search.keyword)? {
+                pkginfo.show(&machine_status)?;
             }
 
+            Ok(())
+        }
+        SubCmd::Provide(provide) => {
+            let dbs: Vec<PathBuf> = localdb
+                .get_all_contents_db()
+                .context("Invalid local package database")?
+                .into_iter()
+                .map(|(_, path)| path)
+                .collect();
+
+            for pkgname in search::search_file(&dbs, &provide.file)? {
+                crate::WRITER.writeln("", &pkgname)?;
+            }
             Ok(())
         }
     }
