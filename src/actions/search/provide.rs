@@ -5,6 +5,7 @@ use std::{
     io::{BufRead, BufReader},
     path::PathBuf,
 };
+use rayon::prelude::*;
 
 // Given a filename or path, find package names that provide such file
 pub fn search_file(dbs: &[PathBuf], filename: &str) -> Result<Vec<String>> {
@@ -22,12 +23,20 @@ pub fn search_file(dbs: &[PathBuf], filename: &str) -> Result<Vec<String>> {
     for db in dbs {
         let f = File::open(db)?;
         let bufreader = BufReader::new(f);
-        for line in bufreader.lines() {
-            let line = line?;
-            if let Some(captures) = regex.captures(&line) {
-                res.push(captures.name("pkgname").unwrap().as_str().to_owned());
+        let mut pkgnames: Vec<String> = bufreader.lines().par_bridge().filter_map(|line| {
+            match line {
+                Ok(l) => {
+                    if regex.is_match(&l) {
+                        let captures = regex.captures(&l).unwrap();
+                        Some(captures.name("pkgname").unwrap().as_str().to_owned())
+                    } else {
+                        None
+                    }
+                }
+                Err(_) => None,
             }
-        }
+        }).collect();
+        res.append(&mut pkgnames);
     }
 
     res.dedup();
