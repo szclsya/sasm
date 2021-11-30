@@ -6,9 +6,10 @@ use std::{
     path::PathBuf,
 };
 use rayon::prelude::*;
+use flate2::read::GzDecoder;
 
 // Given a filename or path, find package names that provide such file
-pub fn search_file(dbs: &[PathBuf], filename: &str) -> Result<Vec<String>> {
+pub fn provide_file(dbs: &[PathBuf], filename: &str) -> Result<Vec<String>> {
     // Construct regex based on deb Contents file format
     let regex = if filename.starts_with('/') {
         // Absolute path, strip "/" to match Contents file format
@@ -22,6 +23,7 @@ pub fn search_file(dbs: &[PathBuf], filename: &str) -> Result<Vec<String>> {
     let mut res = Vec::new();
     for db in dbs {
         let f = File::open(db)?;
+        let f = GzDecoder::new(f);
         let bufreader = BufReader::new(f);
         let mut pkgnames: Vec<String> = bufreader.lines().par_bridge().filter_map(|line| {
             match line {

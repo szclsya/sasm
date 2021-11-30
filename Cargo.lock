@@ -1047,6 +1047,7 @@ dependencies = [
  "console",
  "debcontrol",
  "dialoguer",
+ "flate2",
  "futures-util",
  "hex",
  "indicatif",

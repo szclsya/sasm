@@ -96,7 +96,7 @@ pub async fn fullfill_command(
                 .map(|(_, path)| path)
                 .collect();
 
-            for pkgname in search::search_file(&dbs, &provide.file)? {
+            for pkgname in search::provide_file(&dbs, &provide.file)? {
                 crate::WRITER.writeln("", &pkgname)?;
             }
             Ok(())

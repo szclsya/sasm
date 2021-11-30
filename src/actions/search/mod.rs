@@ -1,7 +1,7 @@
 mod pkg;
 mod provide;
 pub use pkg::search_deb_db;
-pub use provide::search_file;
+pub use provide::provide_file;
 
 use crate::{
     executor::{MachineStatus, PkgState},

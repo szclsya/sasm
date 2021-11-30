@@ -84,7 +84,7 @@ impl LocalDb {
         for component in &repo.components {
             // First prepare arch-specific repo
             let arch = self.root.join(format!(
-                "{}/Contents_{}_{}_{}",
+                "{}/Contents_{}_{}_{}.gz",
                 &name, &repo.distribution, component, &self.arch
             ));
             if !arch.is_file() {
@@ -93,7 +93,7 @@ impl LocalDb {
             files.push((repo.url.clone(), self.root.join(arch)));
             // Then prepare noarch repo, if exists
             let noarch = self.root.join(format!(
-                "{}/Contents_{}_{}_{}",
+                "{}/Contents_{}_{}_{}.gz",
                 &name, &repo.distribution, component, "all"
             ));
             if noarch.is_file() {
@@ -182,16 +182,11 @@ impl LocalDb {
                     }
                     // 2. Download Contents db
                     let compressed_rel_url = format!("{}/Contents-{}.gz", component, arch);
-                    let decompressed_rel_url = format!("{}/Contents-{}", component, arch);
                     if let Some(compressed_meta) = dbs.get(name).unwrap().get(&compressed_rel_url) {
                         let filename = format!(
-                            "{}/Contents_{}_{}_{}",
+                            "{}/Contents_{}_{}_{}.gz",
                             &name, &repo.distribution, &component, arch
                         );
-                        let decompressed_meta = match dbs.get(name).unwrap().get(&decompressed_rel_url) {
-                            Some(meta) => meta,
-                            None => bail!("Contents.gz exists but Contents does not, remote repository issue?")
-                        };
                         dbs_to_download.push(DownloadJob {
                             url: format!(
                                 "{}/dists/{}/{}",
@@ -199,10 +194,7 @@ impl LocalDb {
                             ),
                             filename: Some(filename),
                             size: Some(compressed_meta.0),
-                            compression: Compression::Gzip((
-                                Some(compressed_meta.1.clone()),
-                                Some(decompressed_meta.1.clone()),
-                            )),
+                            compression: Compression::None(Some(compressed_meta.1.clone())),
                         });
                     }
                 }

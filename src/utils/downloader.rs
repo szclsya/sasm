@@ -22,6 +22,7 @@ pub struct DownloadJob {
     pub compression: Compression,
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub enum Compression {
     Gzip((Option<Checksum>, Option<Checksum>)),

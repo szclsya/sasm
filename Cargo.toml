@@ -37,6 +37,7 @@ tokio = { version = "1.14", default_features = false, features = ["rt", "macros"
 bytes = "1"
 reqwest = { version = "0.11", features = ["rustls-tls"], default-features = false }
 async-compression = { version = "0.3", features = ["tokio", "gzip", "xz"] }
+flate2 = "1"
 # Actions modifier
 nix = "0.23"
 # Parallel searching
