@@ -10,7 +10,7 @@ Note that in order to make sure the dependency tree is sound and up-to-date, oma
 oma remove PKG1 PKG2 ...
 ```
 
-This will remove designated packages alongside their dependencies from the system.
+This will remove designated packages alongside **all** their dependencies from the system.
 
 Note that just like the previous case, you may see omakase upgrade (or even install) packages when using `remove` subcommand.
 
@@ -25,3 +25,10 @@ oma search QUERY
 ```
 
 Query string accepts Regex syntax. Note that only package titles will be searched.
+
+# Search packages that contain certain files
+```bash
+oma provide FILE
+```
+
+Search what packages contain a certain file.
