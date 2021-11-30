@@ -116,6 +116,7 @@ fn get_download_jobs(actions: &PkgActions) -> Vec<DownloadJob> {
         .iter()
         .map(|(install, _)| DownloadJob {
             url: install.url.clone(),
+            description: None,
             filename: None,
             size: Some(install.download_size),
             compression: Compression::None(Some(install.checksum.clone())),
@@ -126,6 +127,7 @@ fn get_download_jobs(actions: &PkgActions) -> Vec<DownloadJob> {
         .iter()
         .map(|(install, _)| DownloadJob {
             url: install.url.clone(),
+            description: None,
             filename: None,
             size: Some(install.download_size),
             compression: Compression::None(Some(install.checksum.clone())),

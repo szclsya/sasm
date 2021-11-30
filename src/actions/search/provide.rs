@@ -1,12 +1,12 @@
 use anyhow::Result;
+use flate2::read::GzDecoder;
+use rayon::prelude::*;
 use regex::Regex;
 use std::{
     fs::File,
     io::{BufRead, BufReader},
     path::PathBuf,
 };
-use rayon::prelude::*;
-use flate2::read::GzDecoder;
 
 // Given a filename or path, find package names that provide such file
 pub fn provide_file(dbs: &[PathBuf], filename: &str) -> Result<Vec<String>> {
@@ -25,8 +25,10 @@ pub fn provide_file(dbs: &[PathBuf], filename: &str) -> Result<Vec<String>> {
         let f = File::open(db)?;
         let f = GzDecoder::new(f);
         let bufreader = BufReader::new(f);
-        let mut pkgnames: Vec<String> = bufreader.lines().par_bridge().filter_map(|line| {
-            match line {
+        let mut pkgnames: Vec<String> = bufreader
+            .lines()
+            .par_bridge()
+            .filter_map(|line| match line {
                 Ok(l) => {
                     if regex.is_match(&l) {
                         let captures = regex.captures(&l).unwrap();
@@ -36,8 +38,8 @@ pub fn provide_file(dbs: &[PathBuf], filename: &str) -> Result<Vec<String>> {
                     }
                 }
                 Err(_) => None,
-            }
-        }).collect();
+            })
+            .collect();
         res.append(&mut pkgnames);
     }
 

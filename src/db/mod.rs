@@ -122,6 +122,7 @@ impl LocalDb {
             .iter()
             .map(|(name, repo)| DownloadJob {
                 url: format!("{}/dists/{}/InRelease", repo.url, repo.distribution),
+                description: Some(format!("Repository metadata for repo {}", name)),
                 filename: Some(format!("InRelease_{}", name)),
                 size: None,
                 compression: Compression::None(None),
@@ -172,6 +173,10 @@ impl LocalDb {
                                 "{}/dists/{}/{}",
                                 repo.url, repo.distribution, compressed_rel_url
                             ),
+                            description: Some(format!(
+                                "Package database of repo {} for {} architecture",
+                                name, arch
+                            )),
                             filename: Some(filename),
                             size: Some(compressed_meta.0),
                             compression: Compression::Xz((
@@ -192,6 +197,10 @@ impl LocalDb {
                                 "{}/dists/{}/{}",
                                 repo.url, repo.distribution, &compressed_rel_url
                             ),
+                            description: Some(format!(
+                                "Contents database of repo {} for {} architecture",
+                                name, arch
+                            )),
                             filename: Some(filename),
                             size: Some(compressed_meta.0),
                             compression: Compression::None(Some(compressed_meta.1.clone())),

@@ -17,6 +17,7 @@ use tokio::{
 #[derive(Clone)]
 pub struct DownloadJob {
     pub url: String,
+    pub description: Option<String>,
     pub filename: Option<String>,
     pub size: Option<u64>,
     pub compression: Compression,
@@ -218,6 +219,7 @@ async fn download_file(
             .content_length()
             .ok_or_else(|| format_err!("Cannot determine content length"))?,
     };
+    let msg = job.description.as_ref().unwrap_or(&filename);
 
     let file_path = path.join(&filename);
     let mut f = {
@@ -230,7 +232,7 @@ async fn download_file(
                     bar.println(format!(
                         "{}{} (not modified)",
                         crate::cli::gen_prefix(&console::style("SKIP").dim().to_string()),
-                        &filename
+                        &msg
                     ));
                     return Ok((job.url, file_path));
                 }
@@ -255,11 +257,11 @@ async fn download_file(
     };
 
     // Prepare progress bar
-    let mut msg = format!("({:0width$}/{}) {}", pos.0, pos.1, filename, width = pos.2);
-    if console::measure_text_width(&msg) > 48 {
-        msg = console::truncate_str(&msg, 45, "...").to_string();
+    let mut progress_text = format!("({:0width$}/{}) {}", pos.0, pos.1, msg, width = pos.2);
+    if console::measure_text_width(&progress_text) > 48 {
+        progress_text = console::truncate_str(&progress_text, 45, "...").to_string();
     }
-    bar.set_message(msg);
+    bar.set_message(progress_text);
     bar.set_length(len);
     bar.set_position(0);
     bar.reset();
@@ -306,7 +308,7 @@ async fn download_file(
     bar.println(format!(
         "{}{}",
         crate::cli::gen_prefix(&console::style("DONE").dim().to_string()),
-        &filename
+        &msg
     ));
     Ok((job.url, file_path))
 }
