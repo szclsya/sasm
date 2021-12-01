@@ -1,4 +1,4 @@
-use super::pool::{get_deps, PkgPool};
+use super::pool::PkgPool;
 use anyhow::Result;
 use petgraph::graph::{DiGraph, NodeIndex};
 use std::collections::HashMap;
@@ -32,7 +32,7 @@ pub fn sort_pkgs_to_cycles(pool: &dyn PkgPool, pkgs: &[usize]) -> Result<Vec<Vec
     }
     // Add dependency edges
     for pkgid in pkgs.iter() {
-        let deps: Vec<usize> = get_deps(pool, *pkgid)?.into_iter().flatten().collect();
+        let deps: Vec<usize> = pool.get_deps(*pkgid)?.into_iter().flatten().collect();
         for depid in deps {
             if pkgs.contains(&depid) {
                 // Add a directed edge

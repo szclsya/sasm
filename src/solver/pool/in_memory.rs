@@ -1,4 +1,4 @@
-use super::{pkg_to_rule, PkgPool};
+use super::{tools::pkg_to_rule, BasicPkgPool, PkgPool};
 use crate::types::{PkgMeta, PkgVersion};
 use crate::warn;
 
@@ -21,7 +21,7 @@ impl InMemoryPool {
     }
 }
 
-impl PkgPool for InMemoryPool {
+impl BasicPkgPool for InMemoryPool {
     fn add(&mut self, meta: PkgMeta) -> usize {
         let name = meta.name.clone();
         let version = meta.version.clone();
@@ -118,3 +118,5 @@ impl PkgPool for InMemoryPool {
         formula
     }
 }
+
+impl PkgPool for InMemoryPool {}

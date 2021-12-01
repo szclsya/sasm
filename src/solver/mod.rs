@@ -30,24 +30,9 @@ impl Solver {
         debug!("Adding requested packages to formula...");
         let mut ids = Vec::new();
         for req in blueprints.get_pkg_requests() {
-            let choices: Vec<usize> = match self.pool.get_pkgs_by_name(&req.name) {
-                Some(pkgs) => pkgs
-                    .iter()
-                    .cloned()
-                    .filter(|pkgid| {
-                        let pkg = self.pool.get_pkg_by_id(*pkgid).unwrap();
-                        req.version.within(&pkg.version)
-                    })
-                    .collect(),
-                None => {
-                    bail!("Package {} not found", &req.name);
-                }
-            };
-            let id = choices
-                .get(0)
-                .ok_or_else(|| format_err!("No suitable version for {}", &req.name))?;
-            formula.add_clause(&[Lit::from_dimacs(*id as isize)]);
-            ids.push(*id);
+            let id = self.pool.pick_best_pkg(&req.name, &req.version)?;
+            formula.add_clause(&[Lit::from_dimacs(id as isize)]);
+            ids.push(id);
         }
         // Add rules to solver
         let mut solver = varisat::Solver::new();
