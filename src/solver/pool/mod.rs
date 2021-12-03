@@ -7,6 +7,20 @@ use crate::types::{PkgMeta, VersionRequirement};
 use anyhow::{bail, format_err, Result};
 use varisat::CnfFormula;
 
+/// The basic PkgPool interface
+pub trait BasicPkgPool {
+    // Add a package to the pool
+    fn add(&mut self, meta: PkgMeta) -> usize;
+    // Finalize the pool, must call before using the pool
+    fn finalize(&mut self);
+    // Get PkgMeta from Pkg ID
+    fn get_pkg_by_id(&self, id: usize) -> Option<&PkgMeta>;
+    // Get a list of available package IDs based on the given name
+    fn get_pkgs_by_name(&self, name: &str) -> Option<Vec<usize>>;
+    // Generate formula for SAT solver, optionally use a subset of the packages
+    fn gen_formula(&self, subset: Option<&[usize]>) -> CnfFormula;
+}
+
 pub trait PkgPool: BasicPkgPool {
     fn get_deps(&self, pkgid: usize) -> Result<Vec<Vec<usize>>> {
         let pkg = self
@@ -59,20 +73,6 @@ pub trait PkgPool: BasicPkgPool {
             .ok_or_else(|| format_err!("No suitable version for {}", pkgname))?;
         Ok(*id)
     }
-}
-
-/// The basic PkgPool interface
-pub trait BasicPkgPool {
-    // Add a package to the pool
-    fn add(&mut self, meta: PkgMeta) -> usize;
-    // Finalize the pool, must call before using the pool
-    fn finalize(&mut self);
-    // Get PkgMeta from Pkg ID
-    fn get_pkg_by_id(&self, id: usize) -> Option<&PkgMeta>;
-    // Get a list of available package IDs based on the given name
-    fn get_pkgs_by_name(&self, name: &str) -> Option<Vec<usize>>;
-    // Generate formula for SAT solver, optionally use a subset of the packages
-    fn gen_formula(&self, subset: Option<&[usize]>) -> CnfFormula;
 }
 
 #[cfg(test)]

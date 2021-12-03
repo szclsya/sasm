@@ -1,3 +1,4 @@
+use super::UserRequest;
 use crate::{
     cli,
     db::LocalDb,
@@ -13,34 +14,63 @@ use crate::{
     utils::downloader::Downloader,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use dialoguer::Confirm;
 
 #[inline]
 pub async fn execute(
     local_db: &LocalDb,
     downloader: &Downloader,
-    blueprint: &Blueprints,
+    blueprint: &mut Blueprints,
     ignorerules: &IgnoreRules,
     opts: &Opts,
     config: &Config,
+    request: UserRequest,
 ) -> Result<()> {
+    debug!("Parsing deb debs...");
     let mut solver = Solver::new();
-
     let dbs = local_db
         .get_all_package_db()
         .context("Invalid local package database")?;
-    debug!("Parsing deb debs...");
     for (baseurl, db_path) in dbs {
         read_deb_db(&db_path, solver.pool.as_mut(), &baseurl)?;
     }
     solver.finalize();
 
+    debug!("Processing user request...");
+    match request {
+        UserRequest::Install(list) => {
+            for (name, instal_recomm) in list {
+                // Add pkg to blueprint
+                blueprint.add(&name, None, None)?;
+                if instal_recomm {
+                    let choices = match solver.pool.get_pkgs_by_name(&name) {
+                        Some(pkgs) => pkgs,
+                        None => bail!("Cannot add recommended packages for {}", &name),
+                    };
+                    let choice = choices.get(0).unwrap();
+                    let meta = solver.pool.get_pkg_by_id(*choice).unwrap();
+                    if let Some(recommends) = &meta.recommends {
+                        for recommend in recommends {
+                            blueprint.add(&recommend.0, Some(&name), Some(recommend.1.clone()))?;
+                        }
+                    }
+                }
+            }
+        }
+        UserRequest::Remove(list) => {
+            for (name, remove_recomm) in list {
+                blueprint.remove(&name, remove_recomm)?;
+            }
+        }
+        UserRequest::Upgrade => (),
+    };
+
     info!("Resolving dependencies...");
     let res = solver.install(blueprint)?;
     // Translating result to list of actions
-    let root = opts.root.clone();
-    let machine_status = MachineStatus::new(&root)?;
+    let root = &opts.root;
+    let machine_status = MachineStatus::new(root)?;
     let mut actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
     // Generate modifiers and apply them
     let ignore_modifier = modifier::IgnorePkgs::new(ignorerules)?;

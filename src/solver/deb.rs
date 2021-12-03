@@ -11,7 +11,7 @@ use std::convert::TryFrom;
 use std::fs::File;
 use std::path::Path;
 
-const REQUIRED_FIELDS: &[&str] = &[
+const INTERESTED_FIELDS: &[&str] = &[
     "Package",
     "Filename",
     "Version",
@@ -22,6 +22,7 @@ const REQUIRED_FIELDS: &[&str] = &[
     "Size",
     "SHA256",
     "SHA512",
+    "Recommends",
 ];
 
 #[inline]
@@ -35,7 +36,7 @@ pub fn read_deb_db(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<(
             Streaming::Item(paragraph) => {
                 let mut fields = HashMap::new();
                 for field in paragraph.fields {
-                    if REQUIRED_FIELDS.contains(&field.name) {
+                    if INTERESTED_FIELDS.contains(&field.name) {
                         fields.insert(field.name.to_string(), field.value);
                     }
                 }
@@ -98,6 +99,10 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
             } else {
                 bail!("Package without checksum (SHA256 or SHA512)")
             }
+        },
+        recommends: match f.get("Recommends") {
+            Some(recomm) => Some(parse_pkg_list(&recomm)?),
+            None => None,
         },
     })
 }

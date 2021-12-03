@@ -1,8 +1,9 @@
 use anyhow::{bail, Context, Result};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512};
 use std::{fmt::Display, fs::File, io, path::Path};
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub enum Checksum {
     Sha256(Vec<u8>),
     Sha512(Vec<u8>),

@@ -86,11 +86,15 @@ pub enum SubCmd {
 #[derive(Parser)]
 pub struct InstallPkg {
     pub names: Vec<String>,
+    #[clap(long, about = "Don't install recommended packages")]
+    pub no_recommends: bool,
 }
 
 #[derive(Parser)]
 pub struct RemovePkg {
     pub names: Vec<String>,
+    #[clap(long, about = "Also remove recommended packages")]
+    pub remove_recommends: bool,
 }
 
 #[derive(Parser)]

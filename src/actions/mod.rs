@@ -14,6 +14,14 @@ use crate::{
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
+pub enum UserRequest {
+    // Vec<(PkgName, install_recomm)>
+    Install(Vec<(String, bool)>),
+    // Vec<(PkgName, remove_recomm)>
+    Remove(Vec<(String, bool)>),
+    Upgrade,
+}
+
 /// bool in return type indicated whether the blueprint is altered
 pub async fn fullfill_command(
     config: &Config,
@@ -33,27 +41,50 @@ pub async fn fullfill_command(
 
     match &opts.subcmd {
         SubCmd::Install(add) => {
-            // Modify blueprint
-            for name in &add.names {
-                blueprints.add(name)?;
-            }
+            let req: Vec<(String, bool)> = add
+                .names
+                .iter()
+                .map(|pkgname| (pkgname.to_owned(), !add.no_recommends))
+                .collect();
+            let req = UserRequest::Install(req);
             // Update local db
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             // Execute blueprint
-            execute(&localdb, &downloader, blueprints, ignorerules, opts, config).await?;
+            execute(
+                &localdb,
+                &downloader,
+                blueprints,
+                ignorerules,
+                opts,
+                config,
+                req,
+            )
+            .await?;
             Ok(())
         }
         SubCmd::Remove(rm) => {
-            // Modify blueprint
-            for name in &rm.names {
-                blueprints.remove(name)?;
-            }
+            // Prepare request
+            let req: Vec<(String, bool)> = rm
+                .names
+                .iter()
+                .map(|name| (name.to_owned(), rm.remove_recommends))
+                .collect();
+            let req = UserRequest::Remove(req);
             // Update local db
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             // Apply stuff
-            execute(&localdb, &downloader, blueprints, ignorerules, opts, config).await?;
+            execute(
+                &localdb,
+                &downloader,
+                blueprints,
+                ignorerules,
+                opts,
+                config,
+                req,
+            )
+            .await?;
             Ok(())
         }
         SubCmd::Refresh => {
@@ -63,13 +94,23 @@ pub async fn fullfill_command(
             Ok(())
         }
         SubCmd::Execute | SubCmd::Upgrade => {
+            let req = UserRequest::Upgrade;
             info!("Refreshing local package databases...");
             localdb
                 .update(&downloader)
                 .await
                 .context("Failed to refresh local package database")?;
 
-            execute(&localdb, &downloader, blueprints, ignorerules, opts, config).await?;
+            execute(
+                &localdb,
+                &downloader,
+                blueprints,
+                ignorerules,
+                opts,
+                config,
+                req,
+            )
+            .await?;
 
             Ok(())
         }

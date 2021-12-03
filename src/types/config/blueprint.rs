@@ -17,6 +17,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[derive(Debug, PartialEq, Eq, Default, Clone)]
+pub struct PkgRequest {
+    pub name: String,
+    pub version: VersionRequirement,
+    pub added_by: Option<String>,
+}
+
 /// A collection of
 pub struct Blueprints {
     user_blueprint_path: PathBuf,
@@ -67,22 +74,28 @@ impl Blueprints {
         res
     }
 
-    pub fn add(&mut self, pkgname: &str) -> Result<()> {
+    pub fn add(
+        &mut self,
+        pkgname: &str,
+        added_by: Option<&str>,
+        ver_req: Option<VersionRequirement>,
+    ) -> Result<()> {
         if self.user_list_contains(pkgname) {
             bail!("Package {} already exists in user blueprint", pkgname);
         }
 
+        let version = ver_req.unwrap_or_else(|| VersionRequirement::default());
         let pkgreq = PkgRequest {
             name: pkgname.to_string(),
-            version: VersionRequirement::default(),
-            install_recomm: None,
+            version,
+            added_by: added_by.map(|pkgname| pkgname.to_owned()),
         };
         self.user.push(BlueprintLine::PkgRequest(pkgreq));
         self.user_blueprint_modified = true;
         Ok(())
     }
 
-    pub fn remove(&mut self, pkgname: &str) -> Result<()> {
+    pub fn remove(&mut self, pkgname: &str, remove_recomms: bool) -> Result<()> {
         if !self.user_list_contains(pkgname) {
             bail!("Package with name {} not found in user blueprint", pkgname)
         } else {
@@ -90,6 +103,12 @@ impl Blueprints {
                 BlueprintLine::PkgRequest(req) => req.name != pkgname,
                 _ => true,
             });
+            if remove_recomms {
+                self.user.retain(|line| match line {
+                    BlueprintLine::PkgRequest(req) => req.added_by != Some(pkgname.to_string()),
+                    _ => true,
+                });
+            }
             self.user_blueprint_modified = true;
             Ok(())
         }
@@ -158,32 +177,21 @@ enum BlueprintLine {
     EmptyLine,
 }
 
-#[derive(Debug, PartialEq, Eq, Default, Clone)]
-pub struct PkgRequest {
-    pub name: String,
-    pub version: VersionRequirement,
-    pub install_recomm: Option<bool>,
-}
-
 impl std::fmt::Display for PkgRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "{}", self.name)?;
         let ver_req_str = self.version.to_string();
-        let recomm_str = match self.install_recomm {
-            Some(recomm) => {
-                if recomm {
-                    "recomm".to_string()
-                } else {
-                    "no_recomm".to_string()
-                }
+        let added_by_str = match &self.added_by {
+            Some(pkgname) => {
+                format!("added_by = {}", pkgname)
             }
             None => String::new(),
         };
 
-        if !ver_req_str.is_empty() || !recomm_str.is_empty() {
+        if !ver_req_str.is_empty() || !added_by_str.is_empty() {
             write!(f, "({}", ver_req_str)?;
-            if !recomm_str.is_empty() {
-                write!(f, ", {}", recomm_str)?;
+            if !added_by_str.is_empty() {
+                write!(f, ", {}", added_by_str)?;
             }
             write!(f, ")")?;
         }
@@ -241,18 +249,17 @@ fn package_name(i: &str) -> IResult<&str, &str> {
 }
 
 enum PkgOption {
-    InstallRecomm,
-    NoRecomm,
     VersionRequirement(VersionRequirement),
+    AddedBy(String),
 }
 
 fn pkg_option(i: &str) -> IResult<&str, PkgOption> {
-    if let Ok((i, _)) = tag::<_, _, Error<&str>>("recomm")(i) {
-        return Ok((i, PkgOption::InstallRecomm));
-    }
-
-    if let Ok((i, _)) = tag::<_, _, Error<&str>>("no_recomm")(i) {
-        return Ok((i, PkgOption::NoRecomm));
+    if let Ok((i, _)) = tag::<_, _, Error<&str>>("added_by")(i) {
+        let (i, _) = space0(i)?;
+        let (i, _) = char('=')(i)?;
+        let (i, _) = space0(i)?;
+        let (i, pkgname) = package_name(i)?;
+        return Ok((i, PkgOption::AddedBy(pkgname.to_owned())));
     }
 
     if let Ok((i, req)) = parse_version_requirement(i) {
@@ -272,7 +279,7 @@ fn package_line(i: &str) -> IResult<&str, PkgRequest> {
     let mut res = PkgRequest {
         name: name.to_string(),
         version: VersionRequirement::default(),
-        install_recomm: None,
+        added_by: None,
     };
 
     let i = if let Ok((i, opts)) = nom::sequence::delimited(
@@ -284,8 +291,7 @@ fn package_line(i: &str) -> IResult<&str, PkgRequest> {
         // Enroll optional requests
         for opt in opts {
             match opt {
-                PkgOption::InstallRecomm => res.install_recomm = Some(true),
-                PkgOption::NoRecomm => res.install_recomm = Some(true),
+                PkgOption::AddedBy(pkgname) => res.added_by = Some(pkgname),
                 PkgOption::VersionRequirement(req) => {
                     res.version = res.version.combine(&req).unwrap();
                 }
@@ -384,14 +390,14 @@ mod tests {
     #[test]
     fn test_package_line() {
         let tests = vec![(
-            "abc (no_recomm, >1)",
+            "abc (added_by = wow, >1)",
             PkgRequest {
                 name: "abc".to_string(),
                 version: VersionRequirement {
                     lower_bond: Some((PkgVersion::try_from("1").unwrap(), false)),
                     upper_bond: None,
                 },
-                install_recomm: Some(true),
+                added_by: Some("wow".to_string()),
             },
             (
                 "pkgname (>1, <2)",
@@ -401,7 +407,7 @@ mod tests {
                         lower_bond: Some((PkgVersion::try_from("1").unwrap(), false)),
                         upper_bond: Some((PkgVersion::try_from("2").unwrap(), true)),
                     },
-                    install_recomm: None,
+                    added_by: None,
                 },
             ),
         )];

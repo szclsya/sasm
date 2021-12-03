@@ -7,7 +7,7 @@ pub use action::{PkgActionModifier, PkgActions, PkgInstallAction};
 pub use checksum::Checksum;
 pub use version::{parse_version, parse_version_requirement, PkgVersion, VersionRequirement};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Default)]
 pub struct PkgRequirement {
@@ -15,7 +15,7 @@ pub struct PkgRequirement {
     pub version: Option<VersionRequirement>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PkgMeta {
     pub name: String,
     pub version: PkgVersion,
@@ -27,4 +27,5 @@ pub struct PkgMeta {
     // u64 because reqwest's content length is u64
     pub size: u64,
     pub checksum: Checksum,
+    pub recommends: Option<Vec<(String, VersionRequirement)>>,
 }
