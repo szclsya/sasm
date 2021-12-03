@@ -180,20 +180,18 @@ enum BlueprintLine {
 impl std::fmt::Display for PkgRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "{}", self.name)?;
-        let ver_req_str = self.version.to_string();
-        let added_by_str = match &self.added_by {
-            Some(pkgname) => {
-                format!("added_by = {}", pkgname)
-            }
-            None => String::new(),
-        };
-
-        if !ver_req_str.is_empty() || !added_by_str.is_empty() {
-            write!(f, "({}", ver_req_str)?;
-            if !added_by_str.is_empty() {
-                write!(f, ", {}", added_by_str)?;
-            }
-            write!(f, ")")?;
+        // Sections of package property
+        let mut sections = Vec::new();
+        if !self.version.is_arbitary() {
+            sections.push(self.version.to_string());
+        }
+        if let Some(pkgname) = &self.added_by {
+            sections.push(format!("added_by = {}", pkgname));
+        }
+        // Write it
+        if !sections.is_empty() {
+            let joined = sections.join(", ");
+            write!(f, " ({})", joined)?;
         }
         Ok(())
     }

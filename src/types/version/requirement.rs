@@ -22,6 +22,11 @@ impl VersionRequirement {
         }
     }
 
+    /// Check if this VersionRequirement accepts arbitary version
+    pub fn is_arbitary(&self) -> bool {
+        self.lower_bond.is_none() && self.upper_bond.is_none()
+    }
+
     /// Create a new VersionRequirment that satisfies both original requirements
     pub fn combine(&self, other: &VersionRequirement) -> Result<VersionRequirement> {
         let mut new = self.clone();
