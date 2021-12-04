@@ -44,7 +44,7 @@ pub async fn fullfill_command(
             let req: Vec<(String, bool)> = add
                 .names
                 .iter()
-                .map(|pkgname| (pkgname.to_owned(), !add.no_recommends))
+                .map(|pkgname| (pkgname.clone(), !add.no_recommends))
                 .collect();
             let req = UserRequest::Install(req);
             // Update local db
@@ -68,7 +68,7 @@ pub async fn fullfill_command(
             let req: Vec<(String, bool)> = rm
                 .names
                 .iter()
-                .map(|name| (name.to_owned(), rm.remove_recommends))
+                .map(|name| (name.clone(), rm.remove_recommends))
                 .collect();
             let req = UserRequest::Remove(req);
             // Update local db

@@ -34,18 +34,14 @@ pub enum Compression {
 impl Compression {
     pub fn get_extracted_checksum(&self) -> Option<Checksum> {
         match self {
-            Compression::Gzip((_, c)) => c,
-            Compression::Xz((_, c)) => c,
-            Compression::None(c) => c,
+            Compression::Gzip((_, c)) | Compression::Xz((_, c)) | Compression::None(c) => c,
         }
         .clone()
     }
 
     pub fn get_download_checksum(&self) -> Option<Checksum> {
         match self {
-            Compression::Gzip((c, _)) => c,
-            Compression::Xz((c, _)) => c,
-            Compression::None(c) => c,
+            Compression::Gzip((c, _)) | Compression::Xz((c, _)) | Compression::None(c) => c,
         }
         .clone()
     }

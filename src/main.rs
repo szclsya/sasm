@@ -34,7 +34,7 @@ async fn main() {
     // Set-up debug globally
     DEBUG.store(opts.verbose, Ordering::Relaxed);
     // Check if another instance is runing
-    match utils::lock::check_lock(&opts.root) {
+    match utils::lock::check(&opts.root) {
         Ok(Some(pid)) => {
             error!(
                 "Another instance of Omakase is currently running at PID {}",

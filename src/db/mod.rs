@@ -131,15 +131,15 @@ impl LocalDb {
         downloader.fetch(inrelease_urls, &self.root).await?;
 
         // Step 2: Verify InRelease with PGP
-        for (name, repo) in self.repos.iter() {
+        for (name, repo) in &self.repos {
             let inrelease_path = self.root.join(format!("InRelease_{}", name));
             let inrelease_contents = std::fs::read(inrelease_path)?;
             let bytes = bytes::Bytes::from(inrelease_contents);
-            let res = verify::verify_inrelease(&self.key_root, &repo.keys, bytes)
+            let res = verify::verify_inrelease(&self.key_root, &repo.keys, &bytes)
                 .context(format!("Failed to verify metadata for repository {}", name))?;
             let repo_dbs = parse_inrelease(&res)
                 .context(format!("Failed to parse metadata for repository {}", name))?;
-            dbs.insert(name.to_owned(), repo_dbs);
+            dbs.insert(name.clone(), repo_dbs);
         }
 
         // Step 3: Download deb dbs
@@ -153,7 +153,7 @@ impl LocalDb {
 
             for component in &repo.components {
                 let pre_download_count = dbs_to_download.len();
-                let possible_archs = vec![self.arch.to_owned(), "all".to_owned()];
+                let possible_archs = vec![self.arch.clone(), "all".to_owned()];
                 for arch in possible_archs {
                     // 1. Download Packages db
                     let compressed_rel_url = format!("{}/binary-{}/Packages.xz", component, arch);

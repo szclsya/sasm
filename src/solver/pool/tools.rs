@@ -11,7 +11,7 @@ pub fn pkg_to_rule(
     let pkg = pool.get_pkg_by_id(pkgid).unwrap();
     let mut res = Vec::new();
     // Enroll dependencies
-    for dep in pkg.depends.iter() {
+    for dep in &pkg.depends {
         let available = match pool.get_pkgs_by_name(&dep.0) {
             Some(pkgs) => match subset {
                 Some(ids) => {

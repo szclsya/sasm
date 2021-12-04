@@ -37,7 +37,7 @@ impl PkgInfo {
         pkg_info_line.push_str(&style(&self.version).green().to_string());
         if self.has_dbg_pkg {
             pkg_info_line.push(' ');
-            pkg_info_line.push_str(&style("(debug symbols available)").dim().to_string())
+            pkg_info_line.push_str(&style("(debug symbols available)").dim().to_string());
         }
         crate::WRITER.writeln(&prefix, &pkg_info_line)?;
         crate::WRITER.writeln("", &self.description)?;

@@ -27,7 +27,7 @@ pub trait PkgPool: BasicPkgPool {
             .get_pkg_by_id(pkgid)
             .ok_or_else(|| format_err!("Package with ID {} not found", pkgid))?;
         let mut res = Vec::new();
-        for dep in pkg.depends.iter() {
+        for dep in &pkg.depends {
             let mut deps_id = Vec::new();
             let available = match self.get_pkgs_by_name(&dep.0) {
                 Some(d) => d,
@@ -58,7 +58,7 @@ pub trait PkgPool: BasicPkgPool {
         let choices: Vec<usize> = match self.get_pkgs_by_name(pkgname) {
             Some(pkgs) => pkgs
                 .iter()
-                .cloned()
+                .copied()
                 .filter(|pkgid| {
                     let pkg = self.get_pkg_by_id(*pkgid).unwrap();
                     ver_req.within(&pkg.version)

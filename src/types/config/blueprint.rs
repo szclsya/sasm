@@ -84,7 +84,7 @@ impl Blueprints {
             bail!("Package {} already exists in user blueprint", pkgname);
         }
 
-        let version = ver_req.unwrap_or_else(|| VersionRequirement::default());
+        let version = ver_req.unwrap_or_default();
         let pkgreq = PkgRequest {
             name: pkgname.to_string(),
             version,
@@ -290,8 +290,8 @@ fn package_line(i: &str) -> IResult<&str, PkgRequest> {
         for opt in opts {
             match opt {
                 PkgOption::AddedBy(pkgname) => res.added_by = Some(pkgname),
-                PkgOption::VersionRequirement(req) => {
-                    res.version = res.version.combine(&req).unwrap();
+                PkgOption::VersionRequirement(request) => {
+                    res.version = res.version.combine(&request).unwrap();
                 }
             }
         }

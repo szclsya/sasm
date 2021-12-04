@@ -101,7 +101,7 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
             }
         },
         recommends: match f.get("Recommends") {
-            Some(recomm) => Some(parse_pkg_list(&recomm)?),
+            Some(recomm) => Some(parse_pkg_list(recomm)?),
             None => None,
         },
     })

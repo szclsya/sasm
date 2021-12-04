@@ -53,7 +53,7 @@ pub fn reduce(pool: &dyn PkgPool, res: &mut Vec<usize>, to_install: &[usize]) ->
     // Try remove this package from the list of cycles
     let cycles = sort_pkgs_to_cycles(pool, res)?;
     let mut assumes = Vec::new();
-    cycles.iter().for_each(|cycle| {
+    for cycle in &cycles {
         let mut no_ids: Vec<Lit> = cycle
             .iter()
             .map(|id| !Lit::from_dimacs(*id as isize))
@@ -65,7 +65,7 @@ pub fn reduce(pool: &dyn PkgPool, res: &mut Vec<usize>, to_install: &[usize]) ->
             // If can be solved without the cycle, it should be safe to remove it
             assumes = new_assume;
         }
-    });
+    }
 
     solver.assume(&assumes);
     *res = solve(&mut solver).unwrap();
@@ -88,7 +88,7 @@ pub fn gen_update_assume(pool: &dyn PkgPool, ids: &[usize]) -> Vec<(String, Vec<
             let mut reached = false;
             for pkgid in pkgids {
                 if pkgid == *id {
-                    reached = true
+                    reached = true;
                 }
                 if reached {
                     reached = true;

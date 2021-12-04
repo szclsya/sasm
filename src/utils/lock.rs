@@ -11,7 +11,7 @@ struct LockInfo {
     pid: u32,
 }
 
-pub fn check_lock(root: &Path) -> Result<Option<u32>> {
+pub fn check(root: &Path) -> Result<Option<u32>> {
     let lock_path = root.join(LOCK_PATH);
     if lock_path.is_file() {
         let lock_content =
@@ -28,21 +28,21 @@ pub fn lock(root: &Path) -> Result<()> {
     let lock_path = root.join(LOCK_PATH);
     if lock_path.is_file() {
         bail!("Cannot lock because lock file already exists");
-    } else {
-        // Create directory if not created yet
-        let prefix = lock_path.parent().unwrap();
-        if !prefix.is_dir() {
-            fs::create_dir_all(prefix).context("Failed to create dir for lock file")?;
-        }
-        let lock_info = LockInfo {
-            pid: std::process::id(),
-        };
-        let lock_content = toml::to_string(&lock_info)?;
-        let mut file = fs::File::create(&lock_path).context("Failed to create lock file")?;
-        file.write(lock_content.as_bytes())
-            .context("Failed to write lock content")?;
-        Ok(())
     }
+
+    // Create directory if not created yet
+    let prefix = lock_path.parent().unwrap();
+    if !prefix.is_dir() {
+        fs::create_dir_all(prefix).context("Failed to create dir for lock file")?;
+    }
+    let lock_info = LockInfo {
+        pid: std::process::id(),
+    };
+    let lock_content = toml::to_string(&lock_info)?;
+    let mut file = fs::File::create(&lock_path).context("Failed to create lock file")?;
+    file.write(lock_content.as_bytes())
+        .context("Failed to write lock content")?;
+    Ok(())
 }
 
 pub fn unlock(root: &Path) -> Result<()> {

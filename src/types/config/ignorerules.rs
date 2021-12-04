@@ -91,8 +91,8 @@ impl IgnoreRules {
             .iter()
             .map(|line| match line {
                 IgnoreRuleLine::EmptyLine => "".to_string(),
-                IgnoreRuleLine::Comment(comment) => comment.to_owned(),
-                IgnoreRuleLine::Rule(rule) => rule.to_owned(),
+                IgnoreRuleLine::Comment(comment) => comment.clone(),
+                IgnoreRuleLine::Rule(rule) => rule.clone(),
             })
             .collect();
 

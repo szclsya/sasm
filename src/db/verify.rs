@@ -8,7 +8,11 @@ use sequoia_openpgp::{
 use std::io::Read;
 use std::path::Path;
 
-pub fn verify_inrelease(cert_root: &Path, cert_filenames: &[String], msg: Bytes) -> Result<String> {
+pub fn verify_inrelease(
+    cert_root: &Path,
+    cert_filenames: &[String],
+    msg: &Bytes,
+) -> Result<String> {
     let mut cert_paths = Vec::new();
     for cert_file in cert_filenames {
         let cert_path = cert_root.join(&cert_file);
@@ -49,7 +53,7 @@ impl VerificationHelper for InReleaseVerifier {
     fn get_certs(&mut self, ids: &[KeyHandle]) -> Result<Vec<Cert>> {
         let mut certs = Vec::new();
         for id in ids {
-            for cert in self.certs.iter() {
+            for cert in &self.certs {
                 if &cert.key_handle() == id {
                     certs.push(cert.clone());
                 }
@@ -59,7 +63,7 @@ impl VerificationHelper for InReleaseVerifier {
     }
 
     fn check(&mut self, structure: MessageStructure) -> Result<()> {
-        for layer in structure.into_iter() {
+        for layer in structure {
             if let MessageLayer::SignatureGroup { results } = layer {
                 for r in results {
                     if let Err(e) = r {

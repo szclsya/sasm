@@ -29,7 +29,7 @@ pub fn find_incompatible_friendly(pool: &dyn PkgPool, to_install: &[usize]) -> S
                 console::style(pkg.version.clone()).dim().to_string()
             ));
             if pkgs.peek().is_some() {
-                res.push_str(", ")
+                res.push_str(", ");
             }
         }
         res

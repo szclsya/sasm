@@ -126,7 +126,7 @@ impl fmt::Display for PkgVersion {
         if self.epoch != 0 {
             write!(f, "{}:", self.epoch)?;
         }
-        for segment in self.version.iter() {
+        for segment in &self.version {
             write!(f, "{}", &segment.0)?;
             if let Some(num) = segment.1 {
                 write!(f, "{}", num)?;
@@ -273,7 +273,7 @@ fn parse_version_string(s: &str) -> Result<Vec<(String, Option<u128>)>> {
     if digit_buffer.is_empty() {
         result.push((nondigit_buffer, None));
     } else {
-        result.push((nondigit_buffer, Some(digit_buffer.parse::<u128>()?)))
+        result.push((nondigit_buffer, Some(digit_buffer.parse::<u128>()?)));
     }
     Ok(result)
 }

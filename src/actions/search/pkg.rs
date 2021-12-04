@@ -39,7 +39,7 @@ pub fn search_deb_db(dbs: &[PathBuf], keyword: &str) -> Result<Vec<PkgInfo>> {
         .into_iter()
         .partition(|(_, pkginfo)| pkginfo.section != "debug");
     // Add `has_dbg_pkg` property for corresponding packages
-    for (name, pkginfo) in res.iter_mut() {
+    for (name, pkginfo) in &mut res {
         let dbg_pkg_name = format!("{}-dbg", &name);
         if dbg_pkgs.contains_key(&dbg_pkg_name) {
             pkginfo.has_dbg_pkg = true;
