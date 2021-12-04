@@ -1,10 +1,9 @@
-use crate::warn;
+use crate::{ warn, LOCK_PATH };
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{fs, io::prelude::*, path::Path};
 
 /// Make sure only one instance of Omakase can run at one time
-const LOCK_PATH: &str = "var/lib/omakase/lock";
 
 #[derive(Serialize, Deserialize)]
 struct LockInfo {

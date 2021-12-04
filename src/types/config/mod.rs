@@ -81,6 +81,8 @@ pub enum SubCmd {
     Search(SearchPkg),
     #[clap(about = "Search what packages provide a certain file")]
     Provide(ProvideFile),
+    #[clap(about = "Delete local database and package cache")]
+    Clean(CleanConfig),
 }
 
 #[derive(Parser)]
@@ -105,4 +107,10 @@ pub struct SearchPkg {
 #[derive(Parser)]
 pub struct ProvideFile {
     pub file: String,
+}
+
+#[derive(Parser)]
+pub struct CleanConfig {
+    #[clap(short, long, about = "Remove both package cache and local database")]
+    pub all: bool,
 }

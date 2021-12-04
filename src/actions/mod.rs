@@ -8,7 +8,7 @@ use crate::{
     db::LocalDb,
     executor::MachineStatus,
     info, success,
-    types::config::{Blueprints, Config, IgnoreRules, Opts, SubCmd},
+    types::config::{Blueprints, Config, IgnoreRules, Opts, SubCmd}
 };
 
 use anyhow::{Context, Result};
@@ -31,9 +31,9 @@ pub async fn fullfill_command(
 ) -> Result<()> {
     let downloader = crate::utils::downloader::Downloader::new();
     // Directory that stores trusted public keys for repos
-    let key_root = opts.root.join("etc/omakase/keys");
+    let key_root = opts.root.join(crate::DB_KEY_PATH);
     let localdb = LocalDb::new(
-        opts.root.join("var/cache/omakase/db"),
+        opts.root.join(crate::DB_CACHE_PATH),
         key_root,
         config.repo.clone(),
         &config.arch,
@@ -139,6 +139,20 @@ pub async fn fullfill_command(
 
             for pkgname in search::provide_file(&dbs, &provide.file)? {
                 crate::WRITER.writeln("", &pkgname)?;
+            }
+            Ok(())
+        }
+        SubCmd::Clean(cleanconfig) => {
+            info!("Cleaning local package cache...");
+            let pkg_cache_path = opts.root.join(crate::PKG_CACHE_PATH);
+            std::fs::remove_dir_all(&pkg_cache_path)?;
+            std::fs::create_dir_all(&pkg_cache_path)?;
+
+            if cleanconfig.all {
+                info!("Cleaning local database cache...");
+                let db_cache_path = opts.root.join(crate::DB_CACHE_PATH);
+                std::fs::remove_dir_all(&db_cache_path)?;
+                std::fs::create_dir_all(&db_cache_path)?;
             }
             Ok(())
         }

@@ -23,6 +23,11 @@ lazy_static! {
 }
 // Debug flag
 static DEBUG: AtomicBool = AtomicBool::new(false);
+// Global constants
+const DB_KEY_PATH: &str = "etc/omakase/keys";
+const DB_CACHE_PATH: &str = "var/cache/omakase/db";
+const PKG_CACHE_PATH: &str = "var/cache/omakase/pkgs";
+const LOCK_PATH: &str = "var/lib/omakase/lock";
 
 /// Exit codes:
 /// 1 => program screwed up
