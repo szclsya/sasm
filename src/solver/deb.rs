@@ -23,6 +23,8 @@ const INTERESTED_FIELDS: &[&str] = &[
     "SHA256",
     "SHA512",
     "Recommends",
+    "Suggests",
+    "Description",
 ];
 
 #[inline]
@@ -72,6 +74,9 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
         name: f
             .remove("Package")
             .ok_or_else(|| format_err!("Package without name"))?,
+        description: f
+            .remove("Description")
+            .ok_or_else(|| format_err!("Package without Description"))?,
         version: PkgVersion::try_from(
             f.get("Version")
                 .ok_or_else(|| format_err!("Package without Version"))?
@@ -102,6 +107,10 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
         },
         recommends: match f.get("Recommends") {
             Some(recomm) => Some(parse_pkg_list(recomm)?),
+            None => None,
+        },
+        suggests: match f.get("Suggests") {
+            Some(suggests) => Some(parse_pkg_list(suggests)?),
             None => None,
         },
     })

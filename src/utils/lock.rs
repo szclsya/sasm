@@ -1,4 +1,4 @@
-use crate::{ warn, LOCK_PATH };
+use crate::{warn, LOCK_PATH};
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{fs, io::prelude::*, path::Path};

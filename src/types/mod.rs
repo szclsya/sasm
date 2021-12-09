@@ -18,14 +18,15 @@ pub struct PkgRequirement {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PkgMeta {
     pub name: String,
+    pub description: String,
     pub version: PkgVersion,
     pub depends: Vec<(String, VersionRequirement)>,
     pub breaks: Vec<(String, VersionRequirement)>,
     pub conflicts: Vec<(String, VersionRequirement)>,
     pub install_size: u64,
     pub url: String,
-    // u64 because reqwest's content length is u64
-    pub size: u64,
+    pub size: u64, // u64 because reqwest's content length is u64
     pub checksum: Checksum,
     pub recommends: Option<Vec<(String, VersionRequirement)>>,
+    pub suggests: Option<Vec<(String, VersionRequirement)>>,
 }

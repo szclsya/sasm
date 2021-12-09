@@ -1,11 +1,13 @@
 mod in_memory;
 pub use in_memory::InMemoryPool;
-mod tools;
 
-use crate::types::{PkgMeta, VersionRequirement};
+use crate::{
+    types::{PkgMeta, PkgVersion, VersionRequirement},
+    warn,
+};
 
 use anyhow::{bail, format_err, Result};
-use varisat::CnfFormula;
+use varisat::{lit::Lit, CnfFormula, ExtendFormula};
 
 /// The basic PkgPool interface
 pub trait BasicPkgPool {
@@ -17,8 +19,10 @@ pub trait BasicPkgPool {
     fn get_pkg_by_id(&self, id: usize) -> Option<&PkgMeta>;
     // Get a list of available package IDs based on the given name
     fn get_pkgs_by_name(&self, name: &str) -> Option<Vec<usize>>;
-    // Generate formula for SAT solver, optionally use a subset of the packages
-    fn gen_formula(&self, subset: Option<&[usize]>) -> CnfFormula;
+    // Get an Iterator of (PkgName, &[(id, PkgVersion)])
+    fn pkgname_iter(&self) -> Box<dyn Iterator<Item = (&str, &[(usize, PkgVersion)])> + '_>;
+    // Get an Iterator of (PkgId, PkgMeta)
+    fn pkgid_iter(&self) -> Box<dyn Iterator<Item = (usize, &PkgMeta)> + '_>;
 }
 
 pub trait PkgPool: BasicPkgPool {
@@ -72,6 +76,153 @@ pub trait PkgPool: BasicPkgPool {
             .get(0)
             .ok_or_else(|| format_err!("No suitable version for {}", pkgname))?;
         Ok(*id)
+    }
+
+    fn pkg_to_rule(&self, pkgid: usize, subset: Option<&[usize]>) -> Result<Vec<Vec<Lit>>> {
+        let pkg = self.get_pkg_by_id(pkgid).unwrap();
+        let mut res = Vec::new();
+        // Enroll dependencies
+        for dep in &pkg.depends {
+            let available = match self.get_pkgs_by_name(&dep.0) {
+                Some(pkgs) => match subset {
+                    Some(ids) => {
+                        let pkgs: Vec<usize> =
+                            pkgs.iter().filter(|id| ids.contains(id)).copied().collect();
+                        pkgs
+                    }
+                    None => pkgs.iter().copied().collect(),
+                },
+                None => {
+                    bail!(
+                        "Cannot fulfill dependency {} because no package found with this name",
+                        dep.0
+                    );
+                }
+            };
+
+            let mut clause = vec![!Lit::from_dimacs(pkgid as isize)];
+
+            for dep_pkgid in available {
+                let p = self.get_pkg_by_id(dep_pkgid).unwrap();
+                if dep.1.within(&p.version) {
+                    clause.push(Lit::from_dimacs(dep_pkgid as isize));
+                }
+            }
+
+            if clause.len() > 1 {
+                res.push(clause);
+            } else {
+                bail!(
+                    "Cannot fulfill dependency {} because no applicable version found",
+                    dep.0
+                );
+            }
+        }
+
+        // Enroll breaks
+        for bk in pkg.breaks.iter() {
+            let breakable = match self.get_pkgs_by_name(&bk.0) {
+                Some(pkgs) => match subset {
+                    Some(ids) => {
+                        let pkgs: Vec<usize> =
+                            pkgs.into_iter().filter(|id| ids.contains(id)).collect();
+                        pkgs
+                    }
+                    None => pkgs,
+                },
+                None => {
+                    // Nothing to break. Good!
+                    continue;
+                }
+            };
+
+            for bk_pkgid in breakable {
+                let p = self.get_pkg_by_id(bk_pkgid).unwrap();
+                if bk.1.within(&p.version) {
+                    let clause = vec![
+                        !Lit::from_dimacs(pkgid as isize),
+                        !Lit::from_dimacs(bk_pkgid as isize),
+                    ];
+                    res.push(clause);
+                }
+            }
+        }
+
+        // Enroll conflicts
+        for conflict in pkg.conflicts.iter() {
+            let conflicable = match self.get_pkgs_by_name(&conflict.0) {
+                Some(pkgs) => match subset {
+                    Some(ids) => {
+                        let pkgs: Vec<usize> =
+                            pkgs.into_iter().filter(|id| ids.contains(id)).collect();
+                        pkgs
+                    }
+                    None => pkgs,
+                },
+                None => {
+                    continue;
+                }
+            };
+
+            for conflict_pkgid in conflicable {
+                let p = self.get_pkg_by_id(conflict_pkgid).unwrap();
+                if conflict.1.within(&p.version) {
+                    let clause = vec![
+                        !Lit::from_dimacs(pkgid as isize),
+                        !Lit::from_dimacs(conflict_pkgid as isize),
+                    ];
+                    res.push(clause);
+                }
+            }
+        }
+
+        Ok(res)
+    }
+
+    fn gen_formula(&self, subset: Option<&[usize]>) -> CnfFormula {
+        let mut formula = CnfFormula::new();
+
+        // Generating rules from pool
+        for (id, meta) in self.pkgid_iter() {
+            let valid = match subset {
+                Some(ids) => ids.contains(&id),
+                // If there's no subset requirement, then all packages are valid
+                None => true,
+            };
+            if valid {
+                match self.pkg_to_rule(id, subset) {
+                    Ok(rules) => {
+                        for rule in rules {
+                            formula.add_clause(&rule);
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Ignoring package {} due to: {}", meta.name, e);
+                    }
+                }
+            }
+        }
+
+        // Generate conflict for different versions of the same package
+        for (_, versions) in self.pkgname_iter() {
+            let versions: Vec<usize> = match subset {
+                Some(ids) => versions
+                    .iter()
+                    .filter(|pkg| ids.contains(&pkg.0))
+                    .map(|pkg| pkg.0)
+                    .collect(),
+                None => versions.into_iter().map(|(id, _)| *id).collect(),
+            };
+            if versions.len() > 1 {
+                let clause: Vec<Lit> = versions
+                    .into_iter()
+                    .map(|pkgid| !Lit::from_dimacs(pkgid as isize))
+                    .collect();
+                formula.add_clause(&clause);
+            }
+        }
+
+        formula
     }
 }
 

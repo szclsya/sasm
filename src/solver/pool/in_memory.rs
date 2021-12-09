@@ -1,10 +1,7 @@
-use super::{tools::pkg_to_rule, BasicPkgPool, PkgPool};
+use super::{BasicPkgPool, PkgPool};
 use crate::types::{PkgMeta, PkgVersion};
-use crate::warn;
 
-use rayon::prelude::*;
 use std::collections::HashMap;
-use varisat::{lit::Lit, CnfFormula, ExtendFormula};
 
 pub struct InMemoryPool {
     pkgs: Vec<PkgMeta>,
@@ -66,56 +63,20 @@ impl BasicPkgPool for InMemoryPool {
         }
     }
 
-    fn gen_formula(&self, subset: Option<&[usize]>) -> CnfFormula {
-        let ids = match subset {
-            Some(ids) => ids.to_vec(),
-            None => (1..self.pkgs.len()).collect(),
-        };
-        // Generating rules from pool
-        let mut rules: Vec<Vec<Lit>> = ids
-            .par_iter()
-            .filter_map(|id| match pkg_to_rule(self, *id, Some(&ids)) {
-                Ok(rules) => Some(rules),
-                Err(e) => {
-                    let pkg = self.get_pkg_by_id(*id).unwrap();
-                    warn!("Ignoring package {} due to: {}", pkg.name, e);
-                    None
-                }
-            })
-            .flatten()
-            .collect();
+    fn pkgname_iter(&self) -> Box<dyn Iterator<Item = (&str, &[(usize, PkgVersion)])> + '_> {
+        Box::new(
+            self.name_to_ids
+                .iter()
+                .map(|(name, pkgs)| (name.as_str(), pkgs.as_slice())),
+        )
+    }
 
-        // Generate conflict for different versions of the same package
-        let conflict_rules: Vec<Vec<Lit>> = self
-            .name_to_ids
-            .par_iter()
-            .filter_map(|(_, versions)| {
-                let versions: Vec<usize> = versions
-                    .iter()
-                    .filter(|pkg| ids.contains(&pkg.0))
-                    .map(|pkg| pkg.0)
-                    .collect();
-                if versions.len() > 1 {
-                    let clause: Vec<Lit> = versions
-                        .into_iter()
-                        .map(|pkgid| !Lit::from_dimacs(pkgid as isize))
-                        .collect();
-                    Some(clause)
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        // Combine rule sets
-        rules.extend(conflict_rules);
-
-        let mut formula = CnfFormula::new();
-        // Add generated rules to formula
-        for rule in rules {
-            formula.add_clause(&rule);
-        }
-        formula
+    fn pkgid_iter(&self) -> Box<dyn Iterator<Item = (usize, &PkgMeta)> + '_> {
+        // PkgID = pos + 1
+        Box::new(self.pkgs.iter().enumerate().map(|(pos, meta)| {
+            let id = pos + 1;
+            (id, meta)
+        }))
     }
 }
 
