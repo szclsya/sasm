@@ -18,6 +18,7 @@ pub struct PkgRequirement {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PkgMeta {
     pub name: String,
+    pub section: String,
     pub description: String,
     pub version: PkgVersion,
     pub depends: Vec<(String, VersionRequirement)>,

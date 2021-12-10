@@ -8,7 +8,7 @@ use crate::{
     db::LocalDb,
     executor::MachineStatus,
     info, success,
-    types::config::{Blueprints, Config, IgnoreRules, Opts, SubCmd}
+    types::config::{Blueprints, Config, IgnoreRules, Opts, SubCmd},
 };
 
 use anyhow::{Context, Result};
@@ -115,18 +115,8 @@ pub async fn fullfill_command(
             Ok(())
         }
         SubCmd::Search(search) => {
-            let dbs: Vec<PathBuf> = localdb
-                .get_all_contents_db()
-                .context("Invalid local package database")?
-                .into_iter()
-                .map(|(_, path)| path)
-                .collect();
             let machine_status = MachineStatus::new(&opts.root)?;
-
-            for pkginfo in search::search_deb_db(&dbs, &search.keyword)? {
-                pkginfo.show(&machine_status)?;
-            }
-
+            search::search_deb_db(&localdb, &search.keyword, &machine_status)?;
             Ok(())
         }
         SubCmd::Provide(provide) => {
@@ -136,7 +126,6 @@ pub async fn fullfill_command(
                 .into_iter()
                 .map(|(_, path)| path)
                 .collect();
-
             for pkgname in search::provide_file(&dbs, &provide.file)? {
                 crate::WRITER.writeln("", &pkgname)?;
             }

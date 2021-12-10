@@ -14,6 +14,7 @@ use std::path::Path;
 const INTERESTED_FIELDS: &[&str] = &[
     "Package",
     "Filename",
+    "Section",
     "Version",
     "Depends",
     "Breaks",
@@ -74,6 +75,9 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
         name: f
             .remove("Package")
             .ok_or_else(|| format_err!("Package without name"))?,
+        section: f
+            .remove("Section")
+            .ok_or_else(|| format_err!("Package without Section"))?,
         description: f
             .remove("Description")
             .ok_or_else(|| format_err!("Package without Description"))?,

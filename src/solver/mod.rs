@@ -1,8 +1,9 @@
-pub mod deb;
+mod deb;
 mod improve;
 mod incompatible;
 mod pool;
 mod sort;
+pub use deb::read_deb_db;
 
 use crate::types::{config::Blueprints, PkgMeta};
 use crate::{debug, warn};

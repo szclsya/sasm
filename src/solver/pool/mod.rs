@@ -58,6 +58,22 @@ pub trait PkgPool: BasicPkgPool {
         Ok(res)
     }
 
+    fn has_dbg_pkg(&self, pkgid: usize) -> Result<bool> {
+        let pkg = match self.get_pkg_by_id(pkgid) {
+            Some(meta) => meta,
+            None => bail!("Bad pkg id"),
+        };
+        if let Some(dbg_pkgs) = self.get_pkgs_by_name(&format!("{}-dbg", pkg.name)) {
+            for id in dbg_pkgs {
+                let dbgpkg = self.get_pkg_by_id(id).unwrap();
+                if dbgpkg.version == pkg.version && dbgpkg.section == "debug" {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
+    }
+
     fn pick_best_pkg(&self, pkgname: &str, ver_req: &VersionRequirement) -> Result<usize> {
         let choices: Vec<usize> = match self.get_pkgs_by_name(pkgname) {
             Some(pkgs) => pkgs

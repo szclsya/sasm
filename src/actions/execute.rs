@@ -5,7 +5,7 @@ use crate::{
     debug,
     executor::{dpkg, modifier, MachineStatus},
     info,
-    solver::{deb::read_deb_db, Solver},
+    solver::{read_deb_db, Solver},
     success,
     types::{
         config::{Blueprints, Config, IgnoreRules, Opts},
