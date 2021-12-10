@@ -19,14 +19,6 @@ pub struct PkgInfo<'a> {
 }
 
 impl<'a> PkgInfo<'a> {
-    pub fn from(pkg: &'a PkgMeta, has_dbg_pkg: bool, additional_info: Option<String>) -> Self {
-        PkgInfo {
-            pkg,
-            has_dbg_pkg,
-            additional_info,
-        }
-    }
-
     pub fn show(&self, machine_status: &MachineStatus) -> Result<()> {
         // Construct prefix
         let prefix = match machine_status.pkgs.get(&self.pkg.name) {
@@ -58,15 +50,29 @@ impl<'a> PkgInfo<'a> {
         // Write recommended packages
         if let Some(recommends) = &self.pkg.recommends {
             let prefix = style("Recommends:").dim().to_string();
-            let names: Vec<&str> = recommends.iter().map(|(name, _)| name.as_str()).collect();
-            crate::WRITER.write_chunks(&prefix, &names)?;
+            let mut chunks = vec![prefix];
+            for (name, ver_req) in recommends {
+                let mut chunk = name.clone();
+                if !ver_req.is_arbitary() {
+                    chunk.push_str(&format!(" ({})", ver_req));
+                }
+                chunks.push(chunk);
+            }
+            crate::WRITER.write_chunks("", &chunks)?;
         }
 
         // Write suggested packages
         if let Some(suggests) = &self.pkg.suggests {
             let prefix = style("Suggests:").dim().to_string();
-            let names: Vec<&str> = suggests.iter().map(|(name, _)| name.as_str()).collect();
-            crate::WRITER.write_chunks(&prefix, &names)?;
+            let mut chunks = vec![prefix];
+            for (name, ver_req) in suggests {
+                let mut chunk = name.clone();
+                if !ver_req.is_arbitary() {
+                    chunk.push_str(&format!(" ({})", ver_req));
+                }
+                chunks.push(chunk);
+            }
+            crate::WRITER.write_chunks("", &chunks)?;
         }
 
         Ok(())
