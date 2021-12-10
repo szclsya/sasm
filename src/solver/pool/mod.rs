@@ -227,7 +227,7 @@ pub trait PkgPool: BasicPkgPool {
                     .filter(|pkg| ids.contains(&pkg.0))
                     .map(|pkg| pkg.0)
                     .collect(),
-                None => versions.into_iter().map(|(id, _)| *id).collect(),
+                None => versions.iter().map(|(id, _)| *id).collect(),
             };
             if versions.len() > 1 {
                 let clause: Vec<Lit> = versions

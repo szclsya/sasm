@@ -12,7 +12,6 @@ use crate::{
 };
 
 use anyhow::{Context, Result};
-use std::path::PathBuf;
 
 pub enum UserRequest {
     // Vec<(PkgName, install_recomm)>
@@ -120,15 +119,8 @@ pub async fn fullfill_command(
             Ok(())
         }
         SubCmd::Provide(provide) => {
-            let dbs: Vec<PathBuf> = localdb
-                .get_all_contents_db()
-                .context("Invalid local package database")?
-                .into_iter()
-                .map(|(_, path)| path)
-                .collect();
-            for pkgname in search::provide_file(&dbs, &provide.file)? {
-                crate::WRITER.writeln("", &pkgname)?;
-            }
+            let machine_status = MachineStatus::new(&opts.root)?;
+            search::show_provide_file(&localdb, &provide.file, &machine_status)?;
             Ok(())
         }
         SubCmd::Clean(cleanconfig) => {

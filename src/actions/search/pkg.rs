@@ -1,14 +1,18 @@
 use super::PkgInfo;
 use crate::{
     db::LocalDb,
-    solver::{read_deb_db, Solver},
     executor::MachineStatus,
+    solver::{read_deb_db, Solver},
 };
 
 use anyhow::{Context, Result};
 use regex::Regex;
 
-pub fn search_deb_db(local_db: &LocalDb, keyword: &str, machines_status: &MachineStatus) -> Result<()> {
+pub fn search_deb_db(
+    local_db: &LocalDb,
+    keyword: &str,
+    machine_status: &MachineStatus,
+) -> Result<()> {
     let mut solver = Solver::new();
 
     let dbs = local_db
@@ -24,11 +28,11 @@ pub fn search_deb_db(local_db: &LocalDb, keyword: &str, machines_status: &Machin
 
     // Display result
     for pkg in pkgs {
-        pkg.show(machines_status)?;
+        pkg.show(machine_status)?;
     }
 
     Ok(())
-} 
+}
 
 pub fn search_deb_db_helper<'a>(solver: &'a Solver, regex: &Regex) -> Vec<PkgInfo<'a>> {
     // Iterate through package names

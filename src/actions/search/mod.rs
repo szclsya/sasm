@@ -1,7 +1,7 @@
 mod pkg;
 mod provide;
 pub use pkg::search_deb_db;
-pub use provide::provide_file;
+pub use provide::show_provide_file;
 
 use crate::{
     executor::{MachineStatus, PkgState},
@@ -41,7 +41,7 @@ impl<'a> PkgInfo<'a> {
         crate::WRITER.writeln(&prefix, &pkg_info_line)?;
         // Write additional info, if applicable
         if let Some(additional_info) = &self.additional_info {
-            crate::WRITER.writeln("", &additional_info)?;
+            crate::WRITER.writeln("", additional_info)?;
         }
 
         // Write package description
