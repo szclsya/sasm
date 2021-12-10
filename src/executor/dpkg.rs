@@ -1,12 +1,11 @@
 use crate::{
-    info,
+    info, warn,
     types::PkgActions,
     utils::downloader::{Compression, DownloadJob, Downloader},
 };
 
 use anyhow::{bail, Context, Result};
-use std::path::Path;
-use std::process::Command;
+use std::{ process::Command, path::Path, sync::atomic::Ordering };
 
 pub async fn execute_pkg_actions(
     mut actions: PkgActions,
@@ -98,16 +97,20 @@ fn dpkg_run<T: AsRef<std::ffi::OsStr>>(args: &[T], root: &Path) -> Result<()> {
     // Add rest of the arguments
     cmd.args(args);
 
+    // Tell the signal handler we are going to run dpkg
+    crate::DPKG_RUNNING.store(true, Ordering::Relaxed);
     // Run it!
     let res = cmd.status().context("dpkg command execution failed")?;
-    if res.success() {
-        Ok(())
-    } else {
+    if !res.success() {
         match res.code() {
             Some(code) => bail!("dpkg exited with non-zero return code {}", code),
             None => bail!("dpkg exited by signal"),
         }
     }
+
+    // We are done with dpkg
+    crate::DPKG_RUNNING.store(false, Ordering::Relaxed);
+    Ok(())
 }
 
 fn get_download_jobs(actions: &PkgActions) -> Vec<DownloadJob> {

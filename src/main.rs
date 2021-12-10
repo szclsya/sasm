@@ -23,6 +23,7 @@ lazy_static! {
 }
 // Debug flag
 static DEBUG: AtomicBool = AtomicBool::new(false);
+static DPKG_RUNNING: AtomicBool = AtomicBool::new(false);
 // Global constants
 const DB_KEY_PATH: &str = "etc/omakase/keys";
 const DB_CACHE_PATH: &str = "var/cache/omakase/db";
@@ -36,6 +37,19 @@ const LOCK_PATH: &str = "var/lib/omakase/lock";
 async fn main() {
     // Initial setup
     let opts: Opts = Opts::parse();
+    {
+        // Set up SIGINT handler
+        let root = opts.root.clone();
+        ctrlc::set_handler(move || {
+            if DPKG_RUNNING.load(std::sync::atomic::Ordering::Relaxed) {
+                warn!("Cannot interrupt when dpkg is running");
+            } else {
+                // Thanks to stateless, we can just exit
+                utils::lock::unlock(&root).expect("Failed to unlock");
+                exit(2);
+            }
+        }).expect("Error setting SIGINT handler");
+    }
     // Set-up debug globally
     DEBUG.store(opts.verbose, Ordering::Relaxed);
     // Check if another instance is runing
