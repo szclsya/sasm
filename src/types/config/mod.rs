@@ -47,19 +47,19 @@ pub struct RepoConfig {
 }
 
 #[derive(Parser)]
-#[clap(version = "0.1.0", author = "Leo Shen <i@szclsya.me>")]
+#[clap(about, version, author)]
 pub struct Opts {
-    #[clap(long, default_value = "/", about = "Root directory for operation")]
+    #[clap(long, default_value = "/", help = "Root directory for operation")]
     pub root: PathBuf,
     #[clap(
         long,
         default_value = "etc/omakase/",
-        about = "Position of the config folder"
+        help = "Position of the config folder"
     )]
     pub config_root: PathBuf,
-    #[clap(short, long, about = "Print additional debug information")]
+    #[clap(short, long, help = "Print additional debug information")]
     pub verbose: bool,
-    #[clap(long, about = "Unpack but not configure desired packages")]
+    #[clap(long, help = "Unpack but not configure desired packages")]
     pub unpack_only: bool,
     #[clap(subcommand)]
     pub subcmd: SubCmd,
@@ -88,14 +88,14 @@ pub enum SubCmd {
 #[derive(Parser)]
 pub struct InstallPkg {
     pub names: Vec<String>,
-    #[clap(long, about = "Don't install recommended packages")]
+    #[clap(long, help = "Don't install recommended packages")]
     pub no_recommends: bool,
 }
 
 #[derive(Parser)]
 pub struct RemovePkg {
     pub names: Vec<String>,
-    #[clap(long, about = "Also remove recommended packages")]
+    #[clap(long, help = "Also remove recommended packages")]
     pub remove_recommends: bool,
 }
 
@@ -111,6 +111,6 @@ pub struct ProvideFile {
 
 #[derive(Parser)]
 pub struct CleanConfig {
-    #[clap(short, long, about = "Remove both package cache and local database")]
+    #[clap(short, long, help = "Remove both package cache and local database")]
     pub all: bool,
 }

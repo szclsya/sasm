@@ -23,7 +23,7 @@ sha2 = "0.9"
 hex = "0.4"
 # cli
 console = "0.15"
-clap = "3.0.0-beta.5"
+clap = { version = "3.0.0-rc.1", features = ["derive"] }
 # 0.16.2 doesn't work with tokio
 indicatif = "0.17.0-beta.1"
 dialoguer = "0.9"
