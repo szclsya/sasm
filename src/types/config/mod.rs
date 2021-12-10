@@ -67,47 +67,51 @@ pub struct Opts {
 
 #[derive(Parser)]
 pub enum SubCmd {
-    #[clap(about = "Install new packages")]
+    /// Install new packages
     Install(InstallPkg),
-    #[clap(about = "Remove packages")]
+    /// Remove packages
     Remove(RemovePkg),
+    /// Manipulate and inspect IgnoreRules tables
     #[clap(subcommand)]
     Ignore(IgnorePkg),
-    #[clap(about = "Refresh local package databases")]
+    /// Refresh local package databases
     Refresh,
-    #[clap(about = "Install and upgrade all packages according to Blueprint")]
+    /// Install and upgrade all packages according to Blueprint
     Execute,
-    #[clap(about = "Alias to Execute")]
+    /// Alias to Execute
     Upgrade,
-    #[clap(about = "Search packages from package database")]
+    /// Search packages from package database
     Search(SearchPkg),
-    #[clap(about = "Search what packages provide a certain file")]
+    /// Search what packages provide a certain file
     Provide(ProvideFile),
-    #[clap(about = "Delete local database and package cache")]
+    /// Delete local database and package cache
     Clean(CleanConfig),
 }
 
 #[derive(Parser)]
 pub struct InstallPkg {
     pub names: Vec<String>,
-    #[clap(long, help = "Don't install recommended packages")]
+
+    /// Don't install recommended packages
+    #[clap(long)]
     pub no_recommends: bool,
 }
 
 #[derive(Parser)]
 pub struct RemovePkg {
     pub names: Vec<String>,
-    #[clap(long, help = "Also remove recommended packages")]
+    /// Also remove recommended packages"
+    #[clap(long)]
     pub remove_recommends: bool,
 }
 
 #[derive(Parser)]
 pub enum IgnorePkg {
-    #[clap(about = "Add rules to user IgnoreRules table")]
+    /// Add rules to user IgnoreRules table
     Add(ModifyIgnore),
-    #[clap(about = "Remove rules from user IgnoreRules table")]
+    /// Remove rules from user IgnoreRules table
     Remove(ModifyIgnore),
-    #[clap(about = "Show all IgnoreRules (including user and vendor)")]
+    /// Show all IgnoreRules (including user and vendor)
     Show,
 }
 
@@ -128,6 +132,7 @@ pub struct ProvideFile {
 
 #[derive(Parser)]
 pub struct CleanConfig {
-    #[clap(short, long, help = "Remove both package cache and local database")]
+    /// Remove both package cache and local database
+    #[clap(short, long)]
     pub all: bool,
 }
