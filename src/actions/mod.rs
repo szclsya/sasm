@@ -8,10 +8,11 @@ use crate::{
     db::LocalDb,
     executor::MachineStatus,
     info, success,
-    types::config::{Blueprints, Config, IgnoreRules, Opts, SubCmd},
+    types::config::{Blueprints, Config, IgnorePkg, IgnoreRules, Opts, SubCmd},
 };
 
 use anyhow::{Context, Result};
+use console::style;
 
 pub enum UserRequest {
     // Vec<(PkgName, install_recomm)>
@@ -84,6 +85,33 @@ pub async fn fullfill_command(
                 req,
             )
             .await?;
+            Ok(())
+        }
+        SubCmd::Ignore(ignore) => {
+            match ignore {
+                IgnorePkg::Add(flags) => {
+                    for rule in &flags.rules {
+                        info!("Adding {} to IgnoreRules...", style(rule).bold());
+                        ignorerules.add(rule.to_owned())?;
+                    }
+                    success!("Rules have been added");
+                }
+                IgnorePkg::Remove(flags) => {
+                    for rule in &flags.rules {
+                        info!("Removing {} from IgnoreRules...", style(rule).bold());
+                        ignorerules.remove(rule)?;
+                    }
+                    success!("Rules have been added");
+                }
+                IgnorePkg::Show => {
+                    for (info, rules) in ignorerules.gen_human_readable()? {
+                        info!("Rules in {}", style(info).bold());
+                        for rule in rules {
+                            crate::WRITER.writeln("", &rule)?;
+                        }
+                    }
+                }
+            }
             Ok(())
         }
         SubCmd::Refresh => {

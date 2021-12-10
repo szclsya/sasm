@@ -71,6 +71,8 @@ pub enum SubCmd {
     Install(InstallPkg),
     #[clap(about = "Remove packages")]
     Remove(RemovePkg),
+    #[clap(subcommand)]
+    Ignore(IgnorePkg),
     #[clap(about = "Refresh local package databases")]
     Refresh,
     #[clap(about = "Install and upgrade all packages according to Blueprint")]
@@ -97,6 +99,21 @@ pub struct RemovePkg {
     pub names: Vec<String>,
     #[clap(long, help = "Also remove recommended packages")]
     pub remove_recommends: bool,
+}
+
+#[derive(Parser)]
+pub enum IgnorePkg {
+    #[clap(about = "Add rules to user IgnoreRules table")]
+    Add(ModifyIgnore),
+    #[clap(about = "Remove rules from user IgnoreRules table")]
+    Remove(ModifyIgnore),
+    #[clap(about = "Show all IgnoreRules (including user and vendor)")]
+    Show,
+}
+
+#[derive(Parser)]
+pub struct ModifyIgnore {
+    pub rules: Vec<String>,
 }
 
 #[derive(Parser)]

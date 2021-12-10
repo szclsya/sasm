@@ -48,7 +48,8 @@ async fn main() {
                 utils::lock::unlock(&root).expect("Failed to unlock");
                 exit(2);
             }
-        }).expect("Error setting SIGINT handler");
+        })
+        .expect("Error setting SIGINT handler");
     }
     // Set-up debug globally
     DEBUG.store(opts.verbose, Ordering::Relaxed);

@@ -13,10 +13,10 @@ pub struct IgnoreRules {
     user_ignorerules_path: PathBuf,
     user_ignorerules_modified: bool,
     user: Vec<IgnoreRuleLine>,
-    vendor: Vec<Vec<IgnoreRuleLine>>,
+    vendor: Vec<(PathBuf, Vec<IgnoreRuleLine>)>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum IgnoreRuleLine {
     Rule(String),
     EmptyLine,
@@ -28,7 +28,7 @@ impl IgnoreRules {
         let user_rules = read_ignorerules_from_file(&user)?;
         let mut vendor_rules = Vec::new();
         for path in vendor {
-            vendor_rules.push(read_ignorerules_from_file(path)?);
+            vendor_rules.push((path.to_owned(), read_ignorerules_from_file(path)?));
         }
 
         Ok(IgnoreRules {
@@ -47,7 +47,7 @@ impl IgnoreRules {
             }
         }
 
-        for ruleset in &self.vendor {
+        for (_, ruleset) in &self.vendor {
             for line in ruleset {
                 if let IgnoreRuleLine::Rule(rule) = line {
                     res.push(fill_variables(rule)?);
@@ -58,8 +58,59 @@ impl IgnoreRules {
         Ok(res)
     }
 
+    pub fn gen_human_readable(&self) -> Result<Vec<(String, Vec<String>)>> {
+        let mut res = Vec::new();
+        if !self.user.is_empty() {
+            let name = format!(
+                "user IgnoreRules table ({})",
+                self.user_ignorerules_path.display()
+            );
+            let mut rules = Vec::new();
+            for line in &self.user {
+                if let IgnoreRuleLine::Rule(rule) = line {
+                    let generated = fill_variables(rule)?;
+                    if rule == &generated {
+                        rules.push(generated);
+                    } else {
+                        rules.push(format!("{} -> {}", rule, generated));
+                    }
+                }
+            }
+
+            res.push((name, rules));
+        }
+
+        for (path, ruleset) in &self.vendor {
+            if !ruleset.is_empty() {
+                let name = format!("vendor IgnoreRules table ({})", path.display());
+                let mut rules = Vec::new();
+                for line in &self.user {
+                    if let IgnoreRuleLine::Rule(rule) = line {
+                        let generated = fill_variables(rule)?;
+                        if rule == &generated {
+                            rules.push(generated);
+                        } else {
+                            rules.push(format!("{} -> {}", rule, generated));
+                        }
+                    }
+                }
+
+                res.push((name, rules));
+            }
+        }
+
+        Ok(res)
+    }
+
     pub fn add(&mut self, rule: String) -> Result<()> {
-        self.user.push(parse_ignorerule_line(rule)?);
+        let new_rule = parse_ignorerule_line(rule.clone())?;
+        if self.user.contains(&new_rule) {
+            bail!(
+                "Cannot add {}: already exists in user IgnoreRules table",
+                rule
+            );
+        }
+        self.user.push(new_rule);
         self.user_ignorerules_modified = true;
         Ok(())
     }
@@ -68,9 +119,9 @@ impl IgnoreRules {
         let old_len = self.user.len();
         self.user.retain(|line| {
             if let IgnoreRuleLine::Rule(r) = line {
-                r == rule
+                r != rule
             } else {
-                false
+                true
             }
         });
 

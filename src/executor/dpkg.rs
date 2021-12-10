@@ -1,11 +1,11 @@
 use crate::{
-    info, warn,
+    info,
     types::PkgActions,
     utils::downloader::{Compression, DownloadJob, Downloader},
 };
 
 use anyhow::{bail, Context, Result};
-use std::{ process::Command, path::Path, sync::atomic::Ordering };
+use std::{path::Path, process::Command, sync::atomic::Ordering};
 
 pub async fn execute_pkg_actions(
     mut actions: PkgActions,
