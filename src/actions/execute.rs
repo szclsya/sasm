@@ -40,9 +40,9 @@ pub async fn execute(
     debug!("Processing user request...");
     match request {
         UserRequest::Install(list) => {
-            for (name, instal_recomm) in list {
+            for (name, ver_req, instal_recomm, added_by) in list {
                 // Add pkg to blueprint
-                blueprint.add(&name, None, None)?;
+                blueprint.add(&name, added_by.as_deref(), ver_req)?;
                 if instal_recomm {
                     let choices = match solver.pool.get_pkgs_by_name(&name) {
                         Some(pkgs) => pkgs,

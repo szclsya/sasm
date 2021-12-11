@@ -43,6 +43,10 @@ flate2 = "1"
 nix = "0.23"
 # Parallel searching
 rayon = "1"
+# Read deb files
+ar = "0.9"
+tar = "0.4"
+xz2 = "0.1"
 
 [profile.release]
 lto = true

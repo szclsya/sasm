@@ -104,13 +104,21 @@ impl Blueprints {
                 _ => true,
             });
             if remove_recomms {
-                self.user.retain(|line| match line {
-                    BlueprintLine::PkgRequest(req) => req.added_by != Some(pkgname.to_string()),
-                    _ => true,
-                });
+                self.remove_affiliated(pkgname);
             }
             self.user_blueprint_modified = true;
             Ok(())
+        }
+    }
+
+    pub fn remove_affiliated(&mut self, pkgname: &str) {
+        let prev_len = self.user.len();
+        self.user.retain(|line| match line {
+            BlueprintLine::PkgRequest(req) => req.added_by != Some(pkgname.to_string()),
+            _ => true,
+        });
+        if self.user.len() < prev_len {
+            self.user_blueprint_modified = true;
         }
     }
 

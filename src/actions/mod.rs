@@ -1,4 +1,5 @@
 mod execute;
+mod local;
 mod provide;
 mod search;
 use execute::execute;
@@ -8,15 +9,18 @@ use crate::{
     db::LocalDb,
     executor::MachineStatus,
     info, success,
-    types::config::{Blueprints, Config, IgnorePkg, IgnoreRules, Opts, SubCmd},
+    types::{
+        config::{Blueprints, Config, IgnorePkg, IgnoreRules, LocalDeb, Opts, SubCmd},
+        VersionRequirement,
+    },
 };
 
 use anyhow::{Context, Result};
 use console::style;
 
 pub enum UserRequest {
-    // Vec<(PkgName, install_recomm)>
-    Install(Vec<(String, bool)>),
+    // Vec<(PkgName, ver_req, install_recomm, added_by)>
+    Install(Vec<(String, Option<VersionRequirement>, bool, Option<String>)>),
     // Vec<(PkgName, remove_recomm)>
     Remove(Vec<(String, bool)>),
     Upgrade,
@@ -41,10 +45,10 @@ pub async fn fullfill_command(
 
     match &opts.subcmd {
         SubCmd::Install(add) => {
-            let req: Vec<(String, bool)> = add
+            let req = add
                 .names
                 .iter()
-                .map(|pkgname| (pkgname.clone(), !add.no_recommends))
+                .map(|pkgname| (pkgname.clone(), None, !add.no_recommends, None))
                 .collect();
             let req = UserRequest::Install(req);
             // Update local db
@@ -110,6 +114,35 @@ pub async fn fullfill_command(
                             crate::WRITER.writeln("", &rule)?;
                         }
                     }
+                }
+            }
+            Ok(())
+        }
+        SubCmd::Local(local) => {
+            match local {
+                LocalDeb::Install(install) => {
+                    local::install_deb(
+                        &install.path,
+                        &localdb,
+                        &downloader,
+                        blueprints,
+                        ignorerules,
+                        opts,
+                        config,
+                    )
+                    .await?;
+                }
+                LocalDeb::Remove(remove) => {
+                    local::remove_deb(
+                        &remove.name,
+                        &localdb,
+                        &downloader,
+                        blueprints,
+                        ignorerules,
+                        opts,
+                        config,
+                    )
+                    .await?;
                 }
             }
             Ok(())
