@@ -27,7 +27,7 @@ pub async fn execute(
     config: &Config,
     request: UserRequest,
 ) -> Result<()> {
-    debug!("Parsing deb debs...");
+    debug!("Parsing deb dbs...");
     let dbs = local_db
         .get_all_package_db()
         .context("Invalid local package database")?;
