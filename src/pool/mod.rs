@@ -1,4 +1,5 @@
 mod in_memory;
+pub mod source;
 pub use in_memory::InMemoryPool;
 
 use crate::{

@@ -1,10 +1,5 @@
 use super::PkgInfo;
-use crate::{
-    db::LocalDb,
-    debug,
-    executor::MachineStatus,
-    solver::{read_deb_db, Solver},
-};
+use crate::{db::LocalDb, debug, executor::MachineStatus, pool, solver::Solver};
 
 use anyhow::{Context, Result};
 use console::style;
@@ -40,7 +35,7 @@ pub fn show_provide_file(
         .get_all_package_db()
         .context("Cannot initialize local db for searching")?;
     for (baseurl, db_path) in dbs {
-        read_deb_db(&db_path, solver.pool.as_mut(), &baseurl)?;
+        pool::source::debrepo::import(&db_path, solver.pool.as_mut(), &baseurl)?;
     }
     solver.finalize();
 

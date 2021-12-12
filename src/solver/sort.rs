@@ -1,4 +1,4 @@
-use super::pool::PkgPool;
+use crate::pool::PkgPool;
 use anyhow::Result;
 use petgraph::graph::{DiGraph, NodeIndex};
 use std::collections::HashMap;

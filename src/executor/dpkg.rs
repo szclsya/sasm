@@ -1,6 +1,6 @@
 use crate::{
     info,
-    types::PkgActions,
+    types::{PkgActions, PkgSource},
     utils::downloader::{Compression, DownloadJob, Downloader},
 };
 
@@ -8,7 +8,7 @@ use anyhow::{bail, Context, Result};
 use std::{path::Path, process::Command, sync::atomic::Ordering};
 
 pub async fn execute_pkg_actions(
-    mut actions: PkgActions,
+    mut actions: PkgActions<'_>,
     root: &Path,
     downloader: &Downloader,
 ) -> Result<()> {
@@ -23,27 +23,21 @@ pub async fn execute_pkg_actions(
     let mut install_deb_paths: Vec<String> = actions
         .install
         .iter()
-        .map(|(install, _)| {
-            download_res
-                .get(&install.url)
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string()
+        .map(|(install, _)| match &install.source {
+            PkgSource::Http((url, _, _)) => download_res.get(url).unwrap(),
+            PkgSource::Local(p) => &p,
         })
+        .map(|p| p.to_str().unwrap().to_owned())
         .collect();
 
     let mut unpack_deb_paths: Vec<String> = actions
-        .unpack
+        .install
         .iter()
-        .map(|(install, _)| {
-            download_res
-                .get(&install.url)
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string()
+        .map(|(unpack, _)| match &unpack.source {
+            PkgSource::Http((url, _, _)) => download_res.get(url).unwrap(),
+            PkgSource::Local(p) => &p,
         })
+        .map(|p| p.to_str().unwrap().to_owned())
         .collect();
 
     info!("Processing package changes...");
@@ -114,28 +108,31 @@ fn dpkg_run<T: AsRef<std::ffi::OsStr>>(args: &[T], root: &Path) -> Result<()> {
 }
 
 fn get_download_jobs(actions: &PkgActions) -> Vec<DownloadJob> {
-    let mut downloads: Vec<DownloadJob> = actions
-        .install
-        .iter()
-        .map(|(install, _)| DownloadJob {
-            url: install.url.clone(),
-            description: None,
-            filename: None,
-            size: Some(install.download_size),
-            compression: Compression::None(Some(install.checksum.clone())),
-        })
-        .collect();
-    let mut unpack_downloads = actions
-        .unpack
-        .iter()
-        .map(|(install, _)| DownloadJob {
-            url: install.url.clone(),
-            description: None,
-            filename: None,
-            size: Some(install.download_size),
-            compression: Compression::None(Some(install.checksum.clone())),
-        })
-        .collect();
-    downloads.append(&mut unpack_downloads);
-    downloads
+    let mut res = Vec::new();
+    for i in &actions.install {
+        if let PkgSource::Http((url, size, checksum)) = &i.0.source {
+            let job = DownloadJob {
+                url: url.clone(),
+                description: None,
+                filename: None,
+                size: Some(*size),
+                compression: Compression::None(Some(checksum.clone())),
+            };
+            res.push(job);
+        }
+    }
+
+    for i in &actions.unpack {
+        if let PkgSource::Http((url, size, checksum)) = &i.0.source {
+            let job = DownloadJob {
+                url: url.clone(),
+                description: None,
+                filename: None,
+                size: Some(*size),
+                compression: Compression::None(Some(checksum.clone())),
+            };
+            res.push(job);
+        }
+    }
+    res
 }

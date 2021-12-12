@@ -1,14 +1,11 @@
-mod deb;
 mod improve;
 mod incompatible;
-mod pool;
 mod sort;
-pub use deb::read_deb_db;
 
+use crate::pool::{InMemoryPool, PkgPool};
 use crate::types::{config::Blueprints, PkgMeta};
 use crate::{debug, warn};
 use anyhow::{bail, format_err, Context, Result};
-use pool::{InMemoryPool, PkgPool};
 use varisat::{lit::Lit, ExtendFormula};
 
 pub struct Solver {

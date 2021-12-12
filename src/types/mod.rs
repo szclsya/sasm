@@ -8,6 +8,7 @@ pub use checksum::Checksum;
 pub use version::{parse_version, parse_version_requirement, PkgVersion, VersionRequirement};
 
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Deserialize, Default)]
 pub struct PkgRequirement {
@@ -24,10 +25,17 @@ pub struct PkgMeta {
     pub depends: Vec<(String, VersionRequirement)>,
     pub breaks: Vec<(String, VersionRequirement)>,
     pub conflicts: Vec<(String, VersionRequirement)>,
-    pub install_size: u64,
-    pub url: String,
-    pub size: u64, // u64 because reqwest's content length is u64
-    pub checksum: Checksum,
     pub recommends: Option<Vec<(String, VersionRequirement)>>,
     pub suggests: Option<Vec<(String, VersionRequirement)>>,
+    pub install_size: u64,
+
+    pub source: PkgSource,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum PkgSource {
+    // Http((url, size, checksum))
+    Http((String, u64, Checksum)),
+    // Local(path)
+    Local(PathBuf),
 }

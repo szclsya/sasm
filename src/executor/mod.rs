@@ -2,7 +2,7 @@ pub mod dpkg;
 pub mod modifier;
 mod types;
 
-use crate::types::{PkgActions, PkgInstallAction, PkgMeta};
+use crate::types::{PkgActions, PkgMeta};
 pub use types::{PkgState, PkgStatus};
 
 use anyhow::{Context, Result};
@@ -56,7 +56,7 @@ impl MachineStatus {
     }
 
     /// Generate a list of actions according to machine status and package blueprint
-    pub fn gen_actions(&self, blueprint: &[&PkgMeta], purge_config: bool) -> PkgActions {
+    pub fn gen_actions<'a>(&self, blueprint: &[&'a PkgMeta], purge_config: bool) -> PkgActions<'a> {
         let mut res = PkgActions::default();
         // We will modify the list, so do a clone
         let mut old_pkgs = self.pkgs.clone();
@@ -64,17 +64,7 @@ impl MachineStatus {
         for newpkg in blueprint {
             if !old_pkgs.contains_key(&newpkg.name) {
                 // New one! Install it
-                res.install.push((
-                    PkgInstallAction {
-                        name: newpkg.name.clone(),
-                        url: newpkg.url.clone(),
-                        download_size: newpkg.size,
-                        install_size: newpkg.install_size,
-                        checksum: newpkg.checksum.clone(),
-                        version: newpkg.version.clone(),
-                    },
-                    None,
-                ));
+                res.install.push((newpkg, None));
             } else {
                 // Older version exists. Let's check the state of it
                 // Remove it to mark it's been processed
@@ -82,33 +72,14 @@ impl MachineStatus {
                 match oldpkg.state {
                     PkgState::NotInstalled | PkgState::ConfigFiles | PkgState::HalfInstalled => {
                         // Just install as normal
-                        res.install.push((
-                            PkgInstallAction {
-                                name: newpkg.name.clone(),
-                                url: newpkg.url.clone(),
-                                download_size: newpkg.size,
-                                install_size: newpkg.install_size,
-                                checksum: newpkg.checksum.clone(),
-                                version: newpkg.version.clone(),
-                            },
-                            None,
-                        ));
+                        res.install.push((newpkg, None));
                     }
                     PkgState::Installed => {
                         // Check version. If installed is different,
                         //   then install the one in the blueprint
                         if oldpkg.version != newpkg.version {
-                            res.install.push((
-                                PkgInstallAction {
-                                    name: newpkg.name.clone(),
-                                    url: newpkg.url.clone(),
-                                    download_size: newpkg.size,
-                                    install_size: newpkg.install_size,
-                                    checksum: newpkg.checksum.clone(),
-                                    version: newpkg.version.clone(),
-                                },
-                                Some((oldpkg.version, oldpkg.install_size)),
-                            ));
+                            res.install
+                                .push((newpkg, Some((oldpkg.version, oldpkg.install_size))));
                         }
                     }
                     PkgState::Unpacked
@@ -118,17 +89,8 @@ impl MachineStatus {
                         // Reconfigure this package, then if have updates, do it
                         res.configure.push(oldpkg.name.clone());
                         if oldpkg.version != newpkg.version {
-                            res.install.push((
-                                PkgInstallAction {
-                                    name: newpkg.name.clone(),
-                                    url: newpkg.url.clone(),
-                                    download_size: newpkg.size,
-                                    install_size: newpkg.install_size,
-                                    checksum: newpkg.checksum.clone(),
-                                    version: newpkg.version.clone(),
-                                },
-                                Some((oldpkg.version, oldpkg.install_size)),
-                            ));
+                            res.install
+                                .push((newpkg, Some((oldpkg.version, oldpkg.install_size))));
                         }
                     }
                 }

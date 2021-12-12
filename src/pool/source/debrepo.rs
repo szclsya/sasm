@@ -1,7 +1,7 @@
 /// Utilities to deal with deb package db
-use super::pool::PkgPool;
 use crate::{
-    types::{Checksum, PkgMeta, PkgVersion},
+    pool::PkgPool,
+    types::{Checksum, PkgMeta, PkgSource, PkgVersion},
     utils::debcontrol::parse_pkg_list,
 };
 use anyhow::{bail, format_err, Result};
@@ -30,7 +30,7 @@ const INTERESTED_FIELDS: &[&str] = &[
 ];
 
 #[inline]
-pub fn read_deb_db(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
+pub fn import(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
     let f = File::open(db)?;
     let mut buf_parse = BufParse::new(f, 16384);
     let mut pkgs = Vec::new();
@@ -95,21 +95,6 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
             .ok_or_else(|| format_err!("Package without Installed-Size"))?
             .as_str()
             .parse()?,
-        url: path,
-        size: f
-            .remove("Size")
-            .ok_or_else(|| format_err!("Package without Size"))?
-            .as_str()
-            .parse()?,
-        checksum: {
-            if let Some(hex) = f.get("SHA256") {
-                Checksum::from_sha256_str(hex)?
-            } else if let Some(hex) = f.get("SHA512") {
-                Checksum::from_sha512_str(hex)?
-            } else {
-                bail!("Package without checksum (SHA256 or SHA512)")
-            }
-        },
         recommends: match f.get("Recommends") {
             Some(recomm) => Some(parse_pkg_list(recomm)?),
             None => None,
@@ -118,5 +103,21 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
             Some(suggests) => Some(parse_pkg_list(suggests)?),
             None => None,
         },
+        source: PkgSource::Http((
+            path,
+            f.remove("Size")
+                .ok_or_else(|| format_err!("Package without Size"))?
+                .as_str()
+                .parse()?,
+            {
+                if let Some(hex) = f.get("SHA256") {
+                    Checksum::from_sha256_str(hex)?
+                } else if let Some(hex) = f.get("SHA512") {
+                    Checksum::from_sha512_str(hex)?
+                } else {
+                    bail!("Package without checksum (SHA256 or SHA512)")
+                }
+            },
+        )),
     })
 }

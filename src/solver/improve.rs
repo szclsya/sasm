@@ -1,4 +1,5 @@
-use super::{pool::PkgPool, solve, sort::sort_pkgs_to_cycles};
+use super::{solve, sort::sort_pkgs_to_cycles};
+use crate::pool::PkgPool;
 
 use anyhow::Result;
 use std::collections::HashSet;

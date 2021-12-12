@@ -1,11 +1,11 @@
-use super::{Checksum, PkgVersion};
+use super::{Checksum, PkgMeta, PkgSource, PkgVersion};
 use console::style;
 use indicatif::HumanBytes;
 
-#[derive(Default, Debug, PartialEq, Eq)]
-pub struct PkgActions {
-    pub install: Vec<(PkgInstallAction, Option<(PkgVersion, u64)>)>,
-    pub unpack: Vec<(PkgInstallAction, Option<(PkgVersion, u64)>)>,
+#[derive(Default, Debug)]
+pub struct PkgActions<'a> {
+    pub install: Vec<(&'a PkgMeta, Option<(PkgVersion, u64)>)>,
+    pub unpack: Vec<(&'a PkgMeta, Option<(PkgVersion, u64)>)>,
     // (Name, InstallSize)
     pub remove: Vec<(String, u64)>,
     pub purge: Vec<(String, u64)>,
@@ -27,7 +27,7 @@ pub trait PkgActionModifier {
     fn apply(&self, actions: &mut PkgActions);
 }
 
-impl PkgActions {
+impl PkgActions<'_> {
     pub fn is_empty(&self) -> bool {
         self.install.is_empty()
             && self.unpack.is_empty()
@@ -208,11 +208,15 @@ impl PkgActions {
     fn calculate_download_size(&self) -> u64 {
         let mut res = 0;
         for install in &self.install {
-            res += install.0.download_size;
+            if let PkgSource::Http((_, size, _)) = install.0.source {
+                res += size;
+            }
         }
 
         for unpack in &self.unpack {
-            res += unpack.0.download_size;
+            if let PkgSource::Http((_, size, _)) = unpack.0.source {
+                res += size;
+            }
         }
 
         res

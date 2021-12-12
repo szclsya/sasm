@@ -2,6 +2,7 @@ mod actions;
 mod cli;
 mod db;
 mod executor;
+mod pool;
 mod solver;
 mod types;
 mod utils;

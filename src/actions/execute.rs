@@ -5,7 +5,8 @@ use crate::{
     debug,
     executor::{dpkg, modifier, MachineStatus},
     info,
-    solver::{read_deb_db, Solver},
+    pool::source,
+    solver::Solver,
     success,
     types::{
         config::{Blueprints, Config, IgnoreRules, Opts},
@@ -33,7 +34,7 @@ pub async fn execute(
         .get_all_package_db()
         .context("Invalid local package database")?;
     for (baseurl, db_path) in dbs {
-        read_deb_db(&db_path, solver.pool.as_mut(), &baseurl)?;
+        source::debrepo::import(&db_path, solver.pool.as_mut(), &baseurl)?;
     }
     solver.finalize();
 
