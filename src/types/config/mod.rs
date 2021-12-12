@@ -74,9 +74,6 @@ pub enum SubCmd {
     /// Manipulate and inspect IgnoreRules tables
     #[clap(subcommand)]
     Ignore(IgnorePkg),
-    /// Install and remove local debs
-    #[clap(subcommand)]
-    Local(LocalDeb),
     /// Refresh local package databases
     Refresh,
     /// Install and upgrade all packages according to Blueprint
@@ -116,24 +113,6 @@ pub enum IgnorePkg {
     Remove(ModifyIgnore),
     /// Show all IgnoreRules (including user and vendor)
     Show,
-}
-
-#[derive(Parser)]
-pub enum LocalDeb {
-    /// Install a local deb
-    Install(InstallLocalDeb),
-    /// Remove a local deb
-    Remove(RemoveLocalDeb),
-}
-
-#[derive(Parser)]
-pub struct InstallLocalDeb {
-    pub path: PathBuf,
-}
-
-#[derive(Parser)]
-pub struct RemoveLocalDeb {
-    pub name: String,
 }
 
 #[derive(Parser)]

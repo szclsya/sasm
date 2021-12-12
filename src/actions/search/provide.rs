@@ -1,5 +1,5 @@
 use super::PkgInfo;
-use crate::{db::LocalDb, debug, executor::MachineStatus, pool, solver::Solver};
+use crate::{db::LocalDb, debug, executor::MachineStatus, pool};
 
 use anyhow::{Context, Result};
 use console::style;
@@ -30,17 +30,12 @@ pub fn show_provide_file(
 
     // Create a Solver so we can get more info    let mut solver = Solver::new();
     debug!("Constructing package pool...");
-    let mut solver = Solver::new();
     let dbs = local_db
         .get_all_package_db()
         .context("Cannot initialize local db for searching")?;
-    for (baseurl, db_path) in dbs {
-        pool::source::debrepo::import(&db_path, solver.pool.as_mut(), &baseurl)?;
-    }
-    solver.finalize();
+    let pool = pool::source::create_pool(&dbs, &[])?;
 
     debug!("Generating detailed package info...");
-    let pool = &solver.pool;
     for (pkgname, path) in pkgnames {
         if let Some(pkgs) = pool.get_pkgs_by_name(&pkgname) {
             // This is safe unless the pool is broken

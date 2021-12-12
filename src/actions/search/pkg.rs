@@ -1,5 +1,5 @@
 use super::PkgInfo;
-use crate::{db::LocalDb, executor::MachineStatus, pool, solver::Solver};
+use crate::{db::LocalDb, executor::MachineStatus, pool, pool::PkgPool};
 
 use anyhow::{Context, Result};
 use regex::Regex;
@@ -9,18 +9,13 @@ pub fn search_deb_db(
     keyword: &str,
     machine_status: &MachineStatus,
 ) -> Result<()> {
-    let mut solver = Solver::new();
-
     let dbs = local_db
         .get_all_package_db()
         .context("Cannot initialize local db for searching")?;
-    for (baseurl, db_path) in dbs {
-        pool::source::debrepo::import(&db_path, solver.pool.as_mut(), &baseurl)?;
-    }
-    solver.finalize();
+    let pool = pool::source::create_pool(&dbs, &[])?;
 
     let regex = Regex::new(keyword)?;
-    let pkgs = search_deb_db_helper(&solver, &regex);
+    let pkgs = search_deb_db_helper(pool.as_ref(), &regex);
 
     // Display result
     for pkg in pkgs {
@@ -30,14 +25,17 @@ pub fn search_deb_db(
     Ok(())
 }
 
-pub fn search_deb_db_helper<'a>(solver: &'a Solver, regex: &Regex) -> Vec<PkgInfo<'a>> {
+pub fn search_deb_db_helper<'a, P: ?Sized>(pool: &'a P, regex: &Regex) -> Vec<PkgInfo<'a>>
+where
+    P: PkgPool,
+{
     // Iterate through package names
     let mut res = Vec::new();
-    for (name, versions) in solver.pool.pkgname_iter() {
+    for (name, versions) in pool.pkgname_iter() {
         if regex.is_match(name) {
             let id = versions[0].0;
-            let pkg = solver.pool.get_pkg_by_id(id).unwrap();
-            let has_dbg_pkg = solver.pool.has_dbg_pkg(id).unwrap();
+            let pkg = pool.get_pkg_by_id(id).unwrap();
+            let has_dbg_pkg = pool.has_dbg_pkg(id).unwrap();
 
             // Construct PkgInfo, don't include debug packages
             if pkg.name.ends_with("-dbg") || pkg.section != "debug" {

@@ -25,7 +25,7 @@ pub async fn execute_pkg_actions(
         .iter()
         .map(|(install, _)| match &install.source {
             PkgSource::Http((url, _, _)) => download_res.get(url).unwrap(),
-            PkgSource::Local(p) => &p,
+            PkgSource::Local(p) => p,
         })
         .map(|p| p.to_str().unwrap().to_owned())
         .collect();
@@ -35,7 +35,7 @@ pub async fn execute_pkg_actions(
         .iter()
         .map(|(unpack, _)| match &unpack.source {
             PkgSource::Http((url, _, _)) => download_res.get(url).unwrap(),
-            PkgSource::Local(p) => &p,
+            PkgSource::Local(p) => p,
         })
         .map(|p| p.to_str().unwrap().to_owned())
         .collect();

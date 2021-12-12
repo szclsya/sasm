@@ -30,6 +30,7 @@ const DB_KEY_PATH: &str = "etc/omakase/keys";
 const DB_CACHE_PATH: &str = "var/cache/omakase/db";
 const PKG_CACHE_PATH: &str = "var/cache/omakase/pkgs";
 const LOCK_PATH: &str = "var/lib/omakase/lock";
+const LOCAL_REPO_PATH: &str = "var/lib/local_repo";
 
 /// Exit codes:
 /// 1 => program screwed up

@@ -1,5 +1,4 @@
 mod execute;
-mod local;
 mod provide;
 mod search;
 use execute::execute;
@@ -10,7 +9,7 @@ use crate::{
     executor::MachineStatus,
     info, success,
     types::{
-        config::{Blueprints, Config, IgnorePkg, IgnoreRules, LocalDeb, Opts, SubCmd},
+        config::{Blueprints, Config, IgnorePkg, IgnoreRules, Opts, SubCmd},
         VersionRequirement,
     },
 };
@@ -114,35 +113,6 @@ pub async fn fullfill_command(
                             crate::WRITER.writeln("", &rule)?;
                         }
                     }
-                }
-            }
-            Ok(())
-        }
-        SubCmd::Local(local) => {
-            match local {
-                LocalDeb::Install(install) => {
-                    local::install_deb(
-                        &install.path,
-                        &localdb,
-                        &downloader,
-                        blueprints,
-                        ignorerules,
-                        opts,
-                        config,
-                    )
-                    .await?;
-                }
-                LocalDeb::Remove(remove) => {
-                    local::remove_deb(
-                        &remove.name,
-                        &localdb,
-                        &downloader,
-                        blueprints,
-                        ignorerules,
-                        opts,
-                        config,
-                    )
-                    .await?;
                 }
             }
             Ok(())

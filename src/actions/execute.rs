@@ -4,8 +4,7 @@ use crate::{
     db::LocalDb,
     debug,
     executor::{dpkg, modifier, MachineStatus},
-    info,
-    pool::source,
+    info, pool,
     solver::Solver,
     success,
     types::{
@@ -29,14 +28,12 @@ pub async fn execute(
     request: UserRequest,
 ) -> Result<()> {
     debug!("Parsing deb debs...");
-    let mut solver = Solver::new();
     let dbs = local_db
         .get_all_package_db()
         .context("Invalid local package database")?;
-    for (baseurl, db_path) in dbs {
-        source::debrepo::import(&db_path, solver.pool.as_mut(), &baseurl)?;
-    }
-    solver.finalize();
+    let local_repo = vec![opts.root.join(crate::LOCAL_REPO_PATH)];
+    let pool = pool::source::create_pool(&dbs, &local_repo)?;
+    let solver = Solver::from(pool);
 
     debug!("Processing user request...");
     match request {

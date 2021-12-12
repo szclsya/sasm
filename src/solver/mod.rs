@@ -2,7 +2,7 @@ mod improve;
 mod incompatible;
 mod sort;
 
-use crate::pool::{InMemoryPool, PkgPool};
+use crate::pool::PkgPool;
 use crate::types::{config::Blueprints, PkgMeta};
 use crate::{debug, warn};
 use anyhow::{bail, format_err, Context, Result};
@@ -12,17 +12,13 @@ pub struct Solver {
     pub pool: Box<dyn PkgPool>,
 }
 
+impl From<Box<dyn PkgPool>> for Solver {
+    fn from(pool: Box<dyn PkgPool>) -> Self {
+        Solver { pool }
+    }
+}
+
 impl Solver {
-    pub fn new() -> Self {
-        Solver {
-            pool: Box::new(InMemoryPool::new()),
-        }
-    }
-
-    pub fn finalize(&mut self) {
-        self.pool.finalize();
-    }
-
     pub fn install(&self, blueprints: &Blueprints) -> Result<Vec<&PkgMeta>> {
         let mut formula = self.pool.gen_formula(None);
         debug!("Adding requested packages to formula...");

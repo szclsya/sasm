@@ -26,6 +26,7 @@ pub trait BasicPkgPool {
     fn pkgid_iter(&self) -> Box<dyn Iterator<Item = (usize, &PkgMeta)> + '_>;
 }
 
+/// Additional tools
 pub trait PkgPool: BasicPkgPool {
     fn get_deps(&self, pkgid: usize) -> Result<Vec<Vec<usize>>> {
         let pkg = self
