@@ -12,7 +12,6 @@ Omakase accepts a config folder containing a series of files:
 + `config.toml`: main config file folder
 + `blueprint`: a list of desired packages. You should add all packages you intentionally use in this file
   - `blueprint.d/`: vendored blueprints
-+ `ignorerules`: a list of package naming rules that omakase should not remove
 + `keys/`: stores PGP public keys for repositories
 
 Here's a basic example of `config.toml`:
@@ -45,11 +44,6 @@ alacritty (>0.7, <=1.0)
 ```
 
 Omakase is a declarative package manager: given a list of package requests, it will attempt to find the optimal dependency tree, and adjust the system according to this result. This includes installing missing packages, upgrading packages, **downgrade** packages if needed, and even **remove packages that are not needed**. This means that some package that is installed by omakase may be uninstalled later if it is not a dependency anymore. So, always add packages you use to the blueprint to ensure they are guaranteed to be installed.
-
-If you install a package manually, you may want to add it to `ignorerules` so that omakase will not attempt to remove it because it is seemly not required by the blueprint. You can also write package names with variables. For example, you can add `linux-kernel-{KERNEL_VERSION}` to `ignorerules` so that the current running kernel won't be removed until you reboot to another kernel.
-
-Currently supported variables:
-+ `KERNEL_VERSION`: version of the current running kernel
 
 ## Operating omakase
 Put these files at `/etc/omakase/` and run `oma execute`. It will download the latest package databases, read your blueprint, and try to find an optimal solution. If omakase can't fulfill the blueprint, it will try to tell you which of the packages are causing problems.

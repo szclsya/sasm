@@ -43,14 +43,16 @@ konsole
 # Package request with version requirements
 linux+kernel (>=3:5.14.0, <3:5.15.0)
 mpv (=0.33.1)
+# Package that are installed from local debs
+some_pkg (local)
+# Package that are installed because they are recommended by other packages
+fcitx5-base
+fcitx5 (added_by = fcitx5-base)
+fcitx5-qt (added_by = fcitx5-base)
 ```
 
-You can specify additional requirements inside the pair of round brackets after package name. Multiple requirements are separated by `,`. Currently only version requirements (`>`, `>=`, `=`, `<`, `<=`) are supported; but there's plan to add more requirements, including install all recommended packages for a package request.
-
-# Ignore Rules
-Ignore rules defines what packages **shouldn't be removed** even if they are neither requested in the blueprints nor required as a dependency. Note that it doesn't prevent packages that match such rules from being installed.
-
-Such rules can be used to prevent manually installed packages from being removed. It can also be used to prevent the currently running kernel from being removed.
-
-Ignore rules files have a very simple syntax. Each line represents a package name. Package names may include variables surrounded by `{}`. These variables are supported for now:
-+ `KERNEL_VERSION`: version of the current running kernel
+You can specify additional attributes inside the pair of round brackets after package name. Multiple arguments are separated by `,`. Currently these attributes are supported:
++ Version requirements (`>`, `>=`, `=`, `<`, `<=`): Indicate what range of version should be installed. Multiple requirements are allowed as far as they are not contradictory (for example, `>2, <1` will not be accepted).
+  - Note that this only accepts full deb version, which includes epoch, upstream version and package revision.
++ `local`: Install this package from local package repository. This will be added automatically if you use `install --local` to install a local deb.
++ `added_by = PKGNAME`: This package is introduced by another package rather than direct user request. Recommended packages will contain this attribute to show which package recommends them. When removing packages with `--remove-recommends` argument, all packages that have this attribute and is pointing to the package to remove will also be removed.

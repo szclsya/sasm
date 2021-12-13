@@ -26,6 +26,13 @@ pub async fn execute(
     config: &Config,
     request: UserRequest,
 ) -> Result<()> {
+    // Check if operating in alt-root mode
+    let mut alt_root = false;
+    if &opts.root != std::path::Path::new("/") {
+        info!("Operating in alternative root mode, package will only be unpacked but not configured");
+        alt_root = true;
+    }
+
     debug!("Parsing deb dbs...");
     let dbs = local_db
         .get_all_package_db()
@@ -74,7 +81,7 @@ pub async fn execute(
     let root = &opts.root;
     let machine_status = MachineStatus::new(root)?;
     let mut actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
-    if opts.unpack_only {
+    if alt_root {
         let modifier = modifier::UnpackOnly::default();
         modifier.apply(&mut actions);
     }
