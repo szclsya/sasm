@@ -38,10 +38,10 @@ pub async fn execute(
     debug!("Processing user request...");
     match request {
         UserRequest::Install(list) => {
-            for (name, ver_req, instal_recomm, added_by) in list {
+            for (name, ver_req, instal_recomm, added_by, local) in list {
                 // Add pkg to blueprint
-                blueprint.add(&name, added_by.as_deref(), ver_req)?;
-                if instal_recomm {
+                blueprint.add(&name, added_by.as_deref(), ver_req, local)?;
+                if !local && instal_recomm {
                     let choices = match solver.pool.get_pkgs_by_name(&name) {
                         Some(pkgs) => pkgs,
                         None => bail!("Cannot add recommended packages for {}", &name),
@@ -50,7 +50,12 @@ pub async fn execute(
                     let meta = solver.pool.get_pkg_by_id(*choice).unwrap();
                     if let Some(recommends) = &meta.recommends {
                         for recommend in recommends {
-                            blueprint.add(&recommend.0, Some(&name), Some(recommend.1.clone()))?;
+                            blueprint.add(
+                                &recommend.0,
+                                Some(&name),
+                                Some(recommend.1.clone()),
+                                false,
+                            )?;
                         }
                     }
                 }

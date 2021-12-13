@@ -95,6 +95,9 @@ pub struct InstallPkg {
     /// Don't install recommended packages
     #[clap(long)]
     pub no_recommends: bool,
+    /// da
+    #[clap(long)]
+    pub local: bool,
 }
 
 #[derive(Parser)]

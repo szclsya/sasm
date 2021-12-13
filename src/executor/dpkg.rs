@@ -1,5 +1,6 @@
 use crate::{
     info,
+    debug,
     types::{PkgActions, PkgSource},
     utils::downloader::{Compression, DownloadJob, Downloader},
 };
@@ -31,7 +32,7 @@ pub async fn execute_pkg_actions(
         .collect();
 
     let mut unpack_deb_paths: Vec<String> = actions
-        .install
+        .unpack
         .iter()
         .map(|(unpack, _)| match &unpack.source {
             PkgSource::Http((url, _, _)) => download_res.get(url).unwrap(),

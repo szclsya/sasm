@@ -3,7 +3,7 @@ pub mod source;
 pub use in_memory::InMemoryPool;
 
 use crate::{
-    types::{PkgMeta, PkgVersion, VersionRequirement},
+    types::{PkgMeta, PkgSource, PkgVersion, VersionRequirement},
     warn,
 };
 
@@ -76,24 +76,26 @@ pub trait PkgPool: BasicPkgPool {
         Ok(false)
     }
 
-    fn pick_best_pkg(&self, pkgname: &str, ver_req: &VersionRequirement) -> Result<usize> {
-        let choices: Vec<usize> = match self.get_pkgs_by_name(pkgname) {
-            Some(pkgs) => pkgs
-                .iter()
-                .copied()
-                .filter(|pkgid| {
-                    let pkg = self.get_pkg_by_id(*pkgid).unwrap();
-                    ver_req.within(&pkg.version)
-                })
-                .collect(),
-            None => {
-                bail!("Package {} not found", pkgname);
+    fn pick_best_pkg(
+        &self,
+        pkgname: &str,
+        ver_req: &VersionRequirement,
+        need_local: bool,
+    ) -> Result<usize> {
+        if let Some(pkgs) = self.get_pkgs_by_name(pkgname) {
+            for id in pkgs {
+                // Safe unless the pool is broken
+                let pkg = self.get_pkg_by_id(id).unwrap();
+                let is_local = matches!(pkg.source, PkgSource::Local(_));
+                if ver_req.within(&pkg.version) && (need_local == is_local) {
+                    return Ok(id);
+                }
             }
-        };
-        let id = choices
-            .get(0)
-            .ok_or_else(|| format_err!("No suitable version for {}", pkgname))?;
-        Ok(*id)
+            // We haven't found a suitable candidate
+            bail!("No suitable version for {}", pkgname);
+        } else {
+            bail!("Package {} not found", pkgname);
+        }
     }
 
     fn pkg_to_rule(&self, pkgid: usize, subset: Option<&[usize]>) -> Result<Vec<Vec<Lit>>> {

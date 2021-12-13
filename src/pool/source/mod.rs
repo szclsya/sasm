@@ -2,9 +2,8 @@ pub mod debrepo;
 pub mod local;
 
 use super::{BasicPkgPool, InMemoryPool, PkgPool};
-use crate::debug;
-use anyhow::{bail, Result};
-use std::{fs, path::PathBuf, ffi::OsStr};
+use anyhow::Result;
+use std::path::PathBuf;
 
 pub fn create_pool(
     deb_dbs: &[(String, PathBuf)],
@@ -17,24 +16,8 @@ pub fn create_pool(
 
     // Import debs
     for deb_root in local_deb_roots {
-        // Read dir
-        if !deb_root.is_dir() {
-            bail!(
-                "Invalid local repository: {} is not a dir",
-                deb_root.display()
-            );
-        }
-        for entry in fs::read_dir(deb_root)? {
-            let entry = entry?;
-            let path = entry.path();
-            debug!("Parsing local deb {}", path.display());
-            if !path.is_file() || path.extension() != Some(OsStr::new("deb")) {
-                continue;
-            }
-            // Now we confirm it is a deb file. Read it and add it to pool
-            let pkgmeta = local::read_control_from_deb(&path)?;
-            debug!("{:?}", pkgmeta);
-            pool.add(pkgmeta);
+        for pkg in local::read_debs_from_path(&deb_root)? {
+            pool.add(pkg);
         }
     }
 

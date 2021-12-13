@@ -1,4 +1,5 @@
 mod execute;
+mod local;
 mod provide;
 mod search;
 use execute::execute;
@@ -16,10 +17,19 @@ use crate::{
 
 use anyhow::{Context, Result};
 use console::style;
+use std::path::PathBuf;
 
 pub enum UserRequest {
-    // Vec<(PkgName, ver_req, install_recomm, added_by)>
-    Install(Vec<(String, Option<VersionRequirement>, bool, Option<String>)>),
+    // Vec<(PkgName, ver_req, install_recomm, added_by, local)>
+    Install(
+        Vec<(
+            String,
+            Option<VersionRequirement>,
+            bool,
+            Option<String>,
+            bool,
+        )>,
+    ),
     // Vec<(PkgName, remove_recomm)>
     Remove(Vec<(String, bool)>),
     Upgrade,
@@ -44,10 +54,16 @@ pub async fn fullfill_command(
 
     match &opts.subcmd {
         SubCmd::Install(add) => {
-            let req = add
-                .names
+            let names = if add.local {
+                let paths: Vec<PathBuf> =
+                    add.names.iter().map(|path| PathBuf::from(path)).collect();
+                local::add(&paths, &opts.root)?
+            } else {
+                add.names.clone()
+            };
+            let req = names
                 .iter()
-                .map(|pkgname| (pkgname.clone(), None, !add.no_recommends, None))
+                .map(|pkgname| (pkgname.clone(), None, !add.no_recommends, None, add.local))
                 .collect();
             let req = UserRequest::Install(req);
             // Update local db
@@ -159,6 +175,10 @@ pub async fn fullfill_command(
             let pkg_cache_path = opts.root.join(crate::PKG_CACHE_PATH);
             std::fs::remove_dir_all(&pkg_cache_path)?;
             std::fs::create_dir_all(&pkg_cache_path)?;
+
+            info!("Cleaning local package repository...");
+            let ms = MachineStatus::new(&opts.root)?;
+            local::clean(&ms, &opts.root)?;
 
             if cleanconfig.all {
                 info!("Cleaning local database cache...");

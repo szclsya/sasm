@@ -22,6 +22,7 @@ pub struct PkgRequest {
     pub name: String,
     pub version: VersionRequirement,
     pub added_by: Option<String>,
+    pub local: bool,
 }
 
 /// A collection of
@@ -79,6 +80,7 @@ impl Blueprints {
         pkgname: &str,
         added_by: Option<&str>,
         ver_req: Option<VersionRequirement>,
+        local: bool,
     ) -> Result<()> {
         if self.user_list_contains(pkgname) {
             bail!("Package {} already exists in user blueprint", pkgname);
@@ -89,6 +91,7 @@ impl Blueprints {
             name: pkgname.to_string(),
             version,
             added_by: added_by.map(|pkgname| pkgname.to_owned()),
+            local,
         };
         self.user.push(BlueprintLine::PkgRequest(pkgreq));
         self.user_blueprint_modified = true;
@@ -196,6 +199,9 @@ impl std::fmt::Display for PkgRequest {
         if let Some(pkgname) = &self.added_by {
             sections.push(format!("added_by = {}", pkgname));
         }
+        if self.local {
+            sections.push("local".to_owned());
+        }
         // Write it
         if !sections.is_empty() {
             let joined = sections.join(", ");
@@ -257,6 +263,7 @@ fn package_name(i: &str) -> IResult<&str, &str> {
 enum PkgOption {
     VersionRequirement(VersionRequirement),
     AddedBy(String),
+    Local,
 }
 
 fn pkg_option(i: &str) -> IResult<&str, PkgOption> {
@@ -270,6 +277,10 @@ fn pkg_option(i: &str) -> IResult<&str, PkgOption> {
 
     if let Ok((i, req)) = parse_version_requirement(i) {
         return Ok((i, PkgOption::VersionRequirement(req)));
+    }
+
+    if let Ok((i, _)) = tag::<_, _, Error<&str>>("local")(i) {
+        return Ok((i, PkgOption::Local));
     }
 
     Err(nom::Err::Error(nom::error::Error::from_error_kind(
@@ -286,6 +297,7 @@ fn package_line(i: &str) -> IResult<&str, PkgRequest> {
         name: name.to_string(),
         version: VersionRequirement::default(),
         added_by: None,
+        local: false,
     };
 
     let i = if let Ok((i, opts)) = nom::sequence::delimited(
@@ -300,6 +312,9 @@ fn package_line(i: &str) -> IResult<&str, PkgRequest> {
                 PkgOption::AddedBy(pkgname) => res.added_by = Some(pkgname),
                 PkgOption::VersionRequirement(request) => {
                     res.version = res.version.combine(&request).unwrap();
+                }
+                PkgOption::Local => {
+                    res.local = true;
                 }
             }
         }
@@ -404,9 +419,10 @@ mod tests {
                     upper_bond: None,
                 },
                 added_by: Some("wow".to_string()),
+                local: false,
             },
             (
-                "pkgname (>1, <2)",
+                "pkgname (>1, local, <2)",
                 PkgRequest {
                     name: "abc".to_string(),
                     version: VersionRequirement {
@@ -414,6 +430,7 @@ mod tests {
                         upper_bond: Some((PkgVersion::try_from("2").unwrap(), true)),
                     },
                     added_by: None,
+                    local: true,
                 },
             ),
         )];

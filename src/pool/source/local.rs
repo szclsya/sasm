@@ -1,12 +1,37 @@
 use crate::{
+    debug,
     types::{PkgMeta, PkgSource, PkgVersion},
     utils::debcontrol::parse_pkg_list,
 };
 
 use anyhow::{bail, format_err, Context, Result};
-use std::{collections::HashMap, fs::File, io::prelude::*, path::Path};
+use rayon::prelude::*;
+use std::{collections::HashMap, ffi::OsStr, fs::File, io::prelude::*, path::Path};
 use tar::Archive;
 use xz2::read::XzDecoder;
+
+pub fn read_debs_from_path(p: &Path) -> Result<Vec<PkgMeta>> {
+    if !p.is_dir() {
+        bail!("Invalid local repository: {} is not a dir", p.display());
+    }
+
+    let mut deb_paths = Vec::new();
+    for entry in std::fs::read_dir(p)? {
+        let entry = entry?;
+        let path = entry.path();
+        debug!("Parsing local deb {}", path.display());
+        if !path.is_file() || path.extension() != Some(OsStr::new("deb")) {
+            continue;
+        }
+        // Now we confirm it is a deb file. Add it to the process queue
+        deb_paths.push(path);
+    }
+
+    deb_paths
+        .par_iter()
+        .map(|deb| read_control_from_deb(deb))
+        .collect()
+}
 
 pub fn read_control_from_deb(p: &Path) -> Result<PkgMeta> {
     let mut archive = ar::Archive::new(
