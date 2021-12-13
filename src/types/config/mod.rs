@@ -1,7 +1,5 @@
 mod blueprint;
-mod ignorerules;
 pub use blueprint::{Blueprints, PkgRequest};
-pub use ignorerules::IgnoreRules;
 
 use anyhow::{bail, Result};
 use clap::Parser;
@@ -71,9 +69,6 @@ pub enum SubCmd {
     Install(InstallPkg),
     /// Remove packages
     Remove(RemovePkg),
-    /// Manipulate and inspect IgnoreRules tables
-    #[clap(subcommand)]
-    Ignore(IgnorePkg),
     /// Refresh local package databases
     Refresh,
     /// Install and upgrade all packages according to Blueprint
@@ -106,21 +101,6 @@ pub struct RemovePkg {
     /// Also remove recommended packages"
     #[clap(long)]
     pub remove_recommends: bool,
-}
-
-#[derive(Parser)]
-pub enum IgnorePkg {
-    /// Add rules to user IgnoreRules table
-    Add(ModifyIgnore),
-    /// Remove rules from user IgnoreRules table
-    Remove(ModifyIgnore),
-    /// Show all IgnoreRules (including user and vendor)
-    Show,
-}
-
-#[derive(Parser)]
-pub struct ModifyIgnore {
-    pub rules: Vec<String>,
 }
 
 #[derive(Parser)]

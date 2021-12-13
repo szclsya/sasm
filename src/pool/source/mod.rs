@@ -11,12 +11,12 @@ pub fn create_pool(
 ) -> Result<Box<dyn PkgPool>> {
     let mut pool = InMemoryPool::new();
     for (root_url, deb_db) in deb_dbs {
-        debrepo::import(&deb_db, &mut pool, root_url)?;
+        debrepo::import(deb_db, &mut pool, root_url)?;
     }
 
     // Import debs
     for deb_root in local_deb_roots {
-        for pkg in local::read_debs_from_path(&deb_root)? {
+        for pkg in local::read_debs_from_path(deb_root)? {
             pool.add(pkg);
         }
     }

@@ -10,13 +10,12 @@ use crate::{
     executor::MachineStatus,
     info, success,
     types::{
-        config::{Blueprints, Config, IgnorePkg, IgnoreRules, Opts, SubCmd},
+        config::{Blueprints, Config, Opts, SubCmd},
         VersionRequirement,
     },
 };
 
 use anyhow::{Context, Result};
-use console::style;
 use std::path::PathBuf;
 
 pub enum UserRequest {
@@ -40,7 +39,6 @@ pub async fn fullfill_command(
     config: &Config,
     opts: &Opts,
     blueprints: &mut Blueprints,
-    ignorerules: &mut IgnoreRules,
 ) -> Result<()> {
     let downloader = crate::utils::downloader::Downloader::new();
     // Directory that stores trusted public keys for repos
@@ -55,8 +53,7 @@ pub async fn fullfill_command(
     match &opts.subcmd {
         SubCmd::Install(add) => {
             let names = if add.local {
-                let paths: Vec<PathBuf> =
-                    add.names.iter().map(|path| PathBuf::from(path)).collect();
+                let paths: Vec<PathBuf> = add.names.iter().map(PathBuf::from).collect();
                 local::add(&paths, &opts.root)?
             } else {
                 add.names.clone()
@@ -70,16 +67,7 @@ pub async fn fullfill_command(
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             // Execute blueprint
-            execute(
-                &localdb,
-                &downloader,
-                blueprints,
-                ignorerules,
-                opts,
-                config,
-                req,
-            )
-            .await?;
+            execute(&localdb, &downloader, blueprints, opts, config, req).await?;
             Ok(())
         }
         SubCmd::Remove(rm) => {
@@ -94,43 +82,7 @@ pub async fn fullfill_command(
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             // Apply stuff
-            execute(
-                &localdb,
-                &downloader,
-                blueprints,
-                ignorerules,
-                opts,
-                config,
-                req,
-            )
-            .await?;
-            Ok(())
-        }
-        SubCmd::Ignore(ignore) => {
-            match ignore {
-                IgnorePkg::Add(flags) => {
-                    for rule in &flags.rules {
-                        info!("Adding {} to IgnoreRules...", style(rule).bold());
-                        ignorerules.add(rule.to_owned())?;
-                    }
-                    success!("Rules have been added");
-                }
-                IgnorePkg::Remove(flags) => {
-                    for rule in &flags.rules {
-                        info!("Removing {} from IgnoreRules...", style(rule).bold());
-                        ignorerules.remove(rule)?;
-                    }
-                    success!("Rules have been added");
-                }
-                IgnorePkg::Show => {
-                    for (info, rules) in ignorerules.gen_human_readable()? {
-                        info!("Rules in {}", style(info).bold());
-                        for rule in rules {
-                            crate::WRITER.writeln("", &rule)?;
-                        }
-                    }
-                }
-            }
+            execute(&localdb, &downloader, blueprints, opts, config, req).await?;
             Ok(())
         }
         SubCmd::Refresh => {
@@ -147,16 +99,7 @@ pub async fn fullfill_command(
                 .await
                 .context("Failed to refresh local package database")?;
 
-            execute(
-                &localdb,
-                &downloader,
-                blueprints,
-                ignorerules,
-                opts,
-                config,
-                req,
-            )
-            .await?;
+            execute(&localdb, &downloader, blueprints, opts, config, req).await?;
 
             Ok(())
         }

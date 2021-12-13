@@ -1,6 +1,5 @@
 use crate::{
     info,
-    debug,
     types::{PkgActions, PkgSource},
     utils::downloader::{Compression, DownloadJob, Downloader},
 };
