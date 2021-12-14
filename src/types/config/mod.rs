@@ -77,7 +77,7 @@ pub enum SubCmd {
     Search(SearchPkg),
     /// Search what packages provide a certain file
     Provide(ProvideFile),
-    /// Delete local database and package cache
+    /// Delete local package cache (optionally metadata cache)
     Clean(CleanConfig),
 }
 

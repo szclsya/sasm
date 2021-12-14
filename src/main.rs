@@ -76,6 +76,8 @@ async fn main() {
     };
 
     if let Err(err) = try_main(&opts).await {
+        // Create a new line first, for visual distinction
+        WRITER.writeln("", "").ok();
         error!("{}", err.to_string());
         err.chain().skip(1).for_each(|cause| {
             due_to!("{}", cause);
