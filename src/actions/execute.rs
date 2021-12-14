@@ -29,7 +29,9 @@ pub async fn execute(
     // Check if operating in alt-root mode
     let mut alt_root = false;
     if &opts.root != std::path::Path::new("/") {
-        info!("Operating in alternative root mode, package will only be unpacked but not configured");
+        info!(
+            "Operating in alternative root mode, package will only be unpacked but not configured"
+        );
         alt_root = true;
     }
 
