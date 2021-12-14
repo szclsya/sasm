@@ -25,9 +25,9 @@ impl<'a> PkgInfo<'a> {
             Some(pkg) => match pkg.state {
                 PkgState::Installed => style("INSTALLED").green(),
                 PkgState::Unpacked => style("UNPACKED").yellow(),
-                _ => style("PACKAGE").dim(),
+                _ => style("AVAIL").dim(),
             },
-            None => style("PACKAGE").dim(),
+            None => style("AVAIL").dim(),
         }
         .to_string();
         // Construct pkg info line
@@ -39,10 +39,6 @@ impl<'a> PkgInfo<'a> {
             pkg_info_line.push_str(&style("(debug symbols available)").dim().to_string());
         }
         crate::WRITER.writeln(&prefix, &pkg_info_line)?;
-        // Write additional info, if applicable
-        if let Some(additional_info) = &self.additional_info {
-            crate::WRITER.writeln("", additional_info)?;
-        }
 
         // Write package description
         crate::WRITER.writeln("", &self.pkg.description)?;
@@ -73,6 +69,11 @@ impl<'a> PkgInfo<'a> {
                 chunks.push(chunk);
             }
             crate::WRITER.write_chunks("", &chunks)?;
+        }
+
+        // Write additional info, if applicable
+        if let Some(additional_info) = &self.additional_info {
+            crate::WRITER.writeln("", additional_info)?;
         }
 
         Ok(())
