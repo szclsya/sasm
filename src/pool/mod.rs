@@ -249,15 +249,16 @@ pub trait PkgPool: BasicPkgPool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::{Checksum, PkgMeta, PkgVersion, VersionRequirement};
-    use std::convert::TryFrom;
-    use varisat::ExtendFormula;
+    use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
+    use std::path::PathBuf;
 
     #[test]
     fn trivial_pool() {
         let mut pool = InMemoryPool::new();
         let a_id = pool.add(PkgMeta {
             name: "a".to_string(),
+            description: "".to_string(),
+            section: "".to_string(),
             version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "c".to_string(),
@@ -274,13 +275,15 @@ mod test {
                 },
             )],
             conflicts: Vec::new(),
+            recommends: None,
+            suggests: None,
             install_size: 0,
-            url: String::new(),
-            size: 0,
-            checksum: Checksum::from_sha256_str(&str::repeat("a", 64)).unwrap(),
+            source: PkgSource::Local(PathBuf::new()),
         });
         let b_id = pool.add(PkgMeta {
             name: "b".to_string(),
+            description: "".to_string(),
+            section: "".to_string(),
             version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "a".to_string(),
@@ -291,13 +294,15 @@ mod test {
             )],
             breaks: Vec::new(),
             conflicts: Vec::new(),
+            recommends: None,
+            suggests: None,
             install_size: 0,
-            url: String::new(),
-            size: 0,
-            checksum: Checksum::from_sha256_str(&str::repeat("a", 64)).unwrap(),
+            source: PkgSource::Local(PathBuf::new()),
         });
         let c_id = pool.add(PkgMeta {
             name: "c".to_string(),
+            description: "".to_string(),
+            section: "".to_string(),
             version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "b".to_string(),
@@ -308,13 +313,15 @@ mod test {
             )],
             breaks: Vec::new(),
             conflicts: Vec::new(),
+            recommends: None,
+            suggests: None,
             install_size: 0,
-            url: String::new(),
-            size: 0,
-            checksum: Checksum::from_sha256_str(&str::repeat("a", 64)).unwrap(),
+            source: PkgSource::Local(PathBuf::new()),
         });
-        pool.add(PkgMeta {
-            name: "e".to_string(),
+        let d_id = pool.add(PkgMeta {
+            name: "d".to_string(),
+            description: "".to_string(),
+            section: "".to_string(),
             version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "b".to_string(),
@@ -325,17 +332,17 @@ mod test {
             )],
             breaks: Vec::new(),
             conflicts: Vec::new(),
+            recommends: None,
+            suggests: None,
             install_size: 0,
-            url: String::new(),
-            size: 0,
-            checksum: Checksum::from_sha256_str(&str::repeat("a", 64)).unwrap(),
+            source: PkgSource::Local(PathBuf::new()),
         });
         pool.finalize();
 
         let mut solver = varisat::Solver::new();
         let formula = pool.gen_formula(None);
         solver.add_formula(&formula);
-        solver.add_clause(&[Lit::from_dimacs(c_id as isize)]);
+        solver.assume(&[Lit::from_dimacs(c_id as isize)]);
 
         solver.solve().unwrap();
         assert_eq!(
@@ -344,6 +351,7 @@ mod test {
                 Lit::from_dimacs(a_id as isize),
                 Lit::from_dimacs(b_id as isize),
                 Lit::from_dimacs(c_id as isize),
+                !Lit::from_dimacs(d_id as isize),
             ]
         );
     }
