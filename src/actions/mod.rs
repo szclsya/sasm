@@ -110,7 +110,7 @@ pub async fn fullfill_command(
             lock::unlock(&opts.root)?;
             Ok(())
         }
-        SubCmd::Execute | SubCmd::Upgrade => {
+        SubCmd::Execute => {
             // This operation has side effects
             lock::ensure_unlocked(&opts.root)?;
             lock::lock(&opts.root)?;

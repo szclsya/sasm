@@ -47,15 +47,16 @@ pub struct RepoConfig {
 #[derive(Parser)]
 #[clap(about, version, author)]
 pub struct Opts {
-    #[clap(long, default_value = "/", help = "Root directory for operation")]
+    #[clap(display_order = 1, long, default_value = "/", help = "Root directory for operation")]
     pub root: PathBuf,
     #[clap(
+        display_order = 2,
         long,
         default_value = "etc/omakase/",
         help = "Position of the config folder"
     )]
     pub config_root: PathBuf,
-    #[clap(short, long, help = "Print additional debug information")]
+    #[clap(display_order = 3, short, long, help = "Print additional debug information")]
     pub verbose: bool,
     #[clap(subcommand)]
     pub subcmd: SubCmd,
@@ -64,20 +65,25 @@ pub struct Opts {
 #[derive(Parser)]
 pub enum SubCmd {
     /// Install new packages
+    #[clap(display_order = 1)]
     Install(InstallPkg),
     /// Remove packages
+    #[clap(display_order = 2, aliases = &["purge", "autoremove"])]
     Remove(RemovePkg),
     /// Refresh local package databases
+    #[clap(display_order = 4, aliases = &["update"])]
     Refresh,
     /// Install and upgrade all packages according to Blueprint
+    #[clap(display_order = 3, aliases = &["upgrade"])]
     Execute,
-    /// Alias to Execute
-    Upgrade,
     /// Search packages from package database
+    #[clap(display_order = 11)]
     Search(SearchPkg),
     /// Search what packages provide a certain file
+    #[clap(display_order = 12)]
     Provide(ProvideFile),
     /// Delete local package cache (optionally metadata cache)
+    #[clap(display_order = 21)]
     Clean(CleanConfig),
 }
 
