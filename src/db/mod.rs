@@ -6,6 +6,7 @@ use crate::{
     warn,
 };
 use anyhow::{bail, Context, Result};
+use console::style;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::{collections::HashMap, path::PathBuf};
@@ -38,7 +39,7 @@ impl LocalDb {
     pub fn get_package_db(&self, name: &str) -> Result<Vec<(String, PathBuf)>> {
         let repo = match self.repos.get(name) {
             Some(repo) => repo,
-            None => bail!("Repo with name {} not found", name),
+            None => bail!("Repository with name {} not found", name),
         };
 
         let mut files: Vec<(String, PathBuf)> = Vec::new();
@@ -77,7 +78,7 @@ impl LocalDb {
     pub fn get_contents_db(&self, name: &str) -> Result<Vec<(String, PathBuf)>> {
         let repo = match self.repos.get(name) {
             Some(repo) => repo,
-            None => bail!("Repo with name {} not found", name),
+            None => bail!("Repository with name {} not found", name),
         };
 
         let mut files: Vec<(String, PathBuf)> = Vec::new();
@@ -122,7 +123,7 @@ impl LocalDb {
             .iter()
             .map(|(name, repo)| DownloadJob {
                 url: format!("{}/dists/{}/InRelease", repo.url, repo.distribution),
-                description: Some(format!("Repository metadata for repo {}", name)),
+                description: Some(format!("Repository metadata for {}", style(name).bold())),
                 filename: Some(format!("InRelease_{}", name)),
                 size: None,
                 compression: Compression::None(None),
@@ -174,8 +175,9 @@ impl LocalDb {
                                 repo.url, repo.distribution, compressed_rel_url
                             ),
                             description: Some(format!(
-                                "Package database of repo {} for {} architecture",
-                                name, arch
+                                "Package database of repository {} for {} architecture",
+                                style(name).bold(),
+                                arch
                             )),
                             filename: Some(filename),
                             size: Some(compressed_meta.0),
@@ -198,8 +200,9 @@ impl LocalDb {
                                 repo.url, repo.distribution, &compressed_rel_url
                             ),
                             description: Some(format!(
-                                "Contents database of repo {} for {} architecture",
-                                name, arch
+                                "Contents database of repository {} for {} architecture",
+                                style(name).bold(),
+                                arch
                             )),
                             filename: Some(filename),
                             size: Some(compressed_meta.0),
@@ -211,7 +214,7 @@ impl LocalDb {
                 if pre_download_count == dbs_to_download.len() {
                     warn!("No repository available for {}/{}", name, component);
                     warn!(
-                        "Please check if this repo have packages for {} architecture",
+                        "Please check if this repository have packages for {} architecture",
                         self.arch
                     );
                 }
