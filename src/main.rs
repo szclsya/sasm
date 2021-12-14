@@ -23,7 +23,7 @@ lazy_static! {
     static ref WRITER: cli::Writer = cli::Writer::new();
 }
 // Debug flag
-static DEBUG: AtomicBool = AtomicBool::new(false);
+static VERBOSE: AtomicBool = AtomicBool::new(false);
 static DPKG_RUNNING: AtomicBool = AtomicBool::new(false);
 // Global constants
 const DB_KEY_PATH: &str = "etc/omakase/keys";
@@ -31,6 +31,11 @@ const DB_CACHE_PATH: &str = "var/cache/omakase/db";
 const PKG_CACHE_PATH: &str = "var/cache/omakase/pkgs";
 const LOCK_PATH: &str = "var/lib/omakase/lock";
 const LOCAL_REPO_PATH: &str = "var/lib/omakase/local_repo";
+
+/// Check if in verbose mode
+fn verbose() -> bool {
+    crate::VERBOSE.load(std::sync::atomic::Ordering::Relaxed)
+}
 
 /// Exit codes:
 /// 1 => program screwed up
@@ -54,7 +59,7 @@ async fn main() {
         .expect("Error setting SIGINT handler");
     }
     // Set-up debug globally
-    DEBUG.store(opts.verbose, Ordering::Relaxed);
+    VERBOSE.store(opts.verbose, Ordering::Relaxed);
     // Check if another instance is runing
     match utils::lock::check(&opts.root) {
         Ok(Some(pid)) => {

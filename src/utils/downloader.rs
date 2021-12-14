@@ -225,6 +225,13 @@ async fn download_file(
                 let res = tokio::task::spawn_blocking(move || checksum.cmp_file(&p)).await?;
                 if res.is_ok() && res.unwrap() {
                     bar.finish_and_clear();
+                    if crate::verbose() {
+                        bar.println(format!(
+                            "{}{} (not modified)",
+                            crate::cli::gen_prefix(&console::style("SKIP").dim().to_string()),
+                            &msg
+                        ));
+                    }
                     return Ok((job.url, file_path));
                 }
             }

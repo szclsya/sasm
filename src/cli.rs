@@ -100,7 +100,7 @@ macro_rules! msg {
 #[macro_export]
 macro_rules! debug {
     ($($arg:tt)+) => {
-        if crate::DEBUG.load(std::sync::atomic::Ordering::Relaxed) {
+        if crate::verbose() {
             $crate::WRITER.writeln(&console::style("DEBUG").dim().to_string(), &format!($($arg)+)).ok();
         }
     };
