@@ -10,6 +10,17 @@ struct LockInfo {
     pid: u32,
 }
 
+pub fn ensure_unlocked(root: &Path) -> Result<()> {
+    if let Some(pid) = check(root)? {
+        bail!(
+            "Another instance of Omakase is currently running at PID {}",
+            pid
+        );
+    }
+
+    Ok(())
+}
+
 pub fn check(root: &Path) -> Result<Option<u32>> {
     let lock_path = root.join(LOCK_PATH);
     if lock_path.is_file() {

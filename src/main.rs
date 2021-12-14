@@ -60,26 +60,8 @@ async fn main() {
     }
     // Set-up debug globally
     VERBOSE.store(opts.verbose, Ordering::Relaxed);
-    // Check if another instance is runing
-    match utils::lock::check(&opts.root) {
-        Ok(Some(pid)) => {
-            error!(
-                "Another instance of Omakase is currently running at PID {}",
-                pid
-            );
-            exit(1);
-        }
-        Ok(None) => {
-            if let Err(e) = utils::lock::lock(&opts.root) {
-                error!("Cannot lock omakase: {}", e);
-                exit(1);
-            }
-        }
-        Err(e) => {
-            error!("Failed to check lock status: {}", e.to_string());
-        }
-    };
 
+    // Run main logic
     if let Err(err) = try_main(&opts).await {
         // Create a new line first, for visual distinction
         WRITER.writeln("", "").ok();
@@ -87,15 +69,7 @@ async fn main() {
         err.chain().skip(1).for_each(|cause| {
             due_to!("{}", cause);
         });
-        if let Err(e) = utils::lock::unlock(&opts.root) {
-            warn!("Failed to unlock omakase: {}", e.to_string());
-        }
         std::process::exit(1);
-    } else {
-        if let Err(e) = utils::lock::unlock(&opts.root) {
-            warn!("Failed to unlock omakase: {}", e.to_string());
-        }
-        std::process::exit(0);
     }
 }
 

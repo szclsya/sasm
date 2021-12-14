@@ -13,6 +13,7 @@ use crate::{
         config::{Blueprints, Config, Opts, SubCmd},
         VersionRequirement,
     },
+    utils::lock,
 };
 
 use anyhow::{Context, Result};
@@ -52,6 +53,10 @@ pub async fn fullfill_command(
 
     match &opts.subcmd {
         SubCmd::Install(add) => {
+            // This operation has side effects
+            lock::ensure_unlocked(&opts.root)?;
+            lock::lock(&opts.root)?;
+
             let names = if add.local {
                 let paths: Vec<PathBuf> = add.names.iter().map(PathBuf::from).collect();
                 local::add(&paths, &opts.root)?
@@ -68,9 +73,15 @@ pub async fn fullfill_command(
             localdb.update(&downloader).await?;
             // Execute blueprint
             execute(&localdb, &downloader, blueprints, opts, config, req).await?;
+
+            lock::unlock(&opts.root)?;
             Ok(())
         }
         SubCmd::Remove(rm) => {
+            // This operation has side effects
+            lock::ensure_unlocked(&opts.root)?;
+            lock::lock(&opts.root)?;
+
             // Prepare request
             let req: Vec<(String, bool)> = rm
                 .names
@@ -83,15 +94,27 @@ pub async fn fullfill_command(
             localdb.update(&downloader).await?;
             // Apply stuff
             execute(&localdb, &downloader, blueprints, opts, config, req).await?;
+
+            lock::unlock(&opts.root)?;
             Ok(())
         }
         SubCmd::Refresh => {
+            // This operation has side effects
+            lock::ensure_unlocked(&opts.root)?;
+            lock::lock(&opts.root)?;
+
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             success!("Refresh complete");
+
+            lock::unlock(&opts.root)?;
             Ok(())
         }
         SubCmd::Execute | SubCmd::Upgrade => {
+            // This operation has side effects
+            lock::ensure_unlocked(&opts.root)?;
+            lock::lock(&opts.root)?;
+
             let req = UserRequest::Upgrade;
             info!("Refreshing local package databases...");
             localdb
@@ -101,6 +124,7 @@ pub async fn fullfill_command(
 
             execute(&localdb, &downloader, blueprints, opts, config, req).await?;
 
+            lock::unlock(&opts.root)?;
             Ok(())
         }
         SubCmd::Search(search) => {
@@ -114,6 +138,10 @@ pub async fn fullfill_command(
             Ok(())
         }
         SubCmd::Clean(cleanconfig) => {
+            // This operation has side effects
+            lock::ensure_unlocked(&opts.root)?;
+            lock::lock(&opts.root)?;
+
             info!("Cleaning local package cache...");
             let pkg_cache_path = opts.root.join(crate::PKG_CACHE_PATH);
             std::fs::remove_dir_all(&pkg_cache_path)?;
@@ -129,6 +157,8 @@ pub async fn fullfill_command(
                 std::fs::remove_dir_all(&db_cache_path)?;
                 std::fs::create_dir_all(&db_cache_path)?;
             }
+
+            lock::unlock(&opts.root)?;
             Ok(())
         }
     }
