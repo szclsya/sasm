@@ -15,7 +15,7 @@ pub struct PkgInfo<'a> {
     pub pkg: &'a PkgMeta,
     // Additional info
     pub has_dbg_pkg: bool,
-    pub additional_info: Option<String>,
+    pub additional_info: Vec<String>,
 }
 
 impl<'a> PkgInfo<'a> {
@@ -72,8 +72,8 @@ impl<'a> PkgInfo<'a> {
         }
 
         // Write additional info, if applicable
-        if let Some(additional_info) = &self.additional_info {
-            crate::WRITER.writeln("", additional_info)?;
+        for line in &self.additional_info {
+            crate::WRITER.writeln("", &line)?;
         }
 
         Ok(())

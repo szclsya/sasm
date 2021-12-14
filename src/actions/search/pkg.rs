@@ -42,7 +42,7 @@ where
                 res.push(PkgInfo {
                     pkg,
                     has_dbg_pkg,
-                    additional_info: None,
+                    additional_info: Vec::new(),
                 })
             }
         }

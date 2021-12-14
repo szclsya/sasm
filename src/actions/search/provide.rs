@@ -45,12 +45,15 @@ pub fn show_provide_file(
             // This is safe unless the pool is broken
             let latest_pkg_id = pkgs.get(0).unwrap();
             let latest_pkg = pool.get_pkg_by_id(*latest_pkg_id).unwrap();
-            let paths_str = paths.join(", ");
+            let provide_paths = paths.into_iter().map(|path| {
+                format!("Provides: {}", style(path).bold())
+            })
+                .collect();
             // Prepare a PkgInfo
             let pkginfo = PkgInfo {
                 pkg: latest_pkg,
                 has_dbg_pkg: pool.has_dbg_pkg(*latest_pkg_id)?,
-                additional_info: Some(format!("Provides: {}", style(paths_str).bold())),
+                additional_info: provide_paths,
             };
             pkginfo.show(machine_status)?;
         }
