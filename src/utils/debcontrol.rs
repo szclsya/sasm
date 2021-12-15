@@ -4,7 +4,7 @@ use anyhow::{format_err, Result};
 use nom::{
     bytes::complete::{take_while, take_while1, take, tag},
     character::{complete::alphanumeric1, complete::char, is_alphanumeric},
-    combinator::{opt, recognize},
+    combinator::{opt, recognize, eof},
     sequence::{delimited, separated_pair, pair, preceded},
     branch::alt,
     IResult,
@@ -40,7 +40,9 @@ fn parse_relation_suffix(s: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 fn parse_relational(s: &[u8]) -> IResult<&[u8], (&[u8], Option<&[u8]>)> {
-    pair(parse_package_name, opt(parse_relation_suffix))(s)
+    let (s, res) = pair(parse_package_name, opt(parse_relation_suffix))(s)?;
+    let (s, _) = eof(s)?;
+    Ok((s, res))
 }
 
 pub fn parse_pkg_list(s: &str) -> Result<Vec<(String, VersionRequirement)>> {
