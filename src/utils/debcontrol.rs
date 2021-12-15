@@ -2,11 +2,11 @@ use crate::types::VersionRequirement;
 
 use anyhow::{format_err, Result};
 use nom::{
-    bytes::complete::{take_while, take_while1},
+    bytes::complete::{take_while, take_while1, take, tag},
     character::{complete::alphanumeric1, complete::char, is_alphanumeric},
     combinator::{opt, recognize},
-    sequence::{delimited, separated_pair},
-    sequence::{pair, preceded},
+    sequence::{delimited, separated_pair, pair, preceded},
+    branch::alt,
     IResult,
 };
 
@@ -19,7 +19,7 @@ fn parse_package_name(s: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 fn parse_version_op(s: &[u8]) -> IResult<&[u8], &[u8]> {
-    take_while1(|c| c == b'>' || c == b'<' || c == b'=')(s)
+    alt((tag(b"<<"), tag(b"<="), take(b'='), tag(b">="), tag(b">>")))(s)
 }
 
 fn parse_version(s: &[u8]) -> IResult<&[u8], &[u8]> {

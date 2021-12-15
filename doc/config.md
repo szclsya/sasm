@@ -41,7 +41,7 @@ Blueprint files have a special syntax. Each line in a blueprint file represents 
 # Example of a simple request
 konsole
 # Package request with version requirements
-linux+kernel (>=3:5.14.0, <3:5.15.0)
+linux+kernel (>=3:5.14.0, <<3:5.15.0)
 mpv (=0.33.1)
 # Package that are installed from local debs
 some_pkg (local)
@@ -52,7 +52,8 @@ fcitx5-qt (added_by = fcitx5-base)
 ```
 
 You can specify additional attributes inside the pair of round brackets after package name. Multiple arguments are separated by `,`. Currently these attributes are supported:
-+ Version requirements (`>`, `>=`, `=`, `<`, `<=`): Indicate what range of version should be installed. Multiple requirements are allowed as far as they are not contradictory (for example, `>2, <1` will not be accepted).
++ Version requirements (`>>`, `>=`, `=`, `<<`, `<=`): Indicate what range of version should be installed. Multiple requirements are allowed as far as they are not contradictory (for example, `>=2, <=1` will not be accepted).
+  - `>>` means strictly larger and `<<` means strictly smaller
   - Note that this only accepts full deb version, which includes epoch, upstream version and package revision.
 + `local`: Install this package from local package repository. This will be added automatically if you use `install --local` to install a local deb.
 + `added_by = PKGNAME`: This package is introduced by another package rather than direct user request. Recommended packages will contain this attribute to show which package recommends them. When removing packages with `--remove-recommends` argument, all packages that have this attribute and is pointing to the package to remove will also be removed.

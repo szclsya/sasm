@@ -257,7 +257,7 @@ mod tests {
     #[test]
     fn test_package_line() {
         let tests = vec![(
-            "abc (added_by = wow, >1)",
+            "abc (added_by = wow, >>1)",
             PkgRequest {
                 name: "abc".to_string(),
                 version: VersionRequirement {
@@ -268,7 +268,7 @@ mod tests {
                 local: false,
             },
             (
-                "pkgname (>1, local, <2)",
+                "pkgname (>>1, local, <<2)",
                 PkgRequest {
                     name: "abc".to_string(),
                     version: VersionRequirement {

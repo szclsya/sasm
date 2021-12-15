@@ -111,13 +111,13 @@ impl VersionRequirement {
 pub fn parse_version_requirement(i: &str) -> IResult<&str, VersionRequirement> {
     let (i, compare) = context(
         "parsing compare literal",
-        alt((tag(">="), tag("<="), tag("="), tag(">"), tag("<"))),
+        alt((tag(">="), tag("<="), tag("="), tag(">>"), tag("<<"))),
     )(i)?;
     let (i, _) = space0(i)?;
     let (i, ver) = context("parsing version in VersionRequirement", parse_version)(i)?;
     let mut res = VersionRequirement::default();
     match compare {
-        ">" => {
+        ">>" => {
             res.lower_bond = Some((ver, false));
         }
         ">=" => {
@@ -127,7 +127,7 @@ pub fn parse_version_requirement(i: &str) -> IResult<&str, VersionRequirement> {
             res.lower_bond = Some((ver.clone(), true));
             res.upper_bond = Some((ver, true));
         }
-        "<" => {
+        "<<" => {
             res.upper_bond = Some((ver, false));
         }
         "<=" => {
@@ -143,9 +143,6 @@ impl TryFrom<&str> for VersionRequirement {
     type Error = anyhow::Error;
 
     fn try_from(s: &str) -> Result<Self> {
-        if s == "any" {
-            return Ok(VersionRequirement::default());
-        }
         let (_, ver_req) =
             parse_version_requirement(s).map_err(|e| format_err!("Malformed version: {}", e))?;
         if !ver_req.valid() {
@@ -163,7 +160,7 @@ impl fmt::Display for VersionRequirement {
             if lower.1 {
                 write!(f, ">={}", lower.0)?;
             } else {
-                write!(f, ">{}", lower.0)?;
+                write!(f, ">>{}", lower.0)?;
             }
             written = true;
         }
@@ -176,7 +173,7 @@ impl fmt::Display for VersionRequirement {
             if upper.1 {
                 write!(f, "<={}", upper.0)?;
             } else {
-                write!(f, "<{}", upper.0)?;
+                write!(f, "<<{}", upper.0)?;
             }
         }
         Ok(())
@@ -206,26 +203,26 @@ mod test {
             ),
             (
                 VersionRequirement::default(),
-                VersionRequirement::try_from(">1").unwrap(),
-                VersionRequirement::try_from(">1").unwrap(),
+                VersionRequirement::try_from(">>1").unwrap(),
+                VersionRequirement::try_from(">>1").unwrap(),
             ),
             (
-                VersionRequirement::try_from(">1").unwrap(),
+                VersionRequirement::try_from(">>1").unwrap(),
                 VersionRequirement::try_from(">=1").unwrap(),
-                VersionRequirement::try_from(">1").unwrap(),
+                VersionRequirement::try_from(">>1").unwrap(),
             ),
             (
-                VersionRequirement::try_from(">1").unwrap(),
-                VersionRequirement::try_from(">2").unwrap(),
-                VersionRequirement::try_from(">2").unwrap(),
+                VersionRequirement::try_from(">>1").unwrap(),
+                VersionRequirement::try_from(">>2").unwrap(),
+                VersionRequirement::try_from(">>2").unwrap(),
             ),
             (
-                VersionRequirement::try_from(">2").unwrap(),
-                VersionRequirement::try_from(">1").unwrap(),
-                VersionRequirement::try_from(">2").unwrap(),
+                VersionRequirement::try_from(">>2").unwrap(),
+                VersionRequirement::try_from(">>1").unwrap(),
+                VersionRequirement::try_from(">>2").unwrap(),
             ),
             (
-                VersionRequirement::try_from(">1").unwrap(),
+                VersionRequirement::try_from(">>1").unwrap(),
                 VersionRequirement::try_from("<=2").unwrap(),
                 VersionRequirement {
                     lower_bond: Some((PkgVersion::try_from("1").unwrap(), false)),
@@ -242,8 +239,8 @@ mod test {
     #[test]
     fn merge_ver_fail() {
         let tests = vec![(
-            VersionRequirement::try_from(">1").unwrap(),
-            VersionRequirement::try_from("<1").unwrap(),
+            VersionRequirement::try_from(">>1").unwrap(),
+            VersionRequirement::try_from("<<1").unwrap(),
         )];
 
         for t in tests {
