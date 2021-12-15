@@ -3,8 +3,6 @@ pub use blueprint::{Blueprints, PkgRequest};
 
 use anyhow::{bail, Result};
 use clap::Parser;
-use lazy_static::lazy_static;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 
@@ -17,13 +15,9 @@ pub struct Config {
 
 impl Config {
     pub fn check_sanity(&self) -> Result<()> {
-        lazy_static! {
-            static ref KEY_FILENAME: Regex = Regex::new("^[a-zA-Z0-9.]+$").unwrap();
-        }
-
         for (name, repo) in &self.repo {
             for key_filename in &repo.keys {
-                if !KEY_FILENAME.is_match(key_filename) {
+                if key_filename.contains(|c| !key_filename_char(c)) {
                     bail!(
                         "Invalid character in public key name {} for repo {}",
                         name,
@@ -34,6 +28,10 @@ impl Config {
         }
         Ok(())
     }
+}
+
+fn key_filename_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.'
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
