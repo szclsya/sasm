@@ -1,15 +1,13 @@
-use super::PkgInfo;
+use super::{PkgInfo, search_rk_fast};
 use crate::{db::LocalDb, debug, executor::MachineStatus, pool};
 
 use anyhow::{Context, Result};
 use console::style;
 use flate2::read::GzDecoder;
-use rayon::prelude::*;
-use regex::Regex;
 use std::{
     collections::HashMap,
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Read},
     path::PathBuf,
 };
 
@@ -62,50 +60,44 @@ pub fn show_provide_file(
     Ok(())
 }
 
+/// Re-construct a package/path pair from position of interest
+fn extract_content_line_from_poi(buffer: &[u8], pos: usize) -> Option<(&[u8], &[u8])> {
+    let path_end = &buffer[pos..].iter().position(|c| c == &b' ')?;
+    let name_start = &buffer[pos..].iter().position(|c| c != &b' ')?;
+    let name_end = &buffer[*path_end..].iter().position(|c| c == &b'\n')?;
+    let path_start = &buffer[..pos].iter().rposition(|c| c == &b'\n')?;
+
+    Some((&buffer[*name_start..*name_end], &buffer[*path_start..*path_end]))
+}
+
 // Given a filename or path, find package names that provide such file
-pub fn package_name_provide_file(
-    dbs: &[PathBuf],
-    filename: &str,
-) -> Result<HashMap<String, Vec<String>>> {
-    // Construct regex based on deb Contents file format
-    let regex = if let Some(path) = filename.strip_prefix('/') {
-        // Absolute path, strip "/" to match Contents file format
-        Regex::new(&format!(
-            r"^(?P<path>{}) +[a-zA-Z0-9]+/(?P<pkgname>[-a-zA-Z0-9.+]+)$",
-            path
-        ))?
-    } else {
-        // Relative path, allow segments before filename
-        Regex::new(&format!(
-            r"^(?P<path>.*{}) +[a-zA-Z0-9]+/(?P<pkgname>[-a-zA-Z0-9.+]+)$",
-            filename
-        ))?
-    };
+pub fn package_name_provide_file(dbs: &[PathBuf], filename: &str) -> Result<HashMap<String, Vec<String>>> {
+    // Construct search keyword based on deb Contents file format
+    let keyword = format!("{} ", filename);
 
     let mut res: HashMap<String, Vec<String>> = HashMap::new();
+    let mut buffer = Vec::new();
+    buffer.reserve(1024 * 128);
     for db in dbs {
         let f = File::open(db)?;
         let f = GzDecoder::new(f);
-        let bufreader = BufReader::new(f);
-        let pkgs: Vec<(String, String)> = bufreader
-            .lines()
-            .par_bridge()
-            .filter_map(|line| match line {
-                Ok(l) => {
-                    if regex.is_match(&l) {
-                        let captures = regex.captures(&l).unwrap();
-                        let pkgname = captures.name("pkgname").unwrap().as_str().to_owned();
-                        let mut path = captures.name("path").unwrap().as_str().to_owned();
-                        // Add `/` to the front of path, because Contents file uses relative path
-                        path.insert(0, '/');
-                        Some((pkgname, path))
-                    } else {
-                        None
-                    }
+        let mut bufreader = BufReader::new(f);
+        let mut pkgs: Vec<(String, String)> = Vec::new();
+        while bufreader.read(&mut buffer[..(1024 * 128)])? > 0 {
+            let mut start = 0usize;
+            bufreader.read_until(b'\n', &mut buffer)?;
+            while let Some(pos) = search_rk_fast(&buffer[start..], keyword.as_bytes()) {
+                // lazily parse this line
+                if let Some(result) = extract_content_line_from_poi(&buffer, pos) {
+                    let pkgname = std::str::from_utf8(result.0)?;
+                    let mut path = std::str::from_utf8(result.1)?.to_string();
+                    path.insert(0, '/');
+                    pkgs.push((pkgname.to_string(), path));
                 }
-                Err(_) => None,
-            })
-            .collect();
+                start += pos + 1;
+            }
+            buffer.clear();
+        }
 
         for (pkgname, path) in pkgs {
             if let Some(list) = res.get_mut(&pkgname) {

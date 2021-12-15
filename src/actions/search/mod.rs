@@ -1,6 +1,9 @@
 mod pkg;
 mod provide;
+mod matcher;
+
 pub use pkg::search_deb_db;
+pub use matcher::search_rk_fast;
 pub use provide::show_provide_file;
 
 use crate::{
