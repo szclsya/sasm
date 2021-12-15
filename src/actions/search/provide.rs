@@ -68,9 +68,8 @@ pub fn package_name_provide_file(
     filename: &str,
 ) -> Result<HashMap<String, Vec<String>>> {
     // Construct regex based on deb Contents file format
-    let regex = if filename.starts_with('/') {
+    let regex = if let Some(path) = filename.strip_prefix('/') {
         // Absolute path, strip "/" to match Contents file format
-        let path = filename.strip_prefix('/').unwrap();
         Regex::new(&format!(
             r"^(?P<path>{}) +[a-zA-Z0-9]+/(?P<pkgname>[-a-zA-Z0-9.+]+)$",
             path
