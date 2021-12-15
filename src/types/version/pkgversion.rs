@@ -6,7 +6,6 @@ use nom::{
     sequence::*,
     IResult, InputTakeAtPosition,
 };
-use regex::Regex;
 use serde::{Deserialize, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::convert::TryFrom;
@@ -239,8 +238,7 @@ fn parse_version_string(s: &str) -> Result<Vec<(String, Option<u128>)>> {
         bail!("Empty version string")
     }
 
-    let check_first_digit = Regex::new("^[0-9]").unwrap();
-    if !check_first_digit.is_match(s) {
+    if !s.starts_with(|c: char| c.is_ascii_digit()) {
         bail!("Version string must start with digit")
     }
 
