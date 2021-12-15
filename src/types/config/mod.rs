@@ -47,7 +47,12 @@ pub struct RepoConfig {
 #[derive(Parser)]
 #[clap(about, version, author)]
 pub struct Opts {
-    #[clap(display_order = 1, long, default_value = "/", help = "Root directory for operation")]
+    #[clap(
+        display_order = 1,
+        long,
+        default_value = "/",
+        help = "Root directory for operation"
+    )]
     pub root: PathBuf,
     #[clap(
         display_order = 2,
@@ -56,7 +61,12 @@ pub struct Opts {
         help = "Position of the config folder"
     )]
     pub config_root: PathBuf,
-    #[clap(display_order = 3, short, long, help = "Print additional debug information")]
+    #[clap(
+        display_order = 3,
+        short,
+        long,
+        help = "Print additional debug information"
+    )]
     pub verbose: bool,
     #[clap(subcommand)]
     pub subcmd: SubCmd,

@@ -1088,6 +1088,7 @@ dependencies = [
  "sequoia-openpgp",
  "serde",
  "sha2",
+ "strsim",
  "tar",
  "tokio",
  "toml",

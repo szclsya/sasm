@@ -45,9 +45,9 @@ pub fn show_provide_file(
             // This is safe unless the pool is broken
             let latest_pkg_id = pkgs.get(0).unwrap();
             let latest_pkg = pool.get_pkg_by_id(*latest_pkg_id).unwrap();
-            let provide_paths = paths.into_iter().map(|path| {
-                format!("Provides: {}", style(path).bold())
-            })
+            let provide_paths = paths
+                .into_iter()
+                .map(|path| format!("Provides: {}", style(path).bold()))
                 .collect();
             // Prepare a PkgInfo
             let pkginfo = PkgInfo {
@@ -63,7 +63,10 @@ pub fn show_provide_file(
 }
 
 // Given a filename or path, find package names that provide such file
-pub fn package_name_provide_file(dbs: &[PathBuf], filename: &str) -> Result<HashMap<String, Vec<String>>> {
+pub fn package_name_provide_file(
+    dbs: &[PathBuf],
+    filename: &str,
+) -> Result<HashMap<String, Vec<String>>> {
     // Construct regex based on deb Contents file format
     let regex = if filename.starts_with('/') {
         // Absolute path, strip "/" to match Contents file format
@@ -103,7 +106,7 @@ pub fn package_name_provide_file(dbs: &[PathBuf], filename: &str) -> Result<Hash
                 }
                 Err(_) => None,
             })
-        .collect();
+            .collect();
 
         for (pkgname, path) in pkgs {
             if let Some(list) = res.get_mut(&pkgname) {

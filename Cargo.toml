@@ -43,6 +43,8 @@ flate2 = "1"
 nix = "0.23"
 # Parallel searching
 rayon = "1"
+# Search result optimization
+strsim = "0.10"
 # Read deb files
 ar = "0.9"
 tar = "0.4"
