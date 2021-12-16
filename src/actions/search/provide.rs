@@ -10,6 +10,7 @@ use std::{
     io::{BufRead, BufReader, Read},
     path::PathBuf,
 };
+const READ_BUFFER_SIZE: usize = 1024 * 128;
 
 pub fn show_provide_file(
     local_db: &LocalDb,
@@ -76,14 +77,19 @@ pub fn package_name_provide_file(dbs: &[PathBuf], filename: &str) -> Result<Hash
     let keyword = format!("{} ", filename);
 
     let mut res: HashMap<String, Vec<String>> = HashMap::new();
-    let mut buffer = Vec::new();
-    buffer.reserve(1024 * 128);
+    let mut buffer = vec![0u8; READ_BUFFER_SIZE];
     for db in dbs {
         let f = File::open(db)?;
         let f = GzDecoder::new(f);
         let mut bufreader = BufReader::new(f);
         let mut pkgs: Vec<(String, String)> = Vec::new();
-        while bufreader.read(&mut buffer[..(1024 * 128)])? > 0 {
+        loop {
+            let bytes_read = bufreader.read(&mut buffer[..READ_BUFFER_SIZE])?;
+            if bytes_read < 1 {
+                break;
+            }
+            // shorten the vector and move back the internal cursor
+            buffer.truncate(bytes_read);
             let mut start = 0usize;
             bufreader.read_until(b'\n', &mut buffer)?;
             while let Some(pos) = search_rk_fast(&buffer[start..], keyword.as_bytes()) {
@@ -96,7 +102,7 @@ pub fn package_name_provide_file(dbs: &[PathBuf], filename: &str) -> Result<Hash
                 }
                 start += pos + 1;
             }
-            buffer.clear();
+            buffer.resize(READ_BUFFER_SIZE, 0);
         }
 
         for (pkgname, path) in pkgs {
