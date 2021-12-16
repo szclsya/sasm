@@ -63,12 +63,12 @@ pub fn show_provide_file(
 
 /// Re-construct a package/path pair from position of interest
 fn extract_content_line_from_poi(buffer: &[u8], pos: usize) -> Option<(&[u8], &[u8])> {
-    let path_end = &buffer[pos..].iter().position(|c| c == &b' ')?;
-    let name_start = &buffer[pos..].iter().position(|c| c != &b' ')?;
-    let name_end = &buffer[*path_end..].iter().position(|c| c == &b'\n')?;
+    let path_end = &buffer[pos..].iter().position(|c| c == &b' ')? + pos;
+    let name_start = &buffer[pos..].iter().position(|c| c != &b' ')? + pos;
+    let name_end = &buffer[path_end..].iter().position(|c| c == &b'\n')? + path_end;
     let path_start = &buffer[..pos].iter().rposition(|c| c == &b'\n')?;
 
-    Some((&buffer[*name_start..*name_end], &buffer[*path_start..*path_end]))
+    Some((&buffer[name_start..name_end], &buffer[*path_start..path_end]))
 }
 
 // Given a filename or path, find package names that provide such file
