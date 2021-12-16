@@ -63,9 +63,9 @@ pub fn show_provide_file(
 
 /// Re-construct a package/path pair from position of interest
 fn extract_content_line_from_poi(buffer: &[u8], pos: usize) -> Option<(&[u8], &[u8])> {
-    let path_end = &buffer[pos..].iter().position(|c| c == &b' ')? + pos;
-    let name_start = &buffer[path_end..].iter().position(|c| c == &b'/')? + path_end;
-    let name_end = &buffer[name_start..].iter().position(|c| c == &b'\n')? + name_start;
+    let name_end = &buffer[pos..].iter().position(|c| c == &b'\n')? + pos;
+    let path_end = &buffer[pos..name_end].iter().position(|c| c == &b' ')? + pos;
+    let name_start = &buffer[path_end..name_end].iter().position(|c| c == &b'/')? + path_end;
     let path_start = &buffer[..pos].iter().rposition(|c| c == &b'\n')? + 1;
 
     Some((&buffer[(name_start + 1)..name_end], &buffer[path_start..path_end]))
