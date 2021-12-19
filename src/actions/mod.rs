@@ -134,7 +134,12 @@ pub async fn fullfill_command(
         }
         SubCmd::Provide(provide) => {
             let machine_status = MachineStatus::new(&opts.root)?;
-            search::show_provide_file(&localdb, &provide.file, &machine_status)?;
+            search::show_provide_file(
+                &localdb,
+                &machine_status,
+                &provide.file,
+                provide.first_only,
+            )?;
             Ok(())
         }
         SubCmd::Clean(cleanconfig) => {

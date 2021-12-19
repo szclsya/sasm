@@ -2,11 +2,11 @@ use crate::types::VersionRequirement;
 
 use anyhow::{format_err, Result};
 use nom::{
-    bytes::complete::{take_while, take_while1, take, tag},
-    character::{complete::alphanumeric1, complete::char, is_alphanumeric},
-    combinator::{opt, recognize, eof},
-    sequence::{delimited, separated_pair, pair, preceded},
     branch::alt,
+    bytes::complete::{tag, take, take_while, take_while1},
+    character::{complete::alphanumeric1, complete::char, is_alphanumeric},
+    combinator::{eof, opt, recognize},
+    sequence::{delimited, pair, preceded, separated_pair},
     IResult,
 };
 

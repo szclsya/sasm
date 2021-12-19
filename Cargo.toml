@@ -41,14 +41,12 @@ async-compression = { version = "0.3", features = ["tokio", "gzip", "xz"] }
 flate2 = "1"
 # Actions modifier
 nix = "0.23"
-# Parallel searching
+# Parallel db generation
 rayon = "1"
-# Search result optimization
-strsim = "0.10"
 # Read deb files
 ar = "0.9"
 tar = "0.4"
 xz2 = "0.1"
-
-[profile.release]
-lto = true
+# Search stuff
+strsim = "0.10"
+memchr = "2"

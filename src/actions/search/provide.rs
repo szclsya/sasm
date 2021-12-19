@@ -4,19 +4,21 @@ use crate::{db::LocalDb, debug, executor::MachineStatus, pool};
 use anyhow::{Context, Result};
 use console::style;
 use flate2::read::GzDecoder;
-use rayon::prelude::*;
 use regex::Regex;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Read},
     path::PathBuf,
 };
 
+const READ_BUFFER_SIZE: usize = 1000;
+
 pub fn show_provide_file(
     local_db: &LocalDb,
-    filename: &str,
     machine_status: &MachineStatus,
+    filename: &str,
+    first_only: bool,
 ) -> Result<()> {
     let content_dbs: Vec<PathBuf> = local_db
         .get_all_contents_db()
@@ -27,7 +29,11 @@ pub fn show_provide_file(
 
     // Find a list of package names that provide the designated file
     debug!("Searching Contents databases...");
-    let mut pkgnames = Vec::from_iter(package_name_provide_file(&content_dbs, filename)?);
+    let mut pkgnames = Vec::from_iter(package_name_provide_file(
+        &content_dbs,
+        filename,
+        first_only,
+    )?);
     // Sort based on number of matched paths
     pkgnames.sort_by_key(|(_, paths)| paths.len());
     pkgnames.reverse();
@@ -66,55 +72,85 @@ pub fn show_provide_file(
 pub fn package_name_provide_file(
     dbs: &[PathBuf],
     filename: &str,
-) -> Result<HashMap<String, Vec<String>>> {
-    // Construct regex based on deb Contents file format
-    let regex = if let Some(path) = filename.strip_prefix('/') {
-        // Absolute path, strip "/" to match Contents file format
-        Regex::new(&format!(
-            r"^(?P<path>{}) +[a-zA-Z0-9]+/(?P<pkgname>[-a-zA-Z0-9.+]+)$",
-            path
-        ))?
-    } else {
-        // Relative path, allow segments before filename
-        Regex::new(&format!(
-            r"^(?P<path>.*{}) +[a-zA-Z0-9]+/(?P<pkgname>[-a-zA-Z0-9.+]+)$",
-            filename
-        ))?
-    };
+    first_only: bool,
+) -> Result<HashMap<String, HashSet<String>>> {
+    let regex =
+        Regex::new(r"^(?P<path>[^\s]+) +[a-zA-Z0-9]+/(?P<pkgname>[-a-zA-Z0-9.+]+)$").unwrap();
 
-    let mut res: HashMap<String, Vec<String>> = HashMap::new();
+    let mut res = HashMap::new();
     for db in dbs {
         let f = File::open(db)?;
         let f = GzDecoder::new(f);
-        let bufreader = BufReader::new(f);
-        let pkgs: Vec<(String, String)> = bufreader
-            .lines()
-            .par_bridge()
-            .filter_map(|line| match line {
-                Ok(l) => {
-                    if regex.is_match(&l) {
-                        let captures = regex.captures(&l).unwrap();
-                        let pkgname = captures.name("pkgname").unwrap().as_str().to_owned();
-                        let mut path = captures.name("path").unwrap().as_str().to_owned();
-                        // Add `/` to the front of path, because Contents file uses relative path
-                        path.insert(0, '/');
-                        Some((pkgname, path))
-                    } else {
-                        None
-                    }
-                }
-                Err(_) => None,
-            })
-            .collect();
+        let mut bufreader = BufReader::new(f);
 
-        for (pkgname, path) in pkgs {
-            if let Some(list) = res.get_mut(&pkgname) {
-                list.push(path);
-            } else {
-                res.insert(pkgname, vec![path]);
+        let buffer_size = std::env::var("BUFFER_SIZE")
+            .map(|size| size.parse().unwrap())
+            .unwrap_or(READ_BUFFER_SIZE);
+        let mut buffer = vec![0u8; buffer_size];
+        loop {
+            let len = bufreader.read(&mut buffer)?;
+            if len == 0 {
+                // EOL reached
+                break;
+            }
+            bufreader.read_until(b'\n', &mut buffer)?;
+            // Stop searching if we just want one result
+            if scan_buffer(&buffer, &mut res, filename, &regex, first_only)? {
+                break;
             }
         }
     }
 
     Ok(res)
+}
+
+fn scan_buffer(
+    buffer: &[u8],
+    results: &mut HashMap<String, HashSet<String>>,
+    filename: &str,
+    regex: &Regex,
+    first_only: bool,
+) -> Result<bool> {
+    let substring = format!("{} ", filename);
+    for occurence in memchr::memmem::find_iter(buffer, &substring) {
+        // Find line start
+        let mut start = occurence;
+        loop {
+            if start == 0 || buffer[start - 1] == b'\n' {
+                break;
+            }
+            start -= 1;
+        }
+        // Find line end
+        let mut end = occurence;
+        loop {
+            if end == buffer.len() || buffer[end] == b'\n' {
+                break;
+            }
+            end += 1;
+        }
+
+        let slice = &buffer[start..end];
+        let line = std::str::from_utf8(slice).unwrap();
+
+        let captures = regex.captures(line).unwrap();
+        let pkgname = captures.name("pkgname").unwrap().as_str().to_owned();
+        let mut path = captures.name("path").unwrap().as_str().to_owned();
+        // Add `/` to the front of path, because Contents file uses relative path
+        path.insert(0, '/');
+
+        if let Some(list) = results.get_mut(&pkgname) {
+            list.insert(path);
+        } else {
+            let mut set = HashSet::new();
+            set.insert(path);
+            results.insert(pkgname, set);
+        }
+
+        if first_only {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
 }

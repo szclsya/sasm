@@ -73,7 +73,7 @@ impl<'a> PkgInfo<'a> {
 
         // Write additional info, if applicable
         for line in &self.additional_info {
-            crate::WRITER.writeln("", &line)?;
+            crate::WRITER.writeln("", line)?;
         }
 
         Ok(())
