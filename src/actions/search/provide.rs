@@ -83,10 +83,7 @@ pub fn package_name_provide_file(
         let f = GzDecoder::new(f);
         let mut bufreader = BufReader::new(f);
 
-        let buffer_size = std::env::var("BUFFER_SIZE")
-            .map(|size| size.parse().unwrap())
-            .unwrap_or(READ_BUFFER_SIZE);
-        let mut buffer = vec![0u8; buffer_size];
+        let mut buffer = vec![0u8; READ_BUFFER_SIZE];
         loop {
             let len = bufreader.read(&mut buffer)?;
             if len == 0 {
@@ -131,7 +128,7 @@ fn scan_buffer(
         }
 
         let slice = &buffer[start..end];
-        let line = std::str::from_utf8(slice).unwrap();
+        let line = std::str::from_utf8(slice)?;
 
         let captures = regex.captures(line).unwrap();
         let pkgname = captures.name("pkgname").unwrap().as_str().to_owned();
