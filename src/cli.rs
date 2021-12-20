@@ -53,9 +53,12 @@ impl Writer {
             self.term
                 .write_str(&line_msg)
                 .context("Failed to write message to console")?;
-            // Remove the already written part
-            let line_msg_len = line_msg.len();
-            msg.replace_range(..line_msg_len, "");
+            // Remove the already written part, strip ANSI since it can mess everything up
+            let mut new_msg = console::strip_ansi_codes(&msg).to_string();
+            let line_msg_len = console::measure_text_width(&line_msg);
+            new_msg.replace_range(..line_msg_len, "");
+            // Swap
+            std::mem::swap(&mut msg, &mut new_msg);
         }
         self.term.write_line("")?;
         Ok(())
