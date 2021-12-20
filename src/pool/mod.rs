@@ -8,6 +8,7 @@ use crate::{
 };
 
 use anyhow::{bail, format_err, Result};
+use console::style;
 use varisat::{lit::Lit, CnfFormula, ExtendFormula};
 
 /// The basic PkgPool interface
@@ -38,7 +39,11 @@ pub trait PkgPool: BasicPkgPool {
             let available = match self.get_pkgs_by_name(&dep.0) {
                 Some(d) => d,
                 None => {
-                    bail!("Warning: Cannot find dependency {} for {}", dep.0, pkg.name);
+                    bail!(
+                        "Cannot find dependency {} for {}",
+                        style(&dep.0).bold(),
+                        style(&pkg.name).bold()
+                    );
                 }
             };
             for dep_pkgid in available {
@@ -49,9 +54,9 @@ pub trait PkgPool: BasicPkgPool {
             }
             if deps_id.is_empty() {
                 bail!(
-                    "Warning: dependency {} can't be fulfilled for pkg {}",
-                    &dep.0,
-                    pkg.name
+                    "Cannot fulfill dependency {} for {}",
+                    style(&dep.0).bold(),
+                    style(&pkg.name).bold()
                 );
             } else {
                 res.push(deps_id);
@@ -113,10 +118,7 @@ pub trait PkgPool: BasicPkgPool {
                     None => pkgs.iter().copied().collect(),
                 },
                 None => {
-                    bail!(
-                        "Cannot fulfill dependency {} because no package found with this name",
-                        dep.0
-                    );
+                    bail!("No package exists for dependency {}", style(&dep.0).bold());
                 }
             };
 
@@ -133,8 +135,8 @@ pub trait PkgPool: BasicPkgPool {
                 res.push(clause);
             } else {
                 bail!(
-                    "Cannot fulfill dependency {} because no applicable version found",
-                    dep.0
+                    "No applicable version for dependency {}",
+                    style(&dep.0).bold()
                 );
             }
         }
@@ -217,7 +219,11 @@ pub trait PkgPool: BasicPkgPool {
                         }
                     }
                     Err(e) => {
-                        warn!("Ignoring package {} due to: {}", meta.name, e);
+                        warn!(
+                            "Ignoring package {}. Reason: {}",
+                            style(&meta.name).bold(),
+                            e
+                        );
                     }
                 }
             }
