@@ -10,6 +10,7 @@ use std::{
     fs::File,
     io::{BufRead, BufReader, Read},
     path::PathBuf,
+    cmp::Reverse,
 };
 
 const READ_BUFFER_SIZE: usize = 1000;
@@ -35,8 +36,7 @@ pub fn show_provide_file(
         first_only,
     )?);
     // Sort based on number of matched paths
-    pkgnames.sort_by_key(|(_, paths)| paths.len());
-    pkgnames.reverse();
+    pkgnames.sort_by_key(|(_, paths)| Reverse(paths.len()));
 
     // Create a Solver so we can get more info    let mut solver = Solver::new();
     debug!("Constructing package pool...");
