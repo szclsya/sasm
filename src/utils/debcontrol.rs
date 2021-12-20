@@ -3,7 +3,7 @@ use crate::types::VersionRequirement;
 use anyhow::{format_err, Result};
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take, take_while, take_while1},
+    bytes::complete::{tag, take_while, take_while1},
     character::{complete::alphanumeric1, complete::char, is_alphanumeric},
     combinator::{eof, opt, recognize},
     sequence::{delimited, pair, preceded, separated_pair},
@@ -19,7 +19,7 @@ fn parse_package_name(s: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 fn parse_version_op(s: &[u8]) -> IResult<&[u8], &[u8]> {
-    alt((tag(b"<<"), tag(b"<="), take(b'='), tag(b">="), tag(b">>")))(s)
+    alt((tag(b"<<"), tag(b"<="), tag(b"="), tag(b">="), tag(b">>")))(s)
 }
 
 fn parse_version(s: &[u8]) -> IResult<&[u8], &[u8]> {
@@ -29,7 +29,7 @@ fn parse_version(s: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 fn parse_version_expr(s: &[u8]) -> IResult<&[u8], &[u8]> {
-    recognize(separated_pair(parse_version_op, char(' '), parse_version))(s)
+    recognize(separated_pair(parse_version_op, opt(tag(b" ")), parse_version))(s)
 }
 
 fn parse_relation_suffix(s: &[u8]) -> IResult<&[u8], &[u8]> {
