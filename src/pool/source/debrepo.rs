@@ -1,5 +1,6 @@
 /// Utilities to deal with deb package db
 use crate::{
+    warn,
     pool::PkgPool,
     types::{Checksum, PkgMeta, PkgSource, PkgVersion},
     utils::debcontrol::parse_pkg_list,
@@ -53,7 +54,12 @@ pub fn import(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
     // Parse fields in parallel
     let pkgmetas: Vec<PkgMeta> = pkgs
         .into_par_iter()
-        .filter_map(|fields| fields_to_packagemeta(fields, baseurl).ok())
+        .filter_map(|fields| {
+            match fields_to_packagemeta(fields, baseurl) {
+                Ok(res) => Some(res),
+                Err(e) => { warn!("Invalid pkg: {}", e); None }
+            }
+        })
         .collect();
     // Import results into pool
     for pkgmeta in pkgmetas {
@@ -65,26 +71,28 @@ pub fn import(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
 
 #[inline]
 fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Result<PkgMeta> {
+    // Get name first, for error reporting
+    let name = f
+        .remove("Package")
+        .ok_or_else(|| format_err!("Package doesn't have name"))?;
     // Generate real url
     let mut path = baseurl.to_string();
     path.push('/');
     path.push_str(
         f.get("Filename")
-            .ok_or_else(|| format_err!("Package without filename"))?,
+            .ok_or_else(|| format_err!("Package {} doesn't have field filename", name))?,
     );
     Ok(PkgMeta {
-        name: f
-            .remove("Package")
-            .ok_or_else(|| format_err!("Package without name"))?,
+        name: name.clone(),
         section: f
             .remove("Section")
-            .ok_or_else(|| format_err!("Package without Section"))?,
+            .ok_or_else(|| format_err!("Package {} doesn't have field Section", name))?,
         description: f
             .remove("Description")
-            .ok_or_else(|| format_err!("Package without Description"))?,
+            .ok_or_else(|| format_err!("Package {} doesn't have field Description", name))?,
         version: PkgVersion::try_from(
             f.get("Version")
-                .ok_or_else(|| format_err!("Package without Version"))?
+                .ok_or_else(|| format_err!("Package {} doesn't have field Version", name))?
                 .as_str(),
         )?,
         depends: parse_pkg_list(f.get("Depends").unwrap_or(&String::new()))?,
@@ -92,7 +100,7 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
         conflicts: parse_pkg_list(f.get("Conflicts").unwrap_or(&String::new()))?,
         install_size: f
             .remove("Installed-Size")
-            .ok_or_else(|| format_err!("Package without Installed-Size"))?
+            .ok_or_else(|| format_err!("Package {} doesn't have field Installed-Size", name))?
             .as_str()
             .parse()?,
         recommends: match f.get("Recommends") {
@@ -106,7 +114,7 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
         source: PkgSource::Http((
             path,
             f.remove("Size")
-                .ok_or_else(|| format_err!("Package without Size"))?
+                .ok_or_else(|| format_err!("Package {} doesn't have field Size", name))?
                 .as_str()
                 .parse()?,
             {
@@ -115,7 +123,7 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
                 } else if let Some(hex) = f.get("SHA512") {
                     Checksum::from_sha512_str(hex)?
                 } else {
-                    bail!("Package without checksum (SHA256 or SHA512)")
+                    bail!("Package {} doesn't have field checksum (SHA256 or SHA512)", name)
                 }
             },
         )),
