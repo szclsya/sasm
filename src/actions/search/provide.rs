@@ -6,11 +6,11 @@ use console::style;
 use flate2::read::GzDecoder;
 use regex::Regex;
 use std::{
+    cmp::Reverse,
     collections::{HashMap, HashSet},
     fs::File,
     io::{BufRead, BufReader, Read},
     path::PathBuf,
-    cmp::Reverse,
 };
 
 const READ_BUFFER_SIZE: usize = 1000;

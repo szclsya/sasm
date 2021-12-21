@@ -1,9 +1,9 @@
 /// Utilities to deal with deb package db
 use crate::{
-    warn,
     pool::PkgPool,
     types::{Checksum, PkgMeta, PkgSource, PkgVersion},
     utils::debcontrol::parse_pkg_list,
+    warn,
 };
 use anyhow::{bail, format_err, Result};
 use debcontrol::{BufParse, Streaming};
@@ -54,10 +54,11 @@ pub fn import(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
     // Parse fields in parallel
     let pkgmetas: Vec<PkgMeta> = pkgs
         .into_par_iter()
-        .filter_map(|fields| {
-            match fields_to_packagemeta(fields, baseurl) {
-                Ok(res) => Some(res),
-                Err(e) => { warn!("Invalid pkg: {}", e); None }
+        .filter_map(|fields| match fields_to_packagemeta(fields, baseurl) {
+            Ok(res) => Some(res),
+            Err(e) => {
+                warn!("Invalid entry in package database: {}", e);
+                None
             }
         })
         .collect();
@@ -123,7 +124,10 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
                 } else if let Some(hex) = f.get("SHA512") {
                     Checksum::from_sha512_str(hex)?
                 } else {
-                    bail!("Package {} doesn't have field checksum (SHA256 or SHA512)", name)
+                    bail!(
+                        "Package {} doesn't have field checksum (SHA256 or SHA512)",
+                        name
+                    )
                 }
             },
         )),

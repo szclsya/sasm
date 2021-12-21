@@ -2,9 +2,10 @@ mod parse;
 mod variables;
 use parse::{read_blueprint_from_file, BlueprintLine};
 
-use crate::types::VersionRequirement;
+use crate::{error, info, msg, types::VersionRequirement};
 
 use anyhow::{bail, Context, Result};
+use console::style;
 use std::{fs::OpenOptions, os::unix::fs::FileExt, path::PathBuf};
 
 #[derive(Debug, PartialEq, Eq, Default, Clone)]
@@ -44,7 +45,7 @@ pub struct Blueprints {
     // If we need to export the blueprint back to disk
     user_blueprint_modified: bool,
     user: Vec<BlueprintLine>,
-    vendor: Vec<Vec<BlueprintLine>>,
+    vendor: Vec<(PathBuf, Vec<BlueprintLine>)>,
 }
 
 impl Blueprints {
@@ -52,7 +53,7 @@ impl Blueprints {
         let user_blueprint = read_blueprint_from_file(&user)?;
         let mut vendor_blueprints = Vec::with_capacity(vendor.len());
         for path in vendor {
-            vendor_blueprints.push(read_blueprint_from_file(path)?);
+            vendor_blueprints.push((path.clone(), read_blueprint_from_file(path)?));
         }
 
         Ok(Blueprints {
@@ -75,7 +76,7 @@ impl Blueprints {
             .collect();
 
         // Then add vendor blueprint
-        for vendor in &self.vendor {
+        for (_, vendor) in &self.vendor {
             for line in vendor {
                 if let BlueprintLine::PkgRequest(req) = line {
                     res.push(req);
@@ -113,7 +114,26 @@ impl Blueprints {
 
     pub fn remove(&mut self, pkgname: &str, remove_recomms: bool) -> Result<()> {
         if !self.user_list_contains(pkgname) {
-            bail!("Package with name {} not found in user blueprint", pkgname)
+            if let Some(path) = self.vendor_list_contains(pkgname) {
+                error!(
+                    "Package {} not found in user blueprint",
+                    style(pkgname).bold()
+                );
+                info!(
+                    "However, it exists in vendor blueprint at {}",
+                    style(path.display()).bold()
+                );
+                msg!(
+                    "",
+                    "You cannot remove packages in vendor blueprints via Omakase CLI for safety reason. But if you really wish to remove this package, edit the file above directly."
+                );
+            } else {
+                error!(
+                    "Package {} not found in all blueprints",
+                    style(pkgname).bold()
+                );
+            }
+            bail!("Cannot remove {} from user blueprint", pkgname)
         } else {
             self.user.retain(|line| match line {
                 BlueprintLine::PkgRequest(req) => req.name != pkgname,
@@ -179,5 +199,18 @@ impl Blueprints {
             }
         }
         false
+    }
+
+    fn vendor_list_contains(&self, pkgname: &str) -> Option<PathBuf> {
+        for (path, vendor) in &self.vendor {
+            for line in vendor {
+                if let BlueprintLine::PkgRequest(req) = line {
+                    if req.name == pkgname {
+                        return Some(path.clone());
+                    }
+                }
+            }
+        }
+        None
     }
 }

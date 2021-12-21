@@ -29,7 +29,11 @@ fn parse_version(s: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 fn parse_version_expr(s: &[u8]) -> IResult<&[u8], &[u8]> {
-    recognize(separated_pair(parse_version_op, opt(tag(b" ")), parse_version))(s)
+    recognize(separated_pair(
+        parse_version_op,
+        opt(tag(b" ")),
+        parse_version,
+    ))(s)
 }
 
 fn parse_relation_suffix(s: &[u8]) -> IResult<&[u8], &[u8]> {
