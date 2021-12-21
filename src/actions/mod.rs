@@ -74,7 +74,6 @@ pub async fn fullfill_command(
             // Execute blueprint
             execute(&localdb, &downloader, blueprints, opts, config, req).await?;
 
-            lock::unlock(&opts.root)?;
             Ok(())
         }
         SubCmd::Remove(rm) => {
@@ -95,7 +94,6 @@ pub async fn fullfill_command(
             // Apply stuff
             execute(&localdb, &downloader, blueprints, opts, config, req).await?;
 
-            lock::unlock(&opts.root)?;
             Ok(())
         }
         SubCmd::Refresh => {
@@ -106,8 +104,6 @@ pub async fn fullfill_command(
             info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             success!("Refresh complete");
-
-            lock::unlock(&opts.root)?;
             Ok(())
         }
         SubCmd::Execute => {
@@ -124,7 +120,6 @@ pub async fn fullfill_command(
 
             execute(&localdb, &downloader, blueprints, opts, config, req).await?;
 
-            lock::unlock(&opts.root)?;
             Ok(())
         }
         SubCmd::Search(search) => {
@@ -163,7 +158,6 @@ pub async fn fullfill_command(
                 std::fs::create_dir_all(&db_cache_path)?;
             }
 
-            lock::unlock(&opts.root)?;
             Ok(())
         }
     }

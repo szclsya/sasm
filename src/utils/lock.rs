@@ -1,4 +1,4 @@
-use crate::{warn, LOCK_PATH};
+use crate::{debug,LOCK_PATH};
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{fs, io::prelude::*, path::Path};
@@ -60,7 +60,7 @@ pub fn unlock(root: &Path) -> Result<()> {
     if lock_path.is_file() {
         fs::remove_file(&lock_path).context("Failed to delete lock file")?;
     } else {
-        warn!("Attempt to unlock, but lock file doesn't exist");
+        debug!("Attempt to unlock, but lock file doesn't exist");
     }
     Ok(())
 }

@@ -62,6 +62,7 @@ async fn main() {
     VERBOSE.store(opts.verbose, Ordering::Relaxed);
 
     // Run main logic
+    let mut return_code = 0;
     if let Err(err) = try_main(&opts).await {
         // Create a new line first, for visual distinction
         WRITER.writeln("", "").ok();
@@ -69,8 +70,16 @@ async fn main() {
         err.chain().skip(1).for_each(|cause| {
             due_to!("{}", cause);
         });
-        std::process::exit(1);
+
+        // Set return code
+        return_code = 1;
     }
+
+    // Clean up and exit
+    if let Err(e) = utils::lock::unlock(&opts.root) {
+        error!("{}", e);
+    }
+    std::process::exit(return_code);
 }
 
 async fn try_main(opts: &Opts) -> Result<()> {
