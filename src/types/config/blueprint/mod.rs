@@ -97,7 +97,17 @@ impl Blueprints {
         local: bool,
     ) -> Result<()> {
         if self.user_list_contains(pkgname) {
-            bail!("Package {} already exists in user blueprint", pkgname);
+            bail!(
+                "Package {} already exists in user blueprint",
+                style(pkgname).bold()
+            );
+        }
+        if let Some(path) = self.vendor_list_contains(pkgname) {
+            bail!(
+                "Package {} already exists in vendor blueprint {}",
+                style(pkgname).bold(),
+                style(path.display()).bold()
+            );
         }
 
         let version = ver_req.unwrap_or_default();
