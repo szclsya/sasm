@@ -29,7 +29,10 @@ pub enum BlueprintLine {
 
 pub fn read_blueprint_from_file(path: &Path) -> Result<Vec<BlueprintLine>> {
     // Read lines from blueprint file
-    let f = File::open(path).context(format!("Failed to open Blueprint at {}", path.display()))?;
+    let f = File::open(path).context(format!(
+        "Failed to open blueprint at {}",
+        style(path.display()).bold()
+    ))?;
     let reader = BufReader::new(f);
     let mut lines = parse_blueprint_lines(reader)
         .context(format!("Failed to parse {}", style(path.display()).bold()))?;
