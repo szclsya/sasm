@@ -39,8 +39,11 @@ pub async fn execute(
     let dbs = local_db
         .get_all_package_db()
         .context("Invalid local package database")?;
-    let local_repo = vec![opts.root.join(crate::LOCAL_REPO_PATH)];
-    let pool = pool::source::create_pool(&dbs, &local_repo)?;
+    let local_repo = opts.root.join(crate::LOCAL_REPO_PATH);
+    if !local_repo.is_dir() {
+        std::fs::create_dir_all(&local_repo)?;
+    }
+    let pool = pool::source::create_pool(&dbs, &[local_repo])?;
     let solver = Solver::from(pool);
 
     debug!("Processing user request...");
