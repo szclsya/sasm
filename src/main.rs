@@ -133,7 +133,7 @@ async fn try_main(opts: &Opts) -> Result<()> {
         }
     }
     let mut blueprint =
-        Blueprints::from_files(config_root.join("blueprint"), &vendor_blueprint_paths)?;
+        Blueprints::from_files(config_root.join("user.blueprint"), &vendor_blueprint_paths)?;
 
     // Do stuff
     warn!("Omakase is still in early alpha stage. DO NOT use me on production systems!");
