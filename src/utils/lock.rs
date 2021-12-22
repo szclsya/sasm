@@ -1,5 +1,6 @@
 use crate::{debug, LOCK_PATH};
 use anyhow::{bail, Context, Result};
+use nix::unistd::Uid;
 use serde::{Deserialize, Serialize};
 use std::{fs, io::prelude::*, path::Path};
 
@@ -35,6 +36,11 @@ pub fn check(root: &Path) -> Result<Option<u32>> {
 }
 
 pub fn lock(root: &Path) -> Result<()> {
+    // Make sure we are running as root
+    if !Uid::effective().is_root() {
+        bail!("You must be root to run this operation");
+    }
+
     let lock_path = root.join(LOCK_PATH);
     if lock_path.is_file() {
         bail!("Cannot lock because lock file already exists");
