@@ -1,0 +1,31 @@
+#!/bin/bash
+
+_help_message() {
+    printf "\
+    oma-migrate: export APT database as an Omakase blueprint
+Useage:
+    oma-migrate [OUTPUT]
+    - OUTPUT: Where to generate blueprint. If not specified, /etc/omakase/user.blueprint will be used.
+"
+}
+
+
+if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+    _help_message
+    exit 0
+fi
+
+BLUEPRINT_PATH="/etc/omakase/user.blueprint"
+if [[ -n "$1" ]]; then
+    BLUEPRINT_PATH="$1"
+fi
+
+echo "# Migrated from apt at $(date)" >> "$BLUEPRINT_PATH"
+apt-mark showmanual >> "$BLUEPRINT_PATH"
+
+if [[ $? -ne 0 ]]; then
+    echo "Failed to get packages from apt. Is this system using APT?"
+else
+    echo "All manually installed packages from apt has been added to $BLUEPRINT_PATH."
+    echo "Now, run oma execute to let Omakase take over. Please carefully examine the installation/removal list. If packages are installed or removed unexpectedly, then manually adjust the blueprint."
+fi
