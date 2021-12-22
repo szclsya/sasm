@@ -46,6 +46,7 @@ pub struct PkgStatus {
     pub name: String,
     pub version: PkgVersion,
     pub install_size: u64,
+    pub essential: bool,
     pub state: PkgState,
 }
 
@@ -63,25 +64,37 @@ impl TryFrom<HashMap<&str, String>> for PkgStatus {
         let version = f.remove("Version").ok_or_else(|| {
             format_err!("Malformed dpkg status db: no Version for package {}", name)
         })?;
+        let version = PkgVersion::try_from(version.as_str())
+            .context("Malformed dpkg status db, cannot parse version")?;
         let install_size: u64 = f
             .remove("Installed-Size")
             .ok_or_else(|| {
                 format_err!("Malformed dpkg status db: no Version for package {}", name)
             })?
             .parse()?;
-
+        let essential = if let Some(word) = f.remove("Essential") {
+            match word.as_str() {
+                "yes" => true,
+                "no" => false,
+                invalid => {
+                    bail!("Malformed dpkg status db: expect \"yes\"/\"no\" for Essential field, got {}", invalid);
+                }
+            }
+        } else {
+            false
+        };
         let status: Vec<&str> = state_line.split(' ').collect();
         if status.len() != 3 {
             bail!("Malformed dpkg status db");
         }
 
         let state = PkgState::try_from(*status.get(2).unwrap())?;
-        let version = PkgVersion::try_from(version.as_str())
-            .context("Malformed dpkg status db, cannot parse version")?;
+
         let res = PkgStatus {
             name,
             version,
             install_size,
+            essential,
             state,
         };
 

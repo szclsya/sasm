@@ -44,14 +44,19 @@ pub async fn execute_pkg_actions(
     // Purge stuff
     if !actions.purge.is_empty() {
         let mut cmd = vec!["--purge".to_string()];
-        let mut pkgnames: Vec<String> = actions.purge.into_iter().map(|(name, _)| name).collect();
+        let mut pkgnames: Vec<String> =
+            actions.purge.into_iter().map(|(name, _, _)| name).collect();
         cmd.append(&mut pkgnames);
         dpkg_run(&cmd, root).context("Purge packages failed")?;
     }
     // Remove stuff
     if !actions.remove.is_empty() {
         let mut cmd = vec!["--remove".to_string()];
-        let mut pkgnames: Vec<String> = actions.remove.into_iter().map(|(name, _)| name).collect();
+        let mut pkgnames: Vec<String> = actions
+            .remove
+            .into_iter()
+            .map(|(name, _, _)| name)
+            .collect();
         cmd.append(&mut pkgnames);
         dpkg_run(&cmd, root).context("Remove packages failed")?;
     }

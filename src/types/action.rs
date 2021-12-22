@@ -6,9 +6,9 @@ use indicatif::HumanBytes;
 pub struct PkgActions<'a> {
     pub install: Vec<(&'a PkgMeta, Option<(PkgVersion, u64)>)>,
     pub unpack: Vec<(&'a PkgMeta, Option<(PkgVersion, u64)>)>,
-    // (Name, InstallSize)
-    pub remove: Vec<(String, u64)>,
-    pub purge: Vec<(String, u64)>,
+    // (Name, InstallSize, Essential?)
+    pub remove: Vec<(String, u64, bool)>,
+    pub purge: Vec<(String, u64, bool)>,
     pub configure: Vec<String>,
 }
 
@@ -34,6 +34,22 @@ impl PkgActions<'_> {
             && self.remove.is_empty()
             && self.purge.is_empty()
             && self.configure.is_empty()
+    }
+
+    pub fn remove_essential(&self) -> bool {
+        for (_, _, essential) in &self.remove {
+            if *essential {
+                return true;
+            }
+        }
+
+        for (_, _, essential) in &self.purge {
+            if *essential {
+                return true;
+            }
+        }
+
+        false
     }
 
     pub fn show(&self) {
@@ -127,14 +143,34 @@ impl PkgActions<'_> {
             .write_chunks(&configure_prefix, &self.configure)
             .unwrap();
 
-        let removes: Vec<&str> = self.remove.iter().map(|(name, _)| name.as_str()).collect();
+        let removes: Vec<String> = self
+            .remove
+            .iter()
+            .map(|(name, _, essential)| {
+                let mut pkg = name.clone();
+                if *essential {
+                    pkg.push_str(&style("(essential)").red().to_string());
+                }
+                pkg
+            })
+            .collect();
         let remove_prefix = style("REMOVE").on_red().bold().white().to_string();
         crate::WRITER
             .write_chunks(&remove_prefix, &removes)
             .unwrap();
 
         let purge_prefix = style("PURGE").on_red().white().bold().to_string();
-        let purges: Vec<&str> = self.purge.iter().map(|(name, _)| name.as_str()).collect();
+        let purges: Vec<String> = self
+            .purge
+            .iter()
+            .map(|(name, _, essential)| {
+                let mut pkg = name.clone();
+                if *essential {
+                    pkg.push_str(&style("(essential)").red().to_string());
+                }
+                pkg
+            })
+            .collect();
         crate::WRITER.write_chunks(&purge_prefix, &purges).unwrap();
     }
 

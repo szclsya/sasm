@@ -107,9 +107,11 @@ impl MachineStatus {
                 | PkgState::TriggerPending
                 | PkgState::Unpacked => {
                     if purge_config {
-                        res.purge.push((oldpkg.0, oldpkg.1.install_size));
+                        res.purge
+                            .push((oldpkg.0, oldpkg.1.install_size, oldpkg.1.essential));
                     } else {
-                        res.remove.push((oldpkg.0, oldpkg.1.install_size));
+                        res.remove
+                            .push((oldpkg.0, oldpkg.1.install_size, oldpkg.1.essential));
                     }
                 }
                 PkgState::ConfigFiles | PkgState::NotInstalled => {

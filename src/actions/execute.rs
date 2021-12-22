@@ -4,7 +4,7 @@ use crate::{
     db::LocalDb,
     debug,
     executor::{dpkg, modifier, MachineStatus},
-    info, pool,
+    info, msg, pool,
     solver::Solver,
     success,
     types::{
@@ -15,6 +15,7 @@ use crate::{
 };
 
 use anyhow::{bail, Context, Result};
+use console::style;
 use dialoguer::Confirm;
 
 #[inline]
@@ -98,6 +99,20 @@ pub async fn execute(
         actions.show();
         crate::WRITER.writeln("", "")?;
         actions.show_size_change();
+
+        // Additional confirmation if removing essential packages
+        if actions.remove_essential() {
+            let prefix = style("DANGER").red().to_string();
+            crate::WRITER.writeln(
+                &prefix,
+                "Some Essential packages will be removed/purged. Are you REALLY sure?",
+            )?;
+            let confirm_msg = format!("{}{}", cli::gen_prefix(""), "Is this supposed to happen?");
+            if !Confirm::new().with_prompt(confirm_msg).interact()? {
+                bail!("User cancelled operation");
+            }
+        }
+
         if Confirm::new()
             .with_prompt(format!("{}{}", cli::gen_prefix(""), "Proceed?"))
             .interact()?

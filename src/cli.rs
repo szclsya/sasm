@@ -4,6 +4,10 @@ use console::Term;
 const PREFIX_LEN: u16 = 10;
 
 pub fn gen_prefix(prefix: &str) -> String {
+    if prefix.len() > (PREFIX_LEN - 1).into() {
+        panic!("Line prefix \"{}\" too long!", prefix);
+    }
+
     // Make sure the real_prefix has desired PREFIX_LEN in console
     let left_padding_size = (PREFIX_LEN as usize) - 1 - console::measure_text_width(prefix);
     let mut real_prefix: String = " ".repeat(left_padding_size);
