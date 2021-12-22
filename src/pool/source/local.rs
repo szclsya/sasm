@@ -110,6 +110,18 @@ fn parse_debcontrol_fields(mut f: HashMap<&str, String>, p: &Path) -> Result<Pkg
             .ok_or_else(|| format_err!("deb control without Installed-Size"))?
             .as_str()
             .parse()?,
+        essential: match f.get("Essential") {
+            Some(word) => match word.as_str() {
+                "yes" => true,
+                "no" => false,
+                invalid => bail!(
+                    "deb control for {} has invalid field Essential (should be yes/no, got {})",
+                    p.display(),
+                    invalid
+                ),
+            },
+            None => false,
+        },
         source: PkgSource::Local(p.to_owned()),
     })
 }

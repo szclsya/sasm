@@ -28,6 +28,7 @@ const INTERESTED_FIELDS: &[&str] = &[
     "Recommends",
     "Suggests",
     "Description",
+    "Essential",
 ];
 
 #[inline]
@@ -111,6 +112,18 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
         suggests: match f.get("Suggests") {
             Some(suggests) => Some(parse_pkg_list(suggests)?),
             None => None,
+        },
+        essential: match f.get("Essential") {
+            Some(word) => match word.as_str() {
+                "yes" => true,
+                "no" => false,
+                invalid => bail!(
+                    "Package {} has invalid field Essential (should be yes/no, got {})",
+                    name,
+                    invalid
+                ),
+            },
+            None => false,
         },
         source: PkgSource::Http((
             path,

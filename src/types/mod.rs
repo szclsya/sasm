@@ -29,6 +29,7 @@ pub struct PkgMeta {
     pub suggests: Option<Vec<(String, VersionRequirement)>>,
     pub install_size: u64,
 
+    pub essential: bool,
     pub source: PkgSource,
 }
 
