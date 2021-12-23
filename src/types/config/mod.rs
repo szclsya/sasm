@@ -9,8 +9,15 @@ use std::{collections::HashMap, path::PathBuf};
 #[derive(Deserialize, Serialize)]
 pub struct Config {
     pub arch: String,
-    pub purge_on_remove: bool,
     pub repo: HashMap<String, RepoConfig>,
+    pub r#unsafe: Option<UnsafeConfig>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UnsafeConfig {
+    pub purge_on_remove: bool,
+    pub unsafe_io: bool,
+    pub allow_remove_essential: bool,
 }
 
 impl Config {

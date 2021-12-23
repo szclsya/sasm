@@ -27,6 +27,23 @@ pub async fn execute(
     config: &Config,
     request: UserRequest,
 ) -> Result<()> {
+    // Check config flags
+    let purge_on_remove = config
+        .r#unsafe
+        .as_ref()
+        .map(|c| c.purge_on_remove)
+        .unwrap_or(false);
+    let allow_remove_essential = config
+        .r#unsafe
+        .as_ref()
+        .map(|c| c.allow_remove_essential)
+        .unwrap_or(false);
+    let unsafe_io = config
+        .r#unsafe
+        .as_ref()
+        .map(|c| c.unsafe_io)
+        .unwrap_or(false);
+
     // Check if operating in alt-root mode
     let mut alt_root = false;
     if opts.root != std::path::Path::new("/") {
@@ -86,7 +103,7 @@ pub async fn execute(
     // Translating result to list of actions
     let root = &opts.root;
     let machine_status = MachineStatus::new(root)?;
-    let mut actions = machine_status.gen_actions(res.as_slice(), config.purge_on_remove);
+    let mut actions = machine_status.gen_actions(res.as_slice(), purge_on_remove);
     if alt_root {
         let modifier = modifier::UnpackOnly::default();
         modifier.apply(&mut actions);
@@ -106,14 +123,19 @@ pub async fn execute(
 
         // Additional confirmation if removing essential packages
         if actions.remove_essential() {
-            let prefix = style("DANGER").red().to_string();
-            crate::WRITER.writeln(
-                &prefix,
-                "Some Essential packages will be removed/purged. Are you REALLY sure?",
-            )?;
-            let confirm_msg = format!("{}{}", cli::gen_prefix(""), "Is this supposed to happen?");
-            if !Confirm::new().with_prompt(confirm_msg).interact()? {
-                bail!("User cancelled operation");
+            if allow_remove_essential {
+                let prefix = style("DANGER").red().to_string();
+                crate::WRITER.writeln(
+                    &prefix,
+                    "Some Essential packages will be removed/purged. Are you REALLY sure?",
+                )?;
+                let confirm_msg =
+                    format!("{}{}", cli::gen_prefix(""), "Is this supposed to happen?");
+                if !Confirm::new().with_prompt(confirm_msg).interact()? {
+                    bail!("User cancelled operation");
+                }
+            } else {
+                bail!("Some essential packages will be removed. Aborting")
             }
         }
 
@@ -122,7 +144,7 @@ pub async fn execute(
             .interact()?
         {
             // Run it!
-            dpkg::execute_pkg_actions(actions, &opts.root, downloader).await?;
+            dpkg::execute_pkg_actions(actions, &opts.root, downloader, unsafe_io).await?;
         } else {
             crate::utils::lock::unlock(&opts.root)?;
             std::process::exit(2);

@@ -113,8 +113,7 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
     }
 
     // Set-up pager
-    let pager_cmd = std::env::var("PAGER")
-        .unwrap_or_else(|_| "less".to_owned());
+    let pager_cmd = std::env::var("PAGER").unwrap_or_else(|_| "less".to_owned());
     let pager_cmd_segments: Vec<&str> = pager_cmd.split_ascii_whitespace().collect();
     let pager_name = pager_cmd_segments.get(0).unwrap_or_else(|| &"less");
     let mut p = std::process::Command::new(&pager_name);

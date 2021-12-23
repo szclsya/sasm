@@ -11,6 +11,7 @@ pub async fn execute_pkg_actions(
     mut actions: PkgActions<'_>,
     root: &Path,
     downloader: &Downloader,
+    unsafe_io: bool,
 ) -> Result<()> {
     // Download packages
     let download_jobs = get_download_jobs(&actions);
@@ -47,7 +48,7 @@ pub async fn execute_pkg_actions(
         let mut pkgnames: Vec<String> =
             actions.purge.into_iter().map(|(name, _, _)| name).collect();
         cmd.append(&mut pkgnames);
-        dpkg_run(&cmd, root).context("Purge packages failed")?;
+        dpkg_run(&cmd, root, unsafe_io).context("Purge packages failed")?;
     }
     // Remove stuff
     if !actions.remove.is_empty() {
@@ -58,32 +59,35 @@ pub async fn execute_pkg_actions(
             .map(|(name, _, _)| name)
             .collect();
         cmd.append(&mut pkgnames);
-        dpkg_run(&cmd, root).context("Remove packages failed")?;
+        dpkg_run(&cmd, root, unsafe_io).context("Remove packages failed")?;
     }
     // Configure stuff
     if !actions.configure.is_empty() {
         let mut cmd = vec!["--configure".to_string()];
         cmd.append(&mut actions.configure);
-        dpkg_run(&cmd, root).context("Configure packages failed")?;
+        dpkg_run(&cmd, root, unsafe_io).context("Configure packages failed")?;
     }
     // Install stuff
     if !install_deb_paths.is_empty() {
         let mut cmd = vec!["--install".to_string()];
         cmd.append(&mut install_deb_paths);
-        dpkg_run(&cmd, root).context("Install packages failed")?;
+        dpkg_run(&cmd, root, unsafe_io).context("Install packages failed")?;
     }
     // Unpack stuff
     if !unpack_deb_paths.is_empty() {
         let mut cmd = vec!["--unpack".to_string()];
         cmd.append(&mut unpack_deb_paths);
-        dpkg_run(&cmd, root).context("Unpack packages failed")?;
+        dpkg_run(&cmd, root, unsafe_io).context("Unpack packages failed")?;
     }
 
     Ok(())
 }
 
-fn dpkg_run<T: AsRef<std::ffi::OsStr>>(args: &[T], root: &Path) -> Result<()> {
+fn dpkg_run<T: AsRef<std::ffi::OsStr>>(args: &[T], root: &Path, unsafe_io: bool) -> Result<()> {
     let mut cmd = Command::new("dpkg");
+    if unsafe_io {
+        cmd.arg("--force-unsafe-io");
+    }
     // Add root position
     cmd.arg("--root");
     cmd.arg(root.as_os_str());

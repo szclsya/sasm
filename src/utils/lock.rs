@@ -1,4 +1,4 @@
-use crate::{debug, warn,LOCK_PATH};
+use crate::{debug, warn, LOCK_PATH};
 use anyhow::{bail, Context, Result};
 use nix::unistd::Uid;
 use serde::{Deserialize, Serialize};
