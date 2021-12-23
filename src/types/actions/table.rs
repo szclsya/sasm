@@ -49,14 +49,18 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         if let Some((_, oldsize)) = old {
             install_size_change -= *oldsize as i128;
         }
+        // Installed-Size is in KiB, but HumanBytes counts in bytes
+        install_size_change *= 1024;
         let mut install_size_change_str = HumanBytes(install_size_change.abs() as u64).to_string();
-        if install_size_change < 0 {
+        if install_size_change >= 0 {
+            install_size_change_str.insert(0, '+');
+        } else {
             install_size_change_str.insert(0, '-');
         }
         let mut row = InstallRow {
             name: new.name.clone(),
             version: match old {
-                Some((oldver, _)) => format!("{} -> {}", new.version, oldver),
+                Some((oldver, _)) => format!("{} -> {}", oldver, new.version),
                 None => new.version.to_string(),
             },
             size: install_size_change_str,
@@ -122,7 +126,9 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         p.arg("-c"); // Start from the top of the screen
         p.env("LESSCHARSET", "UTF-8"); // Rust uses UTF-8
     } else {
-        p.args(&pager_cmd_segments[1..]);
+        if pager_cmd_segments.len() > 1 {
+            p.args(&pager_cmd_segments[1..]);
+        }
     }
     let mut pager_process = p.stdin(std::process::Stdio::piped()).spawn()?;
     let out = pager_process
