@@ -4,7 +4,7 @@ use crate::{
     db::LocalDb,
     debug,
     executor::{dpkg, modifier, MachineStatus},
-    info, msg, pool,
+    info, pool,
     solver::Solver,
     success,
     types::{
@@ -93,10 +93,14 @@ pub async fn execute(
     }
 
     if actions.is_empty() {
-        success!("There's nothing to do, all wishes has been fulfilled!");
+        success!("There's nothing to do.");
     } else {
         info!("These following actions will be performed:");
-        actions.show();
+        if opts.no_pager {
+            actions.show();
+        } else {
+            actions.show_tables()?;
+        }
         crate::WRITER.writeln("", "")?;
         actions.show_size_change();
 

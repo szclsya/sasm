@@ -4,7 +4,7 @@ use console::Term;
 const PREFIX_LEN: u16 = 10;
 
 pub fn gen_prefix(prefix: &str) -> String {
-    if prefix.len() > (PREFIX_LEN - 1).into() {
+    if console::measure_text_width(prefix) > (PREFIX_LEN - 1).into() {
         panic!("Line prefix \"{}\" too long!", prefix);
     }
 

@@ -1,9 +1,9 @@
-mod action;
+mod actions;
 mod checksum;
 pub mod config;
 mod version;
 
-pub use action::{PkgActionModifier, PkgActions, PkgInstallAction};
+pub use actions::{PkgActionModifier, PkgActions, PkgInstallAction};
 pub use checksum::Checksum;
 pub use version::{parse_version, parse_version_requirement, PkgVersion, VersionRequirement};
 

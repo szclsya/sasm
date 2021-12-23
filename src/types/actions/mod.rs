@@ -1,4 +1,8 @@
+mod table;
+
 use super::{Checksum, PkgMeta, PkgSource, PkgVersion};
+
+use anyhow::Result;
 use console::style;
 use indicatif::HumanBytes;
 
@@ -172,6 +176,10 @@ impl PkgActions<'_> {
             })
             .collect();
         crate::WRITER.write_chunks(&purge_prefix, &purges).unwrap();
+    }
+
+    pub fn show_tables(&self) -> Result<()> {
+        table::show_table(self)
     }
 
     pub fn show_size_change(&self) {

@@ -66,6 +66,8 @@ pub struct Opts {
         help = "Print additional debug information"
     )]
     pub verbose: bool,
+    #[clap(display_order = 4, long, help = "Don't pipe long output into a pager")]
+    pub no_pager: bool,
     #[clap(subcommand)]
     pub subcmd: SubCmd,
 }
