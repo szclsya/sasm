@@ -144,7 +144,9 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         )?;
         let table = Table::new(&install_rows)
             .with(Modify::new(Full).with(Alignment::left()))
-            .with(Modify::new(Column(..)).with(|s: &str| format!(" {} ", s)))
+            // Install Size column should align right
+            .with(Modify::new(Column(2..3)).with(Alignment::right()))
+            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
             .with(Style::psql());
         writeln!(out, "{}", table)?;
     }
@@ -157,7 +159,9 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         )?;
         let table = Table::new(&upgrade_rows)
             .with(Modify::new(Full).with(Alignment::left()))
-            .with(Modify::new(Column(..)).with(|s: &str| format!(" {} ", s)))
+            // Install Size column should align right
+            .with(Modify::new(Column(2..3)).with(Alignment::right()))
+            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
             .with(Style::psql());
         writeln!(out, "{}", table)?;
     }
@@ -170,7 +174,9 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         )?;
         let table = Table::new(&downgrade_rows)
             .with(Modify::new(Full).with(Alignment::left()))
-            .with(Modify::new(Column(..)).with(|s: &str| format!(" {} ", s)))
+            // Install Size column should align right
+            .with(Modify::new(Column(1..2)).with(Alignment::right()))
+            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
             .with(Style::psql());
         writeln!(out, "{}", table)?;
     }
@@ -183,7 +189,9 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         )?;
         let table = Table::new(&remove_rows)
             .with(Modify::new(Full).with(Alignment::left()))
-            .with(Modify::new(Column(..)).with(|s: &str| format!(" {} ", s)))
+            // Install Size column should align right
+            .with(Modify::new(Column(1..2)).with(Alignment::right()))
+            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
             .with(Style::psql());
         writeln!(out, "{}", table)?;
     }
@@ -196,7 +204,7 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         )?;
         let table = Table::new(&configure_rows)
             .with(Modify::new(Full).with(Alignment::left()))
-            .with(Modify::new(Column(..)).with(|s: &str| format!(" {} ", s)))
+            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
             .with(Style::psql());
         writeln!(out, "{}", table)?;
     }
