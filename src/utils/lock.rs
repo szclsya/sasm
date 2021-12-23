@@ -1,4 +1,4 @@
-use crate::{debug, LOCK_PATH};
+use crate::{debug, warn,LOCK_PATH};
 use anyhow::{bail, Context, Result};
 use nix::unistd::Uid;
 use serde::{Deserialize, Serialize};
@@ -38,12 +38,27 @@ pub fn check(root: &Path) -> Result<Option<u32>> {
 pub fn lock(root: &Path) -> Result<()> {
     // Make sure we are running as root
     if !Uid::effective().is_root() {
-        bail!("You must be root to run this operation");
+        bail!("You must be root to perform this operation");
     }
 
     let lock_path = root.join(LOCK_PATH);
     if lock_path.is_file() {
         bail!("Cannot lock because lock file already exists");
+    }
+
+    // Set up SIGINT handler
+    {
+        let root = root.to_owned();
+        ctrlc::set_handler(move || {
+            if crate::DPKG_RUNNING.load(std::sync::atomic::Ordering::Relaxed) {
+                warn!("Cannot interrupt when dpkg is running");
+            } else {
+                // Thanks to stateless, we can just exit
+                unlock(&root).expect("Failed to unlock");
+                std::process::exit(2);
+            }
+        })
+        .expect("Error setting SIGINT handler");
     }
 
     // Create directory if not created yet

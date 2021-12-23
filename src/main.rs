@@ -14,7 +14,6 @@ use lazy_static::lazy_static;
 use std::{
     fs::{read_dir, File},
     io::Read,
-    process::exit,
     sync::atomic::{AtomicBool, Ordering},
 };
 
@@ -44,20 +43,6 @@ fn verbose() -> bool {
 async fn main() {
     // Initial setup
     let opts: Opts = Opts::parse();
-    {
-        // Set up SIGINT handler
-        let root = opts.root.clone();
-        ctrlc::set_handler(move || {
-            if DPKG_RUNNING.load(std::sync::atomic::Ordering::Relaxed) {
-                warn!("Cannot interrupt when dpkg is running");
-            } else {
-                // Thanks to stateless, we can just exit
-                utils::lock::unlock(&root).expect("Failed to unlock");
-                exit(2);
-            }
-        })
-        .expect("Error setting SIGINT handler");
-    }
     // Set-up debug globally
     VERBOSE.store(opts.verbose, Ordering::Relaxed);
 
