@@ -18,9 +18,9 @@ pub struct Config {
 pub struct UnsafeConfig {
     #[serde(default)]
     pub purge_on_remove: bool,
-    #[serde(default)] 
+    #[serde(default)]
     pub unsafe_io: bool,
-    #[serde(default)] 
+    #[serde(default)]
     pub allow_remove_essential: bool,
 }
 
