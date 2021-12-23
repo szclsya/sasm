@@ -10,13 +10,17 @@ use std::{collections::HashMap, path::PathBuf};
 pub struct Config {
     pub arch: String,
     pub repo: HashMap<String, RepoConfig>,
-    pub r#unsafe: Option<UnsafeConfig>,
+    #[serde(default)]
+    pub r#unsafe: UnsafeConfig,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct UnsafeConfig {
+    #[serde(default)]
     pub purge_on_remove: bool,
+    #[serde(default)] 
     pub unsafe_io: bool,
+    #[serde(default)] 
     pub allow_remove_essential: bool,
 }
 

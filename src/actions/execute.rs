@@ -27,23 +27,6 @@ pub async fn execute(
     config: &Config,
     request: UserRequest,
 ) -> Result<()> {
-    // Check config flags
-    let purge_on_remove = config
-        .r#unsafe
-        .as_ref()
-        .map(|c| c.purge_on_remove)
-        .unwrap_or(false);
-    let allow_remove_essential = config
-        .r#unsafe
-        .as_ref()
-        .map(|c| c.allow_remove_essential)
-        .unwrap_or(false);
-    let unsafe_io = config
-        .r#unsafe
-        .as_ref()
-        .map(|c| c.unsafe_io)
-        .unwrap_or(false);
-
     // Check if operating in alt-root mode
     let mut alt_root = false;
     if opts.root != std::path::Path::new("/") {
@@ -103,7 +86,7 @@ pub async fn execute(
     // Translating result to list of actions
     let root = &opts.root;
     let machine_status = MachineStatus::new(root)?;
-    let mut actions = machine_status.gen_actions(res.as_slice(), purge_on_remove);
+    let mut actions = machine_status.gen_actions(res.as_slice(), config.r#unsafe.purge_on_remove);
     if alt_root {
         let modifier = modifier::UnpackOnly::default();
         modifier.apply(&mut actions);
@@ -123,7 +106,7 @@ pub async fn execute(
 
         // Additional confirmation if removing essential packages
         if actions.remove_essential() {
-            if allow_remove_essential {
+            if config.r#unsafe.allow_remove_essential {
                 let prefix = style("DANGER").red().to_string();
                 crate::WRITER.writeln(
                     &prefix,
@@ -144,7 +127,8 @@ pub async fn execute(
             .interact()?
         {
             // Run it!
-            dpkg::execute_pkg_actions(actions, &opts.root, downloader, unsafe_io).await?;
+            dpkg::execute_pkg_actions(actions, &opts.root, downloader, config.r#unsafe.unsafe_io)
+                .await?;
         } else {
             crate::utils::lock::unlock(&opts.root)?;
             std::process::exit(2);
