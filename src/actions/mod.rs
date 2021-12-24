@@ -144,8 +144,10 @@ pub async fn fullfill_command(
 
             info!("Cleaning local package cache...");
             let pkg_cache_path = opts.root.join(crate::PKG_CACHE_PATH);
-            std::fs::remove_dir_all(&pkg_cache_path)?;
-            std::fs::create_dir_all(&pkg_cache_path)?;
+            if pkg_cache_path.is_dir() {
+                std::fs::remove_dir_all(&pkg_cache_path)?;
+                std::fs::create_dir_all(&pkg_cache_path)?;
+            }
 
             info!("Cleaning local package repository...");
             let ms = MachineStatus::new(&opts.root)?;
@@ -154,8 +156,10 @@ pub async fn fullfill_command(
             if cleanconfig.all {
                 info!("Cleaning local database cache...");
                 let db_cache_path = opts.root.join(crate::DB_CACHE_PATH);
-                std::fs::remove_dir_all(&db_cache_path)?;
-                std::fs::create_dir_all(&db_cache_path)?;
+                if db_cache_path.is_dir() {
+                    std::fs::remove_dir_all(&db_cache_path)?;
+                    std::fs::create_dir_all(&db_cache_path)?;
+                }
             }
 
             Ok(())
