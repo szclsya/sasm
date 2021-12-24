@@ -3,6 +3,7 @@ pub mod source;
 pub use in_memory::InMemoryPool;
 
 use crate::{
+    msg,
     types::{PkgMeta, PkgSource, PkgVersion, VersionRequirement},
     warn,
 };
@@ -88,12 +89,25 @@ pub trait PkgPool: BasicPkgPool {
         need_local: bool,
     ) -> Result<usize> {
         if let Some(pkgs) = self.get_pkgs_by_name(pkgname) {
+            let mut first_valid_version = true;
             for id in pkgs {
                 // Safe unless the pool is broken
                 let pkg = self.get_pkg_by_id(id).unwrap();
                 let is_local = matches!(pkg.source, PkgSource::Local(_));
-                if ver_req.within(&pkg.version) && (need_local == is_local) {
-                    return Ok(id);
+                if ver_req.within(&pkg.version) {
+                    if need_local == is_local {
+                        return Ok(id);
+                    } else if first_valid_version {
+                        // First version that matches version requirement but can't use it because local
+                        // Tell it to the user
+                        warn!("Local version of {} will be used, but newer version is available in online repositories",
+                              style(pkgname).bold());
+                        msg!(
+                            "Remove {} keyword from blueprint to use the latest version",
+                            style("local").bold()
+                        );
+                        first_valid_version = false;
+                    }
                 }
             }
             // We haven't found a suitable candidate

@@ -79,7 +79,7 @@ impl Downloader {
         let mut handles = Vec::with_capacity(self.max_concurrent);
 
         // Show download info
-        msg!("", "Downloading {} files...", to_download.len());
+        msg!("Downloading {} files...", to_download.len());
         let multibar = MultiProgress::new();
         let bar_template = {
             let max_len = crate::WRITER.get_max_len();

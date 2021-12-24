@@ -99,8 +99,8 @@ impl Writer {
 // We will ignore write errors in the following macros, since cannot print messages is not an emergency
 #[macro_export]
 macro_rules! msg {
-    ($prefix:tt, $($arg:tt)+) => {
-        $crate::WRITER.writeln($prefix, &format!($($arg)+)).ok();
+    ($($arg:tt)+) => {
+        $crate::WRITER.writeln("", &format!($($arg)+)).ok();
     };
 }
 

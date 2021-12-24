@@ -2,9 +2,9 @@ mod improve;
 mod incompatible;
 mod sort;
 
+use crate::debug;
 use crate::pool::PkgPool;
 use crate::types::{config::Blueprints, PkgMeta};
-use crate::{debug, warn};
 use anyhow::{bail, format_err, Context, Result};
 use varisat::{lit::Lit, ExtendFormula};
 
@@ -58,13 +58,7 @@ impl Solver {
         // Generate result
         let pkgs: Vec<&PkgMeta> = res
             .into_iter()
-            .map(|pkgid| {
-                let res = self.pool.get_pkg_by_id(pkgid).unwrap();
-                if !improve::is_best(self.pool.as_ref(), pkgid).unwrap() {
-                    warn!("Cannot select best version of {}", res.name);
-                }
-                res
-            })
+            .map(|pkgid| self.pool.get_pkg_by_id(pkgid).unwrap())
             .collect();
 
         Ok(pkgs)

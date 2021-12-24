@@ -134,7 +134,6 @@ impl Blueprints {
                     style(path.display()).bold()
                 );
                 msg!(
-                    "",
                     "You cannot remove packages in vendor blueprints via Omakase CLI for safety reason. But if you really wish to remove this package, edit the file above directly."
                 );
             } else {
