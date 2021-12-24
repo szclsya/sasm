@@ -35,11 +35,15 @@ keys = ["main.asc"]
 # Blueprints
 Blueprint are, as their name suggests, the blueprint for the system. They defines the packages users can use about the system, and omakase will ensure these packages are available. However, this also means that any package that is not included in the system blueprint is not guaranteed to be installed. For example, user might able to use a package installed as dependency, but if this package is no longer depended, it can be removed. Thus, user should always include packages they use in the blueprint files.
 
+There are two types of blueprint: _user blueprint_ and _vendor blueprint_. There is only one user blueprint at `CONFIG_ROOT/user.blueprint`, but there may be many vendor blueprints at `CONFIG_ROOT/blueprint.d/*.blueprint`. When using the CLI, Omakase will only modify user blueprint. So, if you wants to remove a package inside vendor blueprint, Omakase will not allow so. You will have to manually remove the line in the corresponding vendor blueprint.
+
 Blueprint files have a special syntax. Each line in a blueprint file represents a package request. Such line include two parts: package name and (optional) additional requirements. Here's a few examples:
 
 ```
 # Example of a simple request
 konsole
+# Package name that includes variables
+linux-kernel-{KERNEL_VERSION}
 # Package request with version requirements
 linux+kernel (>=3:5.14.0, <<3:5.15.0)
 mpv (=0.33.1)
@@ -50,6 +54,9 @@ fcitx5-base
 fcitx5 (added_by = fcitx5-base)
 fcitx5-qt (added_by = fcitx5-base)
 ```
+
+There may be variables in package names. These can be used to dynamically request packages based on system state. Currently, these variables are supported:
++ `KERNEL_VERSION`: version of the current running kernel, can be used to prevent current kernel from being removed.
 
 You can specify additional attributes inside the pair of round brackets after package name. Multiple arguments are separated by `,`. Currently these attributes are supported:
 + Version requirements (`>>`, `>=`, `=`, `<<`, `<=`): Indicate what range of version should be installed. Multiple requirements are allowed as far as they are not contradictory (for example, `>=2, <=1` will not be accepted).
