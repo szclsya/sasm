@@ -8,19 +8,19 @@ pub fn fill_variables(rule: &str) -> Result<String> {
     }
 
     let kernel_version = get_kernel_version()?;
-    let mut unintended_variable = None;
+    let mut unknown_variable = Vec::new();
     let res = EXPANSION.replace_all(rule, |caps: &Captures| {
         match caps.get(1).unwrap().as_str() {
             "KERNEL_VERSION" => &kernel_version,
             unintended => {
-                unintended_variable = Some(unintended.to_owned());
+                unknown_variable.push(unintended.to_owned());
                 ""
             }
         }
     });
 
-    if let Some(unintended) = unintended_variable {
-        bail!("Unintended variable {}", unintended);
+    if !unknown_variable.is_empty() {
+        bail!("Unknown variable: {}", unknown_variable.join(", "));
     }
 
     Ok(res.to_string())
