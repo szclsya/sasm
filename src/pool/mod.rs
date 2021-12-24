@@ -284,6 +284,7 @@ mod test {
             recommends: None,
             suggests: None,
             install_size: 0,
+            essential: false,
             source: PkgSource::Local(PathBuf::new()),
         });
         let b_id = pool.add(PkgMeta {
@@ -303,6 +304,7 @@ mod test {
             recommends: None,
             suggests: None,
             install_size: 0,
+            essential: false,
             source: PkgSource::Local(PathBuf::new()),
         });
         let c_id = pool.add(PkgMeta {
@@ -322,6 +324,7 @@ mod test {
             recommends: None,
             suggests: None,
             install_size: 0,
+            essential: false,
             source: PkgSource::Local(PathBuf::new()),
         });
         let d_id = pool.add(PkgMeta {
@@ -341,6 +344,7 @@ mod test {
             recommends: None,
             suggests: None,
             install_size: 0,
+            essential: false,
             source: PkgSource::Local(PathBuf::new()),
         });
         pool.finalize();
