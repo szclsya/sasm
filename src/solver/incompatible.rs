@@ -15,7 +15,7 @@ pub fn find_incompatible_friendly(pool: &dyn PkgPool, to_install: &[usize]) -> S
         format!(
             "{}({}) cannot be installed on its own. Please contact package maintainer",
             pkg.name,
-            console::style(pkg.version.clone()).dim().to_string()
+            console::style(&pkg.version).dim().to_string()
         )
     } else {
         let mut res = String::from("Packages cannot be installed simultaneously: ");
@@ -25,7 +25,7 @@ pub fn find_incompatible_friendly(pool: &dyn PkgPool, to_install: &[usize]) -> S
             res.push_str(&format!(
                 "{}({})",
                 pkg.name,
-                console::style(pkg.version.clone()).dim().to_string()
+                console::style(&pkg.version).dim().to_string()
             ));
             if pkgs.peek().is_some() {
                 res.push_str(", ");
