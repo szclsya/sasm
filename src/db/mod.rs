@@ -175,7 +175,7 @@ impl LocalDb {
                                 repo.url, repo.distribution, compressed_rel_url
                             ),
                             description: Some(format!(
-                                "Package database of repository {} for {} architecture",
+                                "Package data for {} ({})",
                                 style(name).bold(),
                                 arch
                             )),
@@ -200,7 +200,7 @@ impl LocalDb {
                                 repo.url, repo.distribution, &compressed_rel_url
                             ),
                             description: Some(format!(
-                                "Contents database of repository {} for {} architecture",
+                                "Contents data for {} ({})",
                                 style(name).bold(),
                                 arch
                             )),
