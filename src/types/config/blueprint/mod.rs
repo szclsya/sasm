@@ -64,13 +64,18 @@ impl Blueprints {
         })
     }
 
-    pub fn get_pkg_requests(&self) -> Vec<&PkgRequest> {
+    pub fn get_pkg_requests(&self) -> Vec<PkgRequest> {
         // Add user blueprint first
-        let mut res: Vec<&PkgRequest> = self
+        let mut res: Vec<PkgRequest> = self
             .user
             .iter()
-            .filter_map(|line| match line {
-                BlueprintLine::PkgRequest(req) => Some(req),
+            .filter_map(|mut line| match &mut line {
+                BlueprintLine::PkgRequest(req) => {
+                    // Fill variables
+                    let mut req = req.clone();
+                    req.name = variables::fill_variables(&req.name).unwrap();
+                    Some(req)
+                },
                 _ => None,
             })
             .collect();
@@ -79,7 +84,7 @@ impl Blueprints {
         for (_, vendor) in &self.vendor {
             for line in vendor {
                 if let BlueprintLine::PkgRequest(req) = line {
-                    res.push(req);
+                    res.push(req.clone());
                 }
             }
         }

@@ -34,16 +34,13 @@ pub fn read_blueprint_from_file(path: &Path) -> Result<Vec<BlueprintLine>> {
         style(path.display()).bold()
     ))?;
     let reader = BufReader::new(f);
-    let mut lines = parse_blueprint_lines(reader)
+    let lines = parse_blueprint_lines(reader)
         .context(format!("Failed to parse {}", style(path.display()).bold()))?;
-    for (no, mut line) in lines.iter_mut().enumerate() {
-        // Fill variables
-        if let BlueprintLine::PkgRequest(req) = &mut line {
+    for (no, line) in lines.iter().enumerate() {
+        // Try fill variables to sanitize
+        if let BlueprintLine::PkgRequest(req) = &line {
             let new_pkgname = fill_variables(&req.name)?;
-            if new_pkgname.chars().all(is_pkgname_char) {
-                // Only contains valid package names, we are good
-                req.name = new_pkgname;
-            } else {
+            if !new_pkgname.chars().all(is_pkgname_char) {
                 bail!(
                     "Fail to parse {}: invalid package name at line {}",
                     path.display(),
