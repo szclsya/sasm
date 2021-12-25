@@ -2,6 +2,8 @@
 `omakase` is an declarative package manager that employs the power of modern Boolean satisfiability problem solvers.
 
 ## Build
+Requires `nettle`.
+
 ```bash
 cargo build --release
 install -Dm755 target/release/oma /usr/local/bin/oma
@@ -10,16 +12,13 @@ install -Dm755 target/release/oma /usr/local/bin/oma
 ## Concepts and configurations
 Omakase accepts a config folder containing a series of files:
 + `config.toml`: main config file folder
-+ `blueprint`: a list of desired packages. You should add all packages you intentionally use in this file
++ `user.blueprint`: a list of desired packages. You should add all packages you intentionally use in this file
   - `blueprint.d/`: vendored blueprints
 + `keys/`: stores PGP public keys for repositories
 
 Here's a basic example of `config.toml`:
 ```toml
 arch = "amd64"
-# Whether to purge package when it's no longer needed
-# If set to true, config files of packages will also be removed when packages are removed
-purge_on_remove = true
 
 [repo.main]
 url = "https://repo.aosc.io/debs"
