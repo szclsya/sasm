@@ -1,6 +1,7 @@
 mod verify;
 
 use crate::{
+    info,
     types::{config::RepoConfig, Checksum},
     utils::downloader::{Compression, DownloadJob, Downloader},
     warn,
@@ -115,6 +116,8 @@ impl LocalDb {
     }
 
     pub async fn update(&self, downloader: &Downloader) -> Result<()> {
+        info!("Refreshing local package databases...");
+
         // HashMap<RepoName, HashMap<url, (size, checksum)>>
         let mut dbs: HashMap<String, HashMap<String, (u64, Checksum)>> = HashMap::new();
         // Step 1: Download InRelease for each repo

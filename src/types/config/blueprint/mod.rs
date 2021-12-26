@@ -75,7 +75,7 @@ impl Blueprints {
                     let mut req = req.clone();
                     req.name = variables::fill_variables(&req.name).unwrap();
                     Some(req)
-                },
+                }
                 _ => None,
             })
             .collect();

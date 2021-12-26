@@ -69,7 +69,6 @@ pub async fn fullfill_command(
                 .collect();
             let req = UserRequest::Install(req);
             // Update local db
-            info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             // Execute blueprint
             execute(&localdb, &downloader, blueprints, opts, config, req).await?;
@@ -89,7 +88,6 @@ pub async fn fullfill_command(
                 .collect();
             let req = UserRequest::Remove(req);
             // Update local db
-            info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             // Apply stuff
             execute(&localdb, &downloader, blueprints, opts, config, req).await?;
@@ -101,7 +99,6 @@ pub async fn fullfill_command(
             lock::ensure_unlocked(&opts.root)?;
             lock::lock(&opts.root)?;
 
-            info!("Refreshing local package databases...");
             localdb.update(&downloader).await?;
             success!("Refresh complete");
             Ok(())
@@ -112,7 +109,6 @@ pub async fn fullfill_command(
             lock::lock(&opts.root)?;
 
             let req = UserRequest::Upgrade;
-            info!("Refreshing local package databases...");
             localdb
                 .update(&downloader)
                 .await

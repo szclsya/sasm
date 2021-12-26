@@ -125,10 +125,8 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         p.arg("-R"); // Show ANSI escape sequences correctly
         p.arg("-c"); // Start from the top of the screen
         p.env("LESSCHARSET", "UTF-8"); // Rust uses UTF-8
-    } else {
-        if pager_cmd_segments.len() > 1 {
-            p.args(&pager_cmd_segments[1..]);
-        }
+    } else if pager_cmd_segments.len() > 1 {
+        p.args(&pager_cmd_segments[1..]);
     }
     let mut pager_process = p.stdin(std::process::Stdio::piped()).spawn()?;
     let out = pager_process
