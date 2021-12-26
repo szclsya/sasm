@@ -2,7 +2,7 @@ use crate::{debug, warn, LOCK_PATH};
 use anyhow::{bail, Context, Result};
 use nix::unistd::Uid;
 use serde::{Deserialize, Serialize};
-use std::{fs, io::prelude::*, path::Path};
+use std::{fs, io::prelude::*, path::Path, sync::atomic::Ordering};
 
 /// Make sure only one instance of Omakase can run at one time
 
@@ -46,11 +46,14 @@ pub fn lock(root: &Path) -> Result<()> {
         bail!("Cannot lock because lock file already exists");
     }
 
+    // Set global lock parameter
+    crate::LOCKED.store(true, Ordering::Relaxed);
+
     // Set up SIGINT handler
     {
         let root = root.to_owned();
         ctrlc::set_handler(move || {
-            if crate::DPKG_RUNNING.load(std::sync::atomic::Ordering::Relaxed) {
+            if crate::DPKG_RUNNING.load(Ordering::Relaxed) {
                 warn!("Cannot interrupt when dpkg is running");
             } else {
                 // Thanks to stateless, we can just exit

@@ -15,6 +15,7 @@ use std::{
     fs::{read_dir, File},
     io::Read,
     sync::atomic::{AtomicBool, Ordering},
+    process::exit,
 };
 
 // Initialize writer
@@ -23,7 +24,9 @@ lazy_static! {
 }
 // Debug flag
 static VERBOSE: AtomicBool = AtomicBool::new(false);
+// Lock control
 static DPKG_RUNNING: AtomicBool = AtomicBool::new(false);
+static LOCKED: AtomicBool = AtomicBool::new(false);
 // Global constants
 const DB_KEY_PATH: &str = "etc/omakase/keys";
 const DB_CACHE_PATH: &str = "var/cache/omakase/db";
@@ -60,11 +63,13 @@ async fn main() {
         return_code = 1;
     }
 
-    // Clean up and exit
-    if let Err(e) = utils::lock::unlock(&opts.root) {
-        error!("{}", e);
+    // Unlock if current process locked
+    if LOCKED.load(Ordering::Relaxed) {
+        if let Err(e) = utils::lock::unlock(&opts.root) {
+            error!("{}", e);
+        }
     }
-    std::process::exit(return_code);
+    exit(return_code);
 }
 
 async fn try_main(opts: &Opts) -> Result<()> {
