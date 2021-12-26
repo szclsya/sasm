@@ -2,7 +2,7 @@ use super::PkgInfo;
 use crate::{db::LocalDb, executor::MachineStatus, pool, pool::PkgPool};
 
 use anyhow::{Context, Result};
-use std::cmp::Reverse;
+use std::{cmp::Reverse, collections::HashMap};
 
 pub fn search_deb_db(
     local_db: &LocalDb,
@@ -14,7 +14,7 @@ pub fn search_deb_db(
         .context("Cannot initialize local db for searching")?;
     let pool = pool::source::create_pool(&dbs, &[])?;
 
-    let mut pkgs = search_deb_db_helper(pool.as_ref(), keyword);
+    let mut pkgs = search_pkg_helper(pool.as_ref(), keyword);
 
     // Sort pkg in descending order based on relevance to keyword
     pkgs.sort_by_cached_key(|pkg| {
@@ -29,12 +29,12 @@ pub fn search_deb_db(
     Ok(())
 }
 
-pub fn search_deb_db_helper<'a, P: ?Sized>(pool: &'a P, keyword: &str) -> Vec<PkgInfo<'a>>
+pub fn search_pkg_helper<'a, P: ?Sized>(pool: &'a P, keyword: &str) -> Vec<PkgInfo<'a>>
 where
     P: PkgPool,
 {
     // Iterate through package names
-    let mut res = Vec::new();
+    let mut res = HashMap::new();
     for (name, versions) in pool.pkgname_iter() {
         if name.contains(keyword) {
             let id = versions[0].0;
@@ -43,14 +43,30 @@ where
 
             // Construct PkgInfo, don't include debug packages
             if !pkg.name.ends_with("-dbg") && pkg.section != "debug" {
-                res.push(PkgInfo {
+                let pkginfo = PkgInfo {
                     pkg,
                     has_dbg_pkg,
                     additional_info: Vec::new(),
-                })
+                };
+                res.insert(name, pkginfo);
             }
         }
     }
 
+    // Search package description
+    for (id, meta) in pool.pkgid_iter() {
+        if meta.description.contains(keyword) {
+            if !res.contains_key(meta.name.as_str()) {
+                let pkginfo = PkgInfo {
+                    pkg: meta,
+                    has_dbg_pkg: pool.has_dbg_pkg(id).unwrap(),
+                    additional_info: Vec::new(),
+                };
+                res.insert(&meta.name, pkginfo);
+            }
+        }
+    }
+
+    let res = res.into_values().collect();
     res
 }
