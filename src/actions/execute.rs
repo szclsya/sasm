@@ -50,13 +50,19 @@ pub async fn execute(
     debug!("Processing user request...");
     match request {
         UserRequest::Install(list) => {
-            for (name, ver_req, instal_recomm, added_by, local) in list {
+            for install in list {
                 // Add pkg to blueprint
-                blueprint.add(&name, added_by.as_deref(), ver_req, local)?;
-                if !local && instal_recomm {
-                    let choices = match solver.pool.get_pkgs_by_name(&name) {
+                blueprint.add(
+                    &install.pkgname,
+                    install.modify,
+                    None,
+                    install.ver_req,
+                    install.local,
+                )?;
+                if !install.local && install.install_recomm {
+                    let choices = match solver.pool.get_pkgs_by_name(&install.pkgname) {
                         Some(pkgs) => pkgs,
-                        None => bail!("Cannot add recommended packages for {}", &name),
+                        None => bail!("Cannot add recommended packages for {}", &install.pkgname),
                     };
                     let choice = choices.get(0).unwrap();
                     let meta = solver.pool.get_pkg_by_id(*choice).unwrap();
@@ -64,7 +70,8 @@ pub async fn execute(
                         for recommend in recommends {
                             blueprint.add(
                                 &recommend.0,
-                                Some(&name),
+                                false,
+                                Some(&install.pkgname),
                                 Some(recommend.1.clone()),
                                 false,
                             )?;

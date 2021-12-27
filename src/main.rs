@@ -14,8 +14,8 @@ use lazy_static::lazy_static;
 use std::{
     fs::{read_dir, File},
     io::Read,
-    sync::atomic::{AtomicBool, Ordering},
     process::exit,
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 // Initialize writer

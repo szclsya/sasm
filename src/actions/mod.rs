@@ -1,5 +1,6 @@
 mod execute;
 mod local;
+mod pick;
 mod provide;
 mod search;
 use execute::execute;
@@ -19,20 +20,23 @@ use crate::{
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
+#[derive(Debug)]
 pub enum UserRequest {
     // Vec<(PkgName, ver_req, install_recomm, added_by, local)>
-    Install(
-        Vec<(
-            String,
-            Option<VersionRequirement>,
-            bool,
-            Option<String>,
-            bool,
-        )>,
-    ),
+    Install(Vec<InstallRequest>),
     // Vec<(PkgName, remove_recomm)>
     Remove(Vec<(String, bool)>),
     Upgrade,
+}
+
+#[derive(Debug)]
+pub struct InstallRequest {
+    pkgname: String,
+    install_recomm: bool,
+    ver_req: Option<VersionRequirement>,
+    local: bool,
+    /// Whether modify existing entry
+    modify: bool,
 }
 
 /// bool in return type indicated whether the blueprint is altered
@@ -65,7 +69,13 @@ pub async fn fullfill_command(
             };
             let req = names
                 .iter()
-                .map(|pkgname| (pkgname.clone(), None, !add.no_recommends, None, add.local))
+                .map(|pkgname| InstallRequest {
+                    pkgname: pkgname.to_owned(),
+                    install_recomm: !add.no_recommends,
+                    ver_req: None,
+                    local: add.local,
+                    modify: false,
+                })
                 .collect();
             let req = UserRequest::Install(req);
             // Update local db
@@ -87,6 +97,19 @@ pub async fn fullfill_command(
                 .map(|name| (name.clone(), rm.remove_recommends))
                 .collect();
             let req = UserRequest::Remove(req);
+            // Update local db
+            localdb.update(&downloader).await?;
+            // Apply stuff
+            execute(&localdb, &downloader, blueprints, opts, config, req).await?;
+
+            Ok(())
+        }
+        SubCmd::Pick(pick) => {
+            // This operation has side effects
+            lock::ensure_unlocked(&opts.root)?;
+            lock::lock(&opts.root)?;
+
+            let req = pick::pick(&pick.name, &opts, &localdb)?;
             // Update local db
             localdb.update(&downloader).await?;
             // Apply stuff

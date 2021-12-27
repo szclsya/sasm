@@ -91,11 +91,14 @@ pub enum SubCmd {
     /// Remove packages
     #[clap(display_order = 2, aliases = &["purge", "autoremove"])]
     Remove(RemovePkg),
+    /// Pick a specific version of a package
+    #[clap(display_order = 3)]
+    Pick(PickPkg),
     /// Refresh local package databases
-    #[clap(display_order = 4, aliases = &["update"])]
+    #[clap(display_order = 5, aliases = &["update"])]
     Refresh,
     /// Install and upgrade all packages according to Blueprint
-    #[clap(display_order = 3, aliases = &["upgrade"])]
+    #[clap(display_order = 4, aliases = &["upgrade"])]
     Execute,
     /// Search packages from package database
     #[clap(display_order = 11)]
@@ -130,6 +133,12 @@ pub struct RemovePkg {
     /// Also remove recommended packages
     #[clap(long)]
     pub remove_recommends: bool,
+}
+
+#[derive(Parser)]
+pub struct PickPkg {
+    /// Package names to pick version
+    pub name: String,
 }
 
 #[derive(Parser)]

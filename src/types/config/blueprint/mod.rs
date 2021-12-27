@@ -97,17 +97,25 @@ impl Blueprints {
     pub fn add(
         &mut self,
         pkgname: &str,
+        modify: bool,
         added_by: Option<&str>,
         ver_req: Option<VersionRequirement>,
         local: bool,
     ) -> Result<()> {
-        if self.user_list_contains(pkgname) {
+        if !modify && self.user_list_contains(pkgname) {
             bail!(
                 "Package {} already exists in user blueprint",
                 style(pkgname).bold()
             );
         }
         if let Some(path) = self.vendor_list_contains(pkgname) {
+            if modify {
+                bail!(
+                    "Cannot modify {}: package belongs to vendor blueprint {}",
+                    style(pkgname).bold(),
+                    style(path.display()).bold()
+                );
+            }
             bail!(
                 "Package {} already exists in vendor blueprint {}",
                 style(pkgname).bold(),
@@ -122,6 +130,10 @@ impl Blueprints {
             added_by: added_by.map(|pkgname| pkgname.to_owned()),
             local,
         };
+        if modify && self.user_list_contains(pkgname) {
+            // Remove old entry first
+            self.remove(pkgname, false).unwrap();
+        }
         self.user.push(BlueprintLine::PkgRequest(pkgreq));
         self.user_blueprint_modified = true;
         Ok(())
