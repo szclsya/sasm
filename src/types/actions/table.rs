@@ -168,7 +168,7 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         writeln!(
             out,
             "These packages will be {}:",
-            style("downgraded").green().bold()
+            style("downgraded").yellow().bold()
         )?;
         let table = Table::new(&downgrade_rows)
             .with(Modify::new(Full).with(Alignment::left()))
