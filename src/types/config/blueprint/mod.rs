@@ -216,7 +216,7 @@ impl Blueprints {
         Ok(true)
     }
 
-    fn user_list_contains(&self, pkgname: &str) -> bool {
+    pub fn user_list_contains(&self, pkgname: &str) -> bool {
         for line in &self.user {
             if let BlueprintLine::PkgRequest(req) = line {
                 if req.name == pkgname {
@@ -227,7 +227,7 @@ impl Blueprints {
         false
     }
 
-    fn vendor_list_contains(&self, pkgname: &str) -> Option<PathBuf> {
+    pub fn vendor_list_contains(&self, pkgname: &str) -> Option<PathBuf> {
         for (path, vendor) in &self.vendor {
             for line in vendor {
                 if let BlueprintLine::PkgRequest(req) = line {

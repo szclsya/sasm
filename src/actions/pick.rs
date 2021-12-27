@@ -1,18 +1,33 @@
 use super::{InstallRequest, UserRequest};
 use crate::{
     db::LocalDb,
-    debug,
+    error,
     executor::MachineStatus,
-    info, pool,
-    types::{config::Opts, PkgSource, PkgVersion, VersionRequirement},
+    info, msg, pool,
+    types::{config::Blueprints, config::Opts, PkgSource, PkgVersion, VersionRequirement},
 };
 
 use anyhow::{bail, Context, Result};
 use console::style;
 use std::fmt;
 
-pub fn pick(pkgname: &str, opts: &Opts, local_db: &LocalDb) -> Result<UserRequest> {
-    debug!("Parsing deb dbs...");
+pub fn pick(
+    pkgname: &str,
+    blueprints: &Blueprints,
+    opts: &Opts,
+    local_db: &LocalDb,
+) -> Result<UserRequest> {
+    // Don't allow picking if the target is in the vendor blueprint
+    if let Some(path) = blueprints.vendor_list_contains(pkgname) {
+        error!(
+            "Cannot pick version for {} because it is in vendor blueprint {}",
+            style(pkgname).bold(),
+            style(path.display()).bold()
+        );
+        msg!("Vendor blueprints cannot be modified by Omakase for safety reason. If you really wish to pick a version for this package, edit this file directly");
+        bail!("Cannot pick version for {}", style(pkgname).bold())
+    }
+
     let dbs = local_db
         .get_all_package_db()
         .context("Invalid local package database")?;
