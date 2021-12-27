@@ -154,6 +154,15 @@ impl TryFrom<&str> for VersionRequirement {
 
 impl fmt::Display for VersionRequirement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // First, deal with equal
+        if self.lower_bond.is_some() && self.lower_bond == self.upper_bond {
+            let lower = self.lower_bond.as_ref().unwrap();
+            write!(f, "={}", lower.0)?;
+            // We are done!
+            return Ok(());
+        }
+
+        // If not equal, write two parts
         let mut written = false;
         if let Some(lower) = &self.lower_bond {
             // If inclusive
