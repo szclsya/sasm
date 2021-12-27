@@ -32,8 +32,8 @@ impl std::convert::TryFrom<&str> for PkgState {
             "triggers-awaited" => Self::TriggerAwaited,
             "triggers-pending" => Self::TriggerPending,
             "installed" => Self::Installed,
-            _ => {
-                bail!("Malformed package state")
+            unknown => {
+                bail!("Unknown package state {}", unknown)
             }
         };
         Ok(res)
