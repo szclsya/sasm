@@ -33,7 +33,7 @@ pub trait PkgPool: BasicPkgPool {
     fn get_deps(&self, pkgid: usize) -> Result<Vec<Vec<usize>>> {
         let pkg = self
             .get_pkg_by_id(pkgid)
-            .ok_or_else(|| format_err!("Package with ID {} not found", pkgid))?;
+            .ok_or_else(|| format_err!("Package with ID {} not found.", pkgid))?;
         let mut res = Vec::new();
         for dep in &pkg.depends {
             let mut deps_id = Vec::new();
@@ -41,7 +41,7 @@ pub trait PkgPool: BasicPkgPool {
                 Some(d) => d,
                 None => {
                     bail!(
-                        "Cannot find dependency {} for {}",
+                        "Cannot find dependency {} for {}.",
                         style(&dep.0).bold(),
                         style(&pkg.name).bold()
                     );
@@ -55,7 +55,7 @@ pub trait PkgPool: BasicPkgPool {
             }
             if deps_id.is_empty() {
                 bail!(
-                    "Cannot fulfill dependency {} for {}",
+                    "Cannot fulfill dependency {} for {}.",
                     style(&dep.0).bold(),
                     style(&pkg.name).bold()
                 );
@@ -69,7 +69,7 @@ pub trait PkgPool: BasicPkgPool {
     fn has_dbg_pkg(&self, pkgid: usize) -> Result<bool> {
         let pkg = match self.get_pkg_by_id(pkgid) {
             Some(meta) => meta,
-            None => bail!("Bad pkg id"),
+            None => bail!("Bad package ID."),
         };
         if let Some(dbg_pkgs) = self.get_pkgs_by_name(&format!("{}-dbg", pkg.name)) {
             for id in dbg_pkgs {
@@ -100,10 +100,10 @@ pub trait PkgPool: BasicPkgPool {
                     } else if first_valid_version {
                         // First version that matches version requirement but can't use it because local
                         // Tell it to the user
-                        warn!("Local version of {} will be used, but newer version is available in online repositories",
+                        warn!("Keeping local version of {}, but a newer version is available in upstream repositories.",
                               style(pkgname).bold());
                         msg!(
-                            "Remove {} keyword from blueprint to use the latest version",
+                            "Remove the {} keyword from your blueprint to use the latest version.",
                             style("local").bold()
                         );
                         first_valid_version = false;
@@ -111,9 +111,9 @@ pub trait PkgPool: BasicPkgPool {
                 }
             }
             // We haven't found a suitable candidate
-            bail!("No suitable version for {}", pkgname);
+            bail!("Cannot find a suitable version for {}.", pkgname);
         } else {
-            bail!("Package {} not found", pkgname);
+            bail!("Package {} not found.", pkgname);
         }
     }
 
@@ -132,7 +132,7 @@ pub trait PkgPool: BasicPkgPool {
                     None => pkgs.iter().copied().collect(),
                 },
                 None => {
-                    bail!("No package exists for dependency {}", style(&dep.0).bold());
+                    bail!("Cannot find a package which fulfills dependency {}.", style(&dep.0).bold());
                 }
             };
 
@@ -149,7 +149,7 @@ pub trait PkgPool: BasicPkgPool {
                 res.push(clause);
             } else {
                 bail!(
-                    "No applicable version for dependency {}",
+                    "Cannot find an applicable version for dependency {}.",
                     style(&dep.0).bold()
                 );
             }
@@ -234,7 +234,7 @@ pub trait PkgPool: BasicPkgPool {
                     }
                     Err(e) => {
                         warn!(
-                            "Ignoring package {}. Reason: {}",
+                            "Ignoring package {}: {}.",
                             style(&meta.name).bold(),
                             e
                         );
