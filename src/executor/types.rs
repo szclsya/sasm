@@ -2,7 +2,6 @@ use crate::types::PkgVersion;
 
 use anyhow::{bail, format_err, Context, Error, Result};
 use std::collections::HashMap;
-use std::convert::TryFrom;
 
 /// dpkg package state
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -58,18 +57,29 @@ impl TryFrom<HashMap<&str, String>> for PkgStatus {
         let name = f
             .remove("Package")
             .ok_or_else(|| format_err!("Malformed dpkg status database: package without name."))?;
-        let state_line = f
-            .remove("Status")
-            .ok_or_else(|| format_err!("Malformed dpkg status database: no Status field for package {}.", name))?;
-        let version = f.remove("Version").ok_or_else(|| {
-            format_err!("Malformed dpkg status database: no Version field for package {}.", name)
+        let state_line = f.remove("Status").ok_or_else(|| {
+            format_err!(
+                "Malformed dpkg status database: no Status field for package {}.",
+                name
+            )
         })?;
-        let version = PkgVersion::try_from(version.as_str())
-            .context(format!("Malformed dpkg status database: cannot parse version for {}.", name))?;
+        let version = f.remove("Version").ok_or_else(|| {
+            format_err!(
+                "Malformed dpkg status database: no Version field for package {}.",
+                name
+            )
+        })?;
+        let version = PkgVersion::try_from(version.as_str()).context(format!(
+            "Malformed dpkg status database: cannot parse version for {}.",
+            name
+        ))?;
         let install_size: u64 = f
             .remove("Installed-Size")
             .ok_or_else(|| {
-                format_err!("Malformed dpkg status database: no Version field for package {}", name)
+                format_err!(
+                    "Malformed dpkg status database: no Version field for package {}",
+                    name
+                )
             })?
             .parse()?;
         let essential = if let Some(word) = f.remove("Essential") {

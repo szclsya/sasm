@@ -8,10 +8,7 @@ use crate::{
 use anyhow::{bail, format_err, Result};
 use debcontrol::{BufParse, Streaming};
 use rayon::prelude::*;
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::fs::File;
-use std::path::Path;
+use std::{collections::HashMap, fs::File, path::Path};
 
 const INTERESTED_FIELDS: &[&str] = &[
     "Package",
@@ -74,16 +71,18 @@ pub fn import(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
 #[inline]
 fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Result<PkgMeta> {
     // Get name first, for error reporting
-    let name = f
-        .remove("Package")
-        .ok_or_else(|| format_err!("Package metadata does not define a package name (Package field missing)."))?;
+    let name = f.remove("Package").ok_or_else(|| {
+        format_err!("Package metadata does not define a package name (Package field missing).")
+    })?;
     // Generate real url
     let mut path = baseurl.to_string();
     path.push('/');
-    path.push_str(
-        f.get("Filename")
-            .ok_or_else(|| format_err!("Metadata for package {} does not contain the Filename field.", name))?,
-    );
+    path.push_str(f.get("Filename").ok_or_else(|| {
+        format_err!(
+            "Metadata for package {} does not contain the Filename field.",
+            name
+        )
+    })?);
     Ok(PkgMeta {
         name: name.clone(),
         section: f

@@ -57,8 +57,9 @@ pub fn parse_pkg_list(s: &str) -> Result<Vec<(String, VersionRequirement)>> {
     let mut res = Vec::new();
     let pkgs: Vec<&str> = s.split(", ").collect();
     for pkg in pkgs {
-        let (_, (name, version)) = parse_relational(pkg.as_bytes())
-            .map_err(|_| format_err!("Malformed version condition(s) in depends/breaks: {}", pkg))?;
+        let (_, (name, version)) = parse_relational(pkg.as_bytes()).map_err(|_| {
+            format_err!("Malformed version condition(s) in depends/breaks: {}", pkg)
+        })?;
         // The regex should ensure name always exist
         let ver_req = match version {
             Some(s) => VersionRequirement::try_from(std::str::from_utf8(s)?)?,

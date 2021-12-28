@@ -62,7 +62,10 @@ pub async fn execute(
                 if !install.local && install.install_recomm {
                     let choices = match solver.pool.get_pkgs_by_name(&install.pkgname) {
                         Some(pkgs) => pkgs,
-                        None => bail!("Failed to add recommended packages for {} .", &install.pkgname),
+                        None => bail!(
+                            "Failed to add recommended packages for {} .",
+                            &install.pkgname
+                        ),
                     };
                     let choice = choices.get(0).unwrap();
                     let meta = solver.pool.get_pkg_by_id(*choice).unwrap();

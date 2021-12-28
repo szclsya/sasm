@@ -8,7 +8,6 @@ use nom::{
 };
 use serde::{Deserialize, Serialize, Serializer};
 use std::cmp::Ordering;
-use std::convert::TryFrom;
 use std::fmt;
 
 lazy_static! {
@@ -106,7 +105,10 @@ pub fn parse_version(i: &str) -> IResult<&str, PkgVersion> {
                 "Unable to parse version {} with standard parser, switching to compatible mode...",
                 i
             );
-            context("Parsing PkgVersion with compatible mode...", alt_parse_version)(i)?
+            context(
+                "Parsing PkgVersion with compatible mode...",
+                alt_parse_version,
+            )(i)?
         }
     };
     Ok((i, res))

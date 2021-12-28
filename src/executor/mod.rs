@@ -7,10 +7,7 @@ pub use types::{PkgState, PkgStatus};
 
 use anyhow::{Context, Result};
 use debcontrol::{BufParse, Streaming};
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::fs;
-use std::path::Path;
+use std::{collections::HashMap, fs, path::Path};
 
 /// Status of this machine
 pub struct MachineStatus {

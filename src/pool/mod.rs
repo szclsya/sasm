@@ -132,7 +132,10 @@ pub trait PkgPool: BasicPkgPool {
                     None => pkgs.iter().copied().collect(),
                 },
                 None => {
-                    bail!("Cannot find a package which fulfills dependency {}.", style(&dep.0).bold());
+                    bail!(
+                        "Cannot find a package which fulfills dependency {}.",
+                        style(&dep.0).bold()
+                    );
                 }
             };
 
@@ -233,11 +236,7 @@ pub trait PkgPool: BasicPkgPool {
                         }
                     }
                     Err(e) => {
-                        warn!(
-                            "Ignoring package {}: {}.",
-                            style(&meta.name).bold(),
-                            e
-                        );
+                        warn!("Ignoring package {}: {}.", style(&meta.name).bold(), e);
                     }
                 }
             }

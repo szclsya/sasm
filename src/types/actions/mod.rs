@@ -201,7 +201,9 @@ impl PkgActions<'_> {
                     "",
                     &format!(
                         "{} +{}",
-                        &style("Estimated change in storage usage:").bold().to_string(),
+                        &style("Estimated change in storage usage:")
+                            .bold()
+                            .to_string(),
                         HumanBytes(abs_install_size_change)
                     ),
                 )
@@ -212,7 +214,9 @@ impl PkgActions<'_> {
                     "",
                     &format!(
                         "{} -{}",
-                        &style("Estimated change in storage usage:").bold().to_string(),
+                        &style("Estimated change in storage usage:")
+                            .bold()
+                            .to_string(),
                         HumanBytes(abs_install_size_change)
                     ),
                 )

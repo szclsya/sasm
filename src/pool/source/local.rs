@@ -12,7 +12,10 @@ use xz2::read::XzDecoder;
 
 pub fn read_debs_from_path(p: &Path) -> Result<Vec<PkgMeta>> {
     if !p.is_dir() {
-        bail!("Invalid local repository: {} is not a directory.", p.display());
+        bail!(
+            "Invalid local repository: {} is not a directory.",
+            p.display()
+        );
     }
 
     let mut deb_paths = Vec::new();

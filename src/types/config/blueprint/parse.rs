@@ -34,8 +34,10 @@ pub fn read_blueprint_from_file(path: &Path) -> Result<Vec<BlueprintLine>> {
         style(path.display()).bold()
     ))?;
     let reader = BufReader::new(f);
-    let lines = parse_blueprint_lines(reader)
-        .context(format!("Failed to parse blueprint {}.", style(path.display()).bold()))?;
+    let lines = parse_blueprint_lines(reader).context(format!(
+        "Failed to parse blueprint {}.",
+        style(path.display()).bold()
+    ))?;
     for (no, line) in lines.iter().enumerate() {
         // Try fill variables to sanitize
         if let BlueprintLine::PkgRequest(req) = &line {
@@ -184,7 +186,7 @@ mod tests {
     use super::*;
     use crate::types::PkgVersion;
     use nom::{error::Error, IResult};
-    use std::convert::TryFrom;
+
     #[test]
     fn test_empty_line() {
         let t: Vec<(&str, IResult<&str, BlueprintLine>)> = vec![

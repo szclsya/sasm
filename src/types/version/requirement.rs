@@ -3,7 +3,6 @@ use anyhow::{bail, format_err, Result};
 use nom::{branch::alt, bytes::complete::tag, character::complete::*, error::context, IResult};
 use serde::{Deserialize, Serialize, Serializer};
 use std::cmp::Ordering::*;
-use std::convert::TryFrom;
 use std::fmt;
 
 #[derive(PartialEq, Eq, Clone, Debug, Deserialize, Default)]
@@ -55,7 +54,11 @@ impl VersionRequirement {
         }
 
         if !new.valid() {
-            bail!("Failed to reach a solution for version requirements {} and {} .", self, other);
+            bail!(
+                "Failed to reach a solution for version requirements {} and {} .",
+                self,
+                other
+            );
         }
 
         Ok(new)
