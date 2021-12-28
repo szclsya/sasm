@@ -30,19 +30,19 @@ pub enum BlueprintLine {
 pub fn read_blueprint_from_file(path: &Path) -> Result<Vec<BlueprintLine>> {
     // Read lines from blueprint file
     let f = File::open(path).context(format!(
-        "Failed to open blueprint at {}",
+        "Failed to open blueprint file at {}.",
         style(path.display()).bold()
     ))?;
     let reader = BufReader::new(f);
     let lines = parse_blueprint_lines(reader)
-        .context(format!("Failed to parse {}", style(path.display()).bold()))?;
+        .context(format!("Failed to parse blueprint {}.", style(path.display()).bold()))?;
     for (no, line) in lines.iter().enumerate() {
         // Try fill variables to sanitize
         if let BlueprintLine::PkgRequest(req) = &line {
             let new_pkgname = fill_variables(&req.name)?;
             if !new_pkgname.chars().all(is_pkgname_char) {
                 bail!(
-                    "Fail to parse {}: invalid package name at line {}",
+                    "Fail to parse blueprint {}: invalid package name at line {}.",
                     path.display(),
                     no
                 );
@@ -65,7 +65,7 @@ fn parse_blueprint_lines(reader: impl BufRead) -> Result<Vec<BlueprintLine>> {
             Err(e) => {
                 errors += 1;
                 error!(
-                    "Failed to parse blueprint at line {}: {}\n",
+                    "Failed to parse blueprint at line {}: {}.\n",
                     no,
                     e.to_string()
                 );
@@ -76,7 +76,7 @@ fn parse_blueprint_lines(reader: impl BufRead) -> Result<Vec<BlueprintLine>> {
     if errors == 0 {
         Ok(res)
     } else {
-        bail!("Failed to parse blueprint due to {} error(s)", errors)
+        bail!("Failed to parse blueprint, found {} error(s).", errors)
     }
 }
 
