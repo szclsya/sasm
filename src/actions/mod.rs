@@ -123,7 +123,7 @@ pub async fn fullfill_command(
             lock::lock(&opts.root)?;
 
             localdb.update(&downloader).await?;
-            success!("Refresh complete");
+            success!("Omakase has successfully refreshed local package metadata.");
             Ok(())
         }
         SubCmd::Execute => {
@@ -135,7 +135,7 @@ pub async fn fullfill_command(
             localdb
                 .update(&downloader)
                 .await
-                .context("Failed to refresh local package database")?;
+                .context("Failed to refresh local package metadata!")?;
 
             execute(&localdb, &downloader, blueprints, opts, config, req).await?;
 
@@ -161,19 +161,19 @@ pub async fn fullfill_command(
             lock::ensure_unlocked(&opts.root)?;
             lock::lock(&opts.root)?;
 
-            info!("Cleaning local package cache...");
+            info!("Purging local package metadata cache...");
             let pkg_cache_path = opts.root.join(crate::PKG_CACHE_PATH);
             if pkg_cache_path.is_dir() {
                 std::fs::remove_dir_all(&pkg_cache_path)?;
                 std::fs::create_dir_all(&pkg_cache_path)?;
             }
 
-            info!("Cleaning local package repository...");
+            info!("Purging local package cache...");
             let ms = MachineStatus::new(&opts.root)?;
             local::clean(&ms, &opts.root)?;
 
             if cleanconfig.all {
-                info!("Cleaning local database cache...");
+                info!("Purging local metadata cache...");
                 let db_cache_path = opts.root.join(crate::DB_CACHE_PATH);
                 if db_cache_path.is_dir() {
                     std::fs::remove_dir_all(&db_cache_path)?;
