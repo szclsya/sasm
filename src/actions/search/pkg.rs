@@ -11,7 +11,7 @@ pub fn search_deb_db(
 ) -> Result<()> {
     let dbs = local_db
         .get_all_package_db()
-        .context("Cannot initialize local db for searching")?;
+        .context("Failed to initialize local database for searching!")?;
     let pool = pool::source::create_pool(&dbs, &[])?;
 
     let mut pkgs = search_pkg_helper(pool.as_ref(), keyword);
