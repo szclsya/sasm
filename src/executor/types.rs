@@ -57,7 +57,7 @@ impl TryFrom<HashMap<&str, String>> for PkgStatus {
     fn try_from(mut f: HashMap<&str, String>) -> Result<PkgStatus, Self::Error> {
         let name = f
             .remove("Package")
-            .ok_or_else(|| format_err!("Malformed dpkg status database: no Package field for package {}.", name))?;
+            .ok_or_else(|| format_err!("Malformed dpkg status database: package without name."))?;
         let state_line = f
             .remove("Status")
             .ok_or_else(|| format_err!("Malformed dpkg status database: no Status field for package {}.", name))?;
@@ -65,7 +65,7 @@ impl TryFrom<HashMap<&str, String>> for PkgStatus {
             format_err!("Malformed dpkg status database: no Version field for package {}.", name)
         })?;
         let version = PkgVersion::try_from(version.as_str())
-            .context("Malformed dpkg status database: cannot parse version for {}.", name)?;
+            .context(format!("Malformed dpkg status database: cannot parse version for {}.", name))?;
         let install_size: u64 = f
             .remove("Installed-Size")
             .ok_or_else(|| {
