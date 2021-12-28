@@ -79,12 +79,12 @@ async fn try_main(opts: &Opts) -> Result<()> {
         .join(&opts.config_root)
         .canonicalize()
         .context(format!(
-            "Failed to find config_root at {}",
+            "Failed to find config_root in Omakase configuration file {} .",
             opts.config_root.display()
         ))?;
     if !config_root.is_dir() {
         bail!(
-            "Config root does not exist or is not a directory at {}",
+            "Configuration root (config_root) does not exist or is not a directory at {} .",
             config_root.display()
         );
     }
@@ -92,28 +92,28 @@ async fn try_main(opts: &Opts) -> Result<()> {
     let config_path = config_root.join("config.toml");
     // Set-up main config file
     let mut config_file = File::open(&config_path).context(format!(
-        "Failed to open config file at {}",
+        "Failed to open configuration file {} .",
         config_path.display()
     ))?;
     let mut data = String::new();
     config_file
         .read_to_string(&mut data)
-        .context("Failed to read config file")?;
-    let config: Config = toml::from_str(&data).context("Failed to parse config file")?;
+        .context("Failed to read configuration file.")?;
+    let config: Config = toml::from_str(&data).context("Failed to parse configuration file.")?;
     config.check_sanity()?;
 
     // Set-up blueprints
     let mut vendor_blueprint_paths = Vec::new();
     let blueprint_d_path = config_root.join("blueprint.d");
     if blueprint_d_path.is_dir() {
-        let paths = read_dir(blueprint_d_path).context("Failed to load Blueprint directory")?;
+        let paths = read_dir(blueprint_d_path).context("Failed to load Blueprint directory.")?;
         for path in paths {
             let path = path?;
             let filename = path
                 .file_name()
                 .to_str()
                 .context(format!(
-                    "Bad filename in config folder: {}",
+                    "Bad filename in configuration folder: {} .",
                     path.path().display()
                 ))?
                 .to_owned();
