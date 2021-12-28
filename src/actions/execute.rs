@@ -31,15 +31,15 @@ pub async fn execute(
     let mut alt_root = false;
     if opts.root != std::path::Path::new("/") {
         info!(
-            "Operating in alternative root mode, package will only be unpacked but not configured"
+            "Operating in external system root mode, Omakase will only unpack packages without configuration!"
         );
         alt_root = true;
     }
 
-    debug!("Parsing deb dbs...");
+    debug!("Parsing dpkg database...");
     let dbs = local_db
         .get_all_package_db()
-        .context("Invalid local package database")?;
+        .context("Invalid local package database!")?;
     let local_repo = opts.root.join(crate::LOCAL_REPO_PATH);
     if !local_repo.is_dir() {
         std::fs::create_dir_all(&local_repo)?;
@@ -62,7 +62,7 @@ pub async fn execute(
                 if !install.local && install.install_recomm {
                     let choices = match solver.pool.get_pkgs_by_name(&install.pkgname) {
                         Some(pkgs) => pkgs,
-                        None => bail!("Cannot add recommended packages for {}", &install.pkgname),
+                        None => bail!("Failed to add recommended packages for {} .", &install.pkgname),
                     };
                     let choice = choices.get(0).unwrap();
                     let meta = solver.pool.get_pkg_by_id(*choice).unwrap();
@@ -100,9 +100,9 @@ pub async fn execute(
     }
 
     if actions.is_empty() {
-        success!("There's nothing to do.");
+        success!("There is nothing to do.");
     } else {
-        info!("These following actions will be performed:");
+        info!("Omakase will perform the following actions:");
         if opts.no_pager {
             actions.show();
         } else {
@@ -117,15 +117,15 @@ pub async fn execute(
                 let prefix = style("DANGER").red().to_string();
                 crate::WRITER.writeln(
                     &prefix,
-                    "Some Essential packages will be removed/purged. Are you REALLY sure?",
+                    "Some ESSENTIAL packages will be removed/purged. Are you REALLY sure?",
                 )?;
                 let confirm_msg =
                     format!("{}{}", cli::gen_prefix(""), "Is this supposed to happen?");
                 if !Confirm::new().with_prompt(confirm_msg).interact()? {
-                    bail!("User cancelled operation");
+                    bail!("User cancelled operation.");
                 }
             } else {
-                bail!("Some essential packages will be removed. Aborting")
+                bail!("Some ESSENTIAL packages will be removed. Aborting...")
             }
         }
 

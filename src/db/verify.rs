@@ -20,7 +20,7 @@ pub fn verify_inrelease(
             cert_paths.push(cert_path);
         } else {
             bail!(
-                "Public key file {} not found",
+                "Public key file {} not found.",
                 console::style(cert_file).bold().to_string()
             );
         }
@@ -67,11 +67,11 @@ impl VerificationHelper for InReleaseVerifier {
             if let MessageLayer::SignatureGroup { results } = layer {
                 for r in results {
                     if let Err(e) = r {
-                        bail!("InRelease has bad signature: {}", e);
+                        bail!("InRelease contains bad signature: {} .", e);
                     }
                 }
             } else {
-                bail!("Malformed PGP signature, InRelease should only be signed")
+                bail!("Malformed PGP signature, InRelease must be signed.")
             }
         }
 

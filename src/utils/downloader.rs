@@ -206,14 +206,14 @@ async fn download_file(
             .path_segments()
             .and_then(|segments| segments.last())
             .and_then(|name| if name.is_empty() { None } else { Some(name) })
-            .ok_or_else(|| format_err!("{} doesn't contain filename", &job.url))?
+            .ok_or_else(|| format_err!("{} doesn't contain filename.", &job.url))?
             .to_string(),
     };
     let len = match job.size {
         Some(len) => len,
         None => resp
             .content_length()
-            .ok_or_else(|| format_err!("Cannot determine content length"))?,
+            .ok_or_else(|| format_err!("Cannot determine content length."))?,
     };
     let msg = job.description.as_ref().unwrap_or(&filename);
 
@@ -288,7 +288,7 @@ async fn download_file(
         if let Some(len) = job.size {
             if bar.length() != len {
                 bail!(
-                    "Bad file size when downloading {}. Mirror may be syncing. Try again later.",
+                    "Bad file size when downloading {}: mirrors may be synchronizing, please try again later.",
                     job.url
                 );
             }
@@ -297,7 +297,7 @@ async fn download_file(
         if let Some(validator) = validator {
             // finish() returns false if validate failed
             if !validator.finish() {
-                bail!("Checksum mismatch for file {}", filename);
+                bail!("Checksum mismatched for file {}.", filename);
             }
         }
     }

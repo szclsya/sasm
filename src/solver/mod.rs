@@ -21,7 +21,7 @@ impl From<Box<dyn PkgPool>> for Solver {
 impl Solver {
     pub fn install(&self, blueprints: &Blueprints) -> Result<Vec<&PkgMeta>> {
         let mut formula = self.pool.gen_formula(None);
-        debug!("Adding requested packages to formula...");
+        debug!("Adding requested packages to solver formula...");
         let mut ids = Vec::new();
         for req in blueprints.get_pkg_requests() {
             let id = self
@@ -35,7 +35,7 @@ impl Solver {
         solver.add_formula(&formula);
 
         // Initial solve
-        debug!("Initial solve");
+        debug!("Computing initial solution...");
         let mut res = match solve(&mut solver) {
             Ok(r) => r,
             Err(_) => {
@@ -43,13 +43,13 @@ impl Solver {
                     self.pool.as_ref(),
                     &ids
                 )))
-                .context("Cannot satisfy package requirements")
+                .context("Omakase cannot satisfy package requirements.")
             }
         };
 
         // Improve the result to remove redundant packages
         // and select best possible packages
-        debug!("Improving dependency tree...");
+        debug!("Refining dependency solution...");
         improve::upgrade(self.pool.as_ref(), &mut res, &mut solver)?;
         improve::reduce(self.pool.as_ref(), &mut res, &ids)?;
         // Sort result
@@ -69,7 +69,7 @@ impl Solver {
 pub fn solve(solver: &mut varisat::Solver) -> Result<Vec<usize>> {
     let mut res = Vec::new();
     if !solver.solve().unwrap() {
-        bail!("Cannot satisfy package requirements");
+        bail!("Omakase cannot satisfy package requirements.");
     } else {
         let model = solver.model().unwrap();
         for i in model {

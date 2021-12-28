@@ -22,7 +22,7 @@ pub fn add(paths: &[PathBuf], root: &Path) -> Result<Vec<String>> {
         // Try to load deb info
         let pkgmeta = crate::pool::source::local::read_control_from_deb(path)?;
         info!(
-            "Loading {}({}) into local package repository.",
+            "Loading {}({}) into local package repository...",
             style(&pkgmeta.name).bold(),
             pkgmeta.version
         );
@@ -30,12 +30,12 @@ pub fn add(paths: &[PathBuf], root: &Path) -> Result<Vec<String>> {
             .with_prompt(format!("{}{}", cli::gen_prefix(""), "Confirm?"))
             .interact()?
         {
-            bail!("User cancelled operation");
+            bail!("User cancelled operation.");
         }
 
         let filename = match path.file_name() {
             Some(f) => f,
-            None => bail!("Invalid deb file {}", path.display()),
+            None => bail!("Invalid deb file {} !", path.display()),
         };
 
         // Prepare job
@@ -68,7 +68,7 @@ pub fn clean(ms: &MachineStatus, root: &Path) -> Result<()> {
     for entry in fs::read_dir(&local_repo_root)? {
         let entry = entry?;
         let path = entry.path();
-        debug!("Inspecting local deb {}", path.display());
+        debug!("Inspecting local deb {} ...", path.display());
         if !path.is_file() || path.extension() != Some(OsStr::new("deb")) {
             continue;
         }
@@ -81,7 +81,7 @@ pub fn clean(ms: &MachineStatus, root: &Path) -> Result<()> {
             }
         }
         // Not contained in current machine or not installed, remove it.
-        debug!("Removing {}", style(path.display()).bold());
+        debug!("Removing {} ...", style(path.display()).bold());
         fs::remove_file(&path)?;
     }
 

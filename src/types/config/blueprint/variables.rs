@@ -20,7 +20,7 @@ pub fn fill_variables(rule: &str) -> Result<String> {
     });
 
     if !unknown_variable.is_empty() {
-        bail!("Unknown variable: {}", unknown_variable.join(", "));
+        bail!("Unknown variable: {}.", unknown_variable.join(", "));
     }
 
     Ok(res.to_string())
@@ -31,7 +31,7 @@ fn get_kernel_version() -> Result<String> {
     let version = uname.release();
     let sections: Vec<&str> = version.split('-').collect();
     if sections.is_empty() {
-        bail!("Cannot get kernel version: Malformed kernel release");
+        bail!("Failed to obtain kernel version: malformed kernel local version.");
     }
     Ok(sections.get(0).unwrap().to_string())
 }

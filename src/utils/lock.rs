@@ -14,7 +14,7 @@ struct LockInfo {
 pub fn ensure_unlocked(root: &Path) -> Result<()> {
     if let Some(pid) = check(root)? {
         bail!(
-            "Another instance of Omakase is currently running at PID {}",
+            "Another instance of Omakase is currently running at PID {}.",
             pid
         );
     }
@@ -26,9 +26,9 @@ pub fn check(root: &Path) -> Result<Option<u32>> {
     let lock_path = root.join(LOCK_PATH);
     if lock_path.is_file() {
         let lock_content =
-            std::fs::read_to_string(lock_path).context("Failed to read lock file")?;
+            std::fs::read_to_string(lock_path).context("Failed to read lock file.")?;
         let lock_info: LockInfo =
-            toml::from_str(&lock_content).context("Failed to parse lock file")?;
+            toml::from_str(&lock_content).context("Failed to parse lock file.")?;
         Ok(Some(lock_info.pid))
     } else {
         Ok(None)
@@ -38,12 +38,12 @@ pub fn check(root: &Path) -> Result<Option<u32>> {
 pub fn lock(root: &Path) -> Result<()> {
     // Make sure we are running as root
     if !Uid::effective().is_root() {
-        bail!("You must be root to perform this operation");
+        bail!("You must be root to perform this operation.");
     }
 
     let lock_path = root.join(LOCK_PATH);
     if lock_path.is_file() {
-        bail!("Cannot lock because lock file already exists");
+        bail!("Failed to create an instance lock because the lock file already exists.");
     }
 
     // Set global lock parameter
@@ -54,37 +54,37 @@ pub fn lock(root: &Path) -> Result<()> {
         let root = root.to_owned();
         ctrlc::set_handler(move || {
             if crate::DPKG_RUNNING.load(Ordering::Relaxed) {
-                warn!("Cannot interrupt when dpkg is running");
+                warn!("You may not interrupt Omakase when dpkg is running.");
             } else {
                 // Thanks to stateless, we can just exit
-                unlock(&root).expect("Failed to unlock");
+                unlock(&root).expect("Failed to unlock instance.");
                 std::process::exit(2);
             }
         })
-        .expect("Error setting SIGINT handler");
+        .expect("Error setting SIGINT handler.");
     }
 
     // Create directory if not created yet
     let prefix = lock_path.parent().unwrap();
     if !prefix.is_dir() {
-        fs::create_dir_all(prefix).context("Failed to create dir for lock file")?;
+        fs::create_dir_all(prefix).context("Failed to create directory for lock file.")?;
     }
     let lock_info = LockInfo {
         pid: std::process::id(),
     };
     let lock_content = toml::to_string(&lock_info)?;
-    let mut file = fs::File::create(&lock_path).context("Failed to create lock file")?;
+    let mut file = fs::File::create(&lock_path).context("Failed to create lock file.")?;
     file.write(lock_content.as_bytes())
-        .context("Failed to write lock content")?;
+        .context("Failed to write instance information to lock file.")?;
     Ok(())
 }
 
 pub fn unlock(root: &Path) -> Result<()> {
     let lock_path = root.join(LOCK_PATH);
     if lock_path.is_file() {
-        fs::remove_file(&lock_path).context("Failed to delete lock file")?;
+        fs::remove_file(&lock_path).context("Failed to delete lock file.")?;
     } else {
-        debug!("Attempt to unlock, but lock file doesn't exist");
+        debug!("Attempt to unlock, but lock file does not exist.");
     }
     Ok(())
 }

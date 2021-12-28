@@ -33,7 +33,7 @@ impl std::convert::TryFrom<&str> for PkgState {
             "triggers-pending" => Self::TriggerPending,
             "installed" => Self::Installed,
             unknown => {
-                bail!("Unknown package state {}", unknown)
+                bail!("Invalid package state {} .", unknown)
             }
         };
         Ok(res)
@@ -57,19 +57,19 @@ impl TryFrom<HashMap<&str, String>> for PkgStatus {
     fn try_from(mut f: HashMap<&str, String>) -> Result<PkgStatus, Self::Error> {
         let name = f
             .remove("Package")
-            .ok_or_else(|| format_err!("Malformed dpkg status db: no Package name for package"))?;
+            .ok_or_else(|| format_err!("Malformed dpkg status database: no Package field for package {}.", name))?;
         let state_line = f
             .remove("Status")
-            .ok_or_else(|| format_err!("Malformed dpkg status db: no Status for package"))?;
+            .ok_or_else(|| format_err!("Malformed dpkg status database: no Status field for package {}.", name))?;
         let version = f.remove("Version").ok_or_else(|| {
-            format_err!("Malformed dpkg status db: no Version for package {}", name)
+            format_err!("Malformed dpkg status database: no Version field for package {}.", name)
         })?;
         let version = PkgVersion::try_from(version.as_str())
-            .context("Malformed dpkg status db, cannot parse version")?;
+            .context("Malformed dpkg status database: cannot parse version for {}.", name)?;
         let install_size: u64 = f
             .remove("Installed-Size")
             .ok_or_else(|| {
-                format_err!("Malformed dpkg status db: no Version for package {}", name)
+                format_err!("Malformed dpkg status database: no Version field for package {}", name)
             })?
             .parse()?;
         let essential = if let Some(word) = f.remove("Essential") {
@@ -77,7 +77,7 @@ impl TryFrom<HashMap<&str, String>> for PkgStatus {
                 "yes" => true,
                 "no" => false,
                 invalid => {
-                    bail!("Malformed dpkg status db: expect \"yes\"/\"no\" for Essential field, got {}", invalid);
+                    bail!("Malformed dpkg status database: expected \"yes\"/\"no\" for Essential field, got {}.", invalid);
                 }
             }
         } else {
@@ -85,7 +85,7 @@ impl TryFrom<HashMap<&str, String>> for PkgStatus {
         };
         let status: Vec<&str> = state_line.split(' ').collect();
         if status.len() != 3 {
-            bail!("Malformed dpkg status db");
+            bail!("Malformed dpkg status database.");
         }
 
         let state = PkgState::try_from(*status.get(2).unwrap())?;

@@ -55,7 +55,7 @@ impl VersionRequirement {
         }
 
         if !new.valid() {
-            bail!("Cannot merge version requirements {} and {}", self, other);
+            bail!("Failed to reach a solution for version requirements {} and {} .", self, other);
         }
 
         Ok(new)
@@ -110,11 +110,11 @@ impl VersionRequirement {
 /// Use `nom` to parse a VersionRequirement string
 pub fn parse_version_requirement(i: &str) -> IResult<&str, VersionRequirement> {
     let (i, compare) = context(
-        "parsing compare literal",
+        "Parsing compare literal...",
         alt((tag(">="), tag("<="), tag("="), tag(">>"), tag("<<"))),
     )(i)?;
     let (i, _) = space0(i)?;
-    let (i, ver) = context("parsing version in VersionRequirement", parse_version)(i)?;
+    let (i, ver) = context("Parsing version in VersionRequirement...", parse_version)(i)?;
     let mut res = VersionRequirement::default();
     match compare {
         ">>" => {
@@ -146,7 +146,7 @@ impl TryFrom<&str> for VersionRequirement {
         let (_, ver_req) =
             parse_version_requirement(s).map_err(|e| format_err!("Malformed version: {}", e))?;
         if !ver_req.valid() {
-            bail!("Failed to parse version requirement: lower bond is greater than upper bond")
+            bail!("Failed to parse version requirements: lower bound is greater than upper bound.")
         }
         Ok(ver_req)
     }

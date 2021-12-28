@@ -12,14 +12,14 @@ use xz2::read::XzDecoder;
 
 pub fn read_debs_from_path(p: &Path) -> Result<Vec<PkgMeta>> {
     if !p.is_dir() {
-        bail!("Invalid local repository: {} is not a dir", p.display());
+        bail!("Invalid local repository: {} is not a directory.", p.display());
     }
 
     let mut deb_paths = Vec::new();
     for entry in std::fs::read_dir(p)? {
         let entry = entry?;
         let path = entry.path();
-        debug!("Parsing local deb {}", path.display());
+        debug!("Parsing local deb file {} ...", path.display());
         if !path.is_file() || path.extension() != Some(OsStr::new("deb")) {
             continue;
         }
@@ -35,7 +35,7 @@ pub fn read_debs_from_path(p: &Path) -> Result<Vec<PkgMeta>> {
 
 pub fn read_control_from_deb(p: &Path) -> Result<PkgMeta> {
     let mut archive = ar::Archive::new(
-        File::open(p).context(format!("Failed to open deb file at {}", p.display()))?,
+        File::open(p).context(format!("Failed to open deb file {} .", p.display()))?,
     );
     while let Some(entry) = archive.next_entry() {
         let entry = entry?;
@@ -60,13 +60,13 @@ pub fn read_control_from_deb(p: &Path) -> Result<PkgMeta> {
             }
         }
     }
-    bail!("Malformed deb file")
+    bail!("Malformed deb file.")
 }
 
 fn parse_debcontrol(i: &str, p: &Path) -> Result<PkgMeta> {
     let paragraphs = match debcontrol::parse_str(i) {
         Ok(p) => p,
-        Err(e) => bail!("Failed to parse control for deb: {}", e),
+        Err(e) => bail!("Failed to parse control for deb: {} .", e),
     };
     let mut fields = HashMap::new();
     for p in paragraphs {
@@ -82,16 +82,16 @@ fn parse_debcontrol_fields(mut f: HashMap<&str, String>, p: &Path) -> Result<Pkg
     Ok(PkgMeta {
         name: f
             .remove("Package")
-            .ok_or_else(|| format_err!("deb control without name"))?,
+            .ok_or_else(|| format_err!("deb control file does not contain the Package field."))?,
         section: f
             .remove("Section")
-            .ok_or_else(|| format_err!("deb control without Section"))?,
+            .ok_or_else(|| format_err!("deb control file does not contain the Section field."))?,
         description: f
             .remove("Description")
-            .ok_or_else(|| format_err!("deb control without Description"))?,
+            .ok_or_else(|| format_err!("deb control file does not contain the Description field."))?,
         version: PkgVersion::try_from(
             f.get("Version")
-                .ok_or_else(|| format_err!("deb control without Version"))?
+                .ok_or_else(|| format_err!("deb control file does not contain the Version field."))?
                 .as_str(),
         )?,
         depends: parse_pkg_list(f.get("Depends").unwrap_or(&String::new()))?,
@@ -107,7 +107,7 @@ fn parse_debcontrol_fields(mut f: HashMap<&str, String>, p: &Path) -> Result<Pkg
         },
         install_size: f
             .remove("Installed-Size")
-            .ok_or_else(|| format_err!("deb control without Installed-Size"))?
+            .ok_or_else(|| format_err!("deb control file does not contain the Installed-Size field."))?
             .as_str()
             .parse()?,
         essential: match f.get("Essential") {
@@ -115,7 +115,7 @@ fn parse_debcontrol_fields(mut f: HashMap<&str, String>, p: &Path) -> Result<Pkg
                 "yes" => true,
                 "no" => false,
                 invalid => bail!(
-                    "deb control for {} has invalid field Essential (should be yes/no, got {})",
+                    "deb control for {} contains invalid value for the Essential field (should be yes/no, got {}).",
                     p.display(),
                     invalid
                 ),

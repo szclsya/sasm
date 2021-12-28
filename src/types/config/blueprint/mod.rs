@@ -104,7 +104,7 @@ impl Blueprints {
     ) -> Result<()> {
         if !modify && self.user_list_contains(pkgname) {
             bail!(
-                "Package {} already exists in user blueprint",
+                "Package {} already exists in user blueprint.",
                 style(pkgname).bold()
             );
         }
@@ -117,7 +117,7 @@ impl Blueprints {
                 );
             }
             bail!(
-                "Package {} already exists in vendor blueprint {}",
+                "Package {} already exists in vendor blueprint {}.",
                 style(pkgname).bold(),
                 style(path.display()).bold()
             );
@@ -143,23 +143,23 @@ impl Blueprints {
         if !self.user_list_contains(pkgname) {
             if let Some(path) = self.vendor_list_contains(pkgname) {
                 error!(
-                    "Package {} not found in user blueprint",
+                    "Package {} not found in user blueprint.",
                     style(pkgname).bold()
                 );
                 info!(
-                    "However, it exists in vendor blueprint at {}",
+                    "However, it exists in vendor blueprint {}.",
                     style(path.display()).bold()
                 );
                 msg!(
-                    "You cannot remove packages in vendor blueprints via Omakase CLI for safety reason. But if you really wish to remove this package, edit the file above directly."
+                    "You may not remove packages in vendor blueprints via the Omakase CLI. If you really wish to remove this package, please edit the vendor blueprint file above directly."
                 );
             } else {
                 error!(
-                    "Package {} not found in all blueprints",
+                    "Package {} not found in any installed blueprints.",
                     style(pkgname).bold()
                 );
             }
-            bail!("Cannot remove {} from user blueprint", pkgname)
+            bail!("Failed to remove {} from user blueprint.", pkgname)
         } else {
             self.user.retain(|line| match line {
                 BlueprintLine::PkgRequest(req) => req.name != pkgname,
@@ -209,7 +209,7 @@ impl Blueprints {
         blueprint_file
             .write_all_at(&res.into_bytes(), 0)
             .context(format!(
-                "Failed to write to blueprint file at {}",
+                "Failed to write to blueprint file {}.",
                 self.user_blueprint_path.display()
             ))?;
 

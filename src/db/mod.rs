@@ -40,7 +40,7 @@ impl LocalDb {
     pub fn get_package_db(&self, name: &str) -> Result<Vec<(String, PathBuf)>> {
         let repo = match self.repos.get(name) {
             Some(repo) => repo,
-            None => bail!("Repository with name {} not found", name),
+            None => bail!("Repository with name {} not found.", name),
         };
 
         let mut files: Vec<(String, PathBuf)> = Vec::new();
@@ -51,7 +51,7 @@ impl LocalDb {
                 &name, &repo.distribution, component, &self.arch
             ));
             if !arch.is_file() {
-                bail!("Local database is corrupted or out-of-date");
+                bail!("Local repository catalog is corrupted or out-of-date.");
             }
             files.push((repo.url.clone(), self.root.join(arch)));
             // Then prepare noarch repo, if exists
@@ -79,7 +79,7 @@ impl LocalDb {
     pub fn get_contents_db(&self, name: &str) -> Result<Vec<(String, PathBuf)>> {
         let repo = match self.repos.get(name) {
             Some(repo) => repo,
-            None => bail!("Repository with name {} not found", name),
+            None => bail!("Repository with name {} not found.", name),
         };
 
         let mut files: Vec<(String, PathBuf)> = Vec::new();
@@ -90,7 +90,7 @@ impl LocalDb {
                 &name, &repo.distribution, component, &self.arch
             ));
             if !arch.is_file() {
-                bail!("Local database is corrupted or out-of-date");
+                bail!("Local package content metadata is corrupted or out-of-date.");
             }
             files.push((repo.url.clone(), self.root.join(arch)));
             // Then prepare noarch repo, if exists
@@ -116,7 +116,7 @@ impl LocalDb {
     }
 
     pub async fn update(&self, downloader: &Downloader) -> Result<()> {
-        info!("Refreshing local package databases...");
+        info!("Refreshing local repository metadata...");
 
         // HashMap<RepoName, HashMap<url, (size, checksum)>>
         let mut dbs: HashMap<String, HashMap<String, (u64, Checksum)>> = HashMap::new();
@@ -140,9 +140,9 @@ impl LocalDb {
             let inrelease_contents = std::fs::read(inrelease_path)?;
             let bytes = bytes::Bytes::from(inrelease_contents);
             let res = verify::verify_inrelease(&self.key_root, &repo.keys, &bytes)
-                .context(format!("Failed to verify metadata for repository {}", name))?;
+                .context(format!("Failed to verify metadata for repository {}.", name))?;
             let repo_dbs = parse_inrelease(&res)
-                .context(format!("Failed to parse metadata for repository {}", name))?;
+                .context(format!("Failed to parse metadata for repository {}.", name))?;
             dbs.insert(name.clone(), repo_dbs);
         }
 
@@ -178,7 +178,7 @@ impl LocalDb {
                                 repo.url, repo.distribution, compressed_rel_url
                             ),
                             description: Some(format!(
-                                "Package data for {} ({})",
+                                "Repository catalog for {} ({}).",
                                 style(name).bold(),
                                 arch
                             )),
@@ -203,7 +203,7 @@ impl LocalDb {
                                 repo.url, repo.distribution, &compressed_rel_url
                             ),
                             description: Some(format!(
-                                "Contents data for {} ({})",
+                                "Package contents metadata for {} ({}).",
                                 style(name).bold(),
                                 arch
                             )),
@@ -215,9 +215,9 @@ impl LocalDb {
                 }
 
                 if pre_download_count == dbs_to_download.len() {
-                    warn!("No repository available for {}/{}", name, component);
+                    warn!("No repository available for {}/{}.", name, component);
                     warn!(
-                        "Please check if this repository have packages for {} architecture",
+                        "Please check if this repository provides packages for {} architecture.",
                         self.arch
                     );
                 }
@@ -251,7 +251,7 @@ fn parse_inrelease(s: &str) -> Result<HashMap<String, (u64, Checksum)>> {
                     let captures = match CHKSUM.captures(line) {
                         Some(c) => c,
                         None => {
-                            bail!("Malformed InRelease");
+                            bail!("Malformed InRelease, repository issue?");
                         }
                     };
                     let rel_path = captures.name("path").unwrap().as_str().to_string();
@@ -275,5 +275,5 @@ fn parse_inrelease(s: &str) -> Result<HashMap<String, (u64, Checksum)>> {
         }
     }
 
-    bail!("No db hash found in InRelease. Supported Hash: SHA256")
+    bail!("No metadata hash found in InRelease. Supported Hash: SHA256")
 }
