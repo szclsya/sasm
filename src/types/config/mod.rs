@@ -30,7 +30,7 @@ impl Config {
             for key_filename in &repo.keys {
                 if key_filename.contains(|c| !key_filename_char(c)) {
                     bail!(
-                        "Invalid character in public key name {} for repo {}",
+                        "Invalid character in public key filename {} for repository {}.",
                         name,
                         key_filename
                     );
