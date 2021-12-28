@@ -34,7 +34,7 @@ impl Checksum {
     /// This function does not do input sanitization, so do checks before!
     pub fn from_sha256_str(s: &str) -> Result<Self> {
         if s.len() != 64 {
-            bail!("Malformed Sha256 string: bad length")
+            bail!("Malformed SHA256 checksum: bad length.")
         }
         Ok(Checksum::Sha256(hex::decode(s)?))
     }
@@ -42,7 +42,7 @@ impl Checksum {
     /// This function does not do input sanitization, so do checks before!
     pub fn from_sha512_str(s: &str) -> Result<Self> {
         if s.len() != 128 {
-            bail!("Malformed Sha512 string: bad length")
+            bail!("Malformed SHA512 checksum: bad length.")
         }
         Ok(Checksum::Sha512(hex::decode(s)?))
     }
