@@ -58,7 +58,7 @@ pub fn import(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
         .filter_map(|fields| match fields_to_packagemeta(fields, baseurl) {
             Ok(res) => Some(res),
             Err(e) => {
-                warn!("Invalid entry in package database: {}", e);
+                warn!("Invalid entry in package metadata: {} .", e);
                 None
             }
         })
@@ -76,25 +76,25 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
     // Get name first, for error reporting
     let name = f
         .remove("Package")
-        .ok_or_else(|| format_err!("Package doesn't have name"))?;
+        .ok_or_else(|| format_err!("Package metadata does not define a package name (Package field missing)."))?;
     // Generate real url
     let mut path = baseurl.to_string();
     path.push('/');
     path.push_str(
         f.get("Filename")
-            .ok_or_else(|| format_err!("Package {} doesn't have field filename", name))?,
+            .ok_or_else(|| format_err!("Metadata for package {} does not contain the Filename field.", name))?,
     );
     Ok(PkgMeta {
         name: name.clone(),
         section: f
             .remove("Section")
-            .ok_or_else(|| format_err!("Package {} doesn't have field Section", name))?,
+            .ok_or_else(|| format_err!("Metadata for package {} does not contain the Section field.", name))?,
         description: f
             .remove("Description")
-            .ok_or_else(|| format_err!("Package {} doesn't have field Description", name))?,
+            .ok_or_else(|| format_err!("Metadata for package {} does not contain the Description field.", name))?,
         version: PkgVersion::try_from(
             f.get("Version")
-                .ok_or_else(|| format_err!("Package {} doesn't have field Version", name))?
+                .ok_or_else(|| format_err!("Metadata for package {} does not contain the Version field.", name))?
                 .as_str(),
         )?,
         depends: parse_pkg_list(f.get("Depends").unwrap_or(&String::new()))?,
@@ -102,7 +102,7 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
         conflicts: parse_pkg_list(f.get("Conflicts").unwrap_or(&String::new()))?,
         install_size: f
             .remove("Installed-Size")
-            .ok_or_else(|| format_err!("Package {} doesn't have field Installed-Size", name))?
+            .ok_or_else(|| format_err!("Metadata for package {} does not contain the Installed-Size field.", name))?
             .as_str()
             .parse()?,
         recommends: match f.get("Recommends") {
@@ -118,7 +118,7 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
                 "yes" => true,
                 "no" => false,
                 invalid => bail!(
-                    "Package {} has invalid field Essential (should be yes/no, got {})",
+                    "Metadata for package {} contains invalid value for the Essential field (should be yes/no, got {}).",
                     name,
                     invalid
                 ),
@@ -128,7 +128,7 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
         source: PkgSource::Http((
             path,
             f.remove("Size")
-                .ok_or_else(|| format_err!("Package {} doesn't have field Size", name))?
+                .ok_or_else(|| format_err!("Metadata for package {} does not contain the Size field.", name))?
                 .as_str()
                 .parse()?,
             {
@@ -138,7 +138,7 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
                     Checksum::from_sha512_str(hex)?
                 } else {
                     bail!(
-                        "Package {} doesn't have field checksum (SHA256 or SHA512)",
+                        "Metadata for package {} does not contain the checksum field (SHA256 or SHA512).",
                         name
                     )
                 }
