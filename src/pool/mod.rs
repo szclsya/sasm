@@ -236,7 +236,7 @@ pub trait PkgPool: BasicPkgPool {
                         }
                     }
                     Err(e) => {
-                        warn!("Ignoring package {}: {}.", style(&meta.name).bold(), e);
+                        warn!("Ignoring package {}: {}", style(&meta.name).bold(), e);
                     }
                 }
             }
