@@ -55,18 +55,15 @@ where
 
     // Search package description
     for (id, meta) in pool.pkgid_iter() {
-        if meta.description.contains(keyword) {
-            if !res.contains_key(meta.name.as_str()) {
-                let pkginfo = PkgInfo {
-                    pkg: meta,
-                    has_dbg_pkg: pool.has_dbg_pkg(id).unwrap(),
-                    additional_info: Vec::new(),
-                };
-                res.insert(&meta.name, pkginfo);
-            }
+        if meta.description.contains(keyword) && !res.contains_key(meta.name.as_str()) {
+            let pkginfo = PkgInfo {
+                pkg: meta,
+                has_dbg_pkg: pool.has_dbg_pkg(id).unwrap(),
+                additional_info: Vec::new(),
+            };
+            res.insert(&meta.name, pkginfo);
         }
     }
 
-    let res = res.into_values().collect();
-    res
+    res.into_values().collect()
 }

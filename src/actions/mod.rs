@@ -109,7 +109,7 @@ pub async fn fullfill_command(
             lock::ensure_unlocked(&opts.root)?;
             lock::lock(&opts.root)?;
 
-            let req = pick::pick(&pick.name, &blueprints, &opts, &localdb)?;
+            let req = pick::pick(&pick.name, blueprints, opts, &localdb)?;
             // Update local db
             localdb.update(&downloader).await?;
             // Apply stuff
