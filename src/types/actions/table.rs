@@ -13,7 +13,7 @@ struct InstallRow {
     name: String,
     #[header("Version")]
     version: String,
-    #[header("Install Size")]
+    #[header("Installed Size")]
     size: String,
     // Show details to this specific installation
     #[header("Details")]
@@ -98,9 +98,9 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
     }
 
     for (name, size, essential) in &actions.purge {
-        let mut detail_sections = vec![style("Purge configs").red().to_string()];
+        let mut detail_sections = vec![style("Purge configuration files.").red().to_string()];
         if *essential {
-            detail_sections.insert(0, style("Essential package").on_white().red().to_string());
+            detail_sections.insert(0, style("Essential package.").on_white().red().to_string());
         }
         let detail = detail_sections.join(",");
         let row = RemoveRow {
@@ -132,12 +132,12 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
     let out = pager_process
         .stdin
         .as_mut()
-        .expect("Cannot take stdin for pager");
+        .expect("Cannot use stdin as pager.");
 
     if !install_rows.is_empty() {
         writeln!(
             out,
-            "These packages will be {}:",
+            "The following packages will be {}:\n",
             style("installed").green().bold()
         )?;
         let table = Table::new(&install_rows)
@@ -152,7 +152,7 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
     if !upgrade_rows.is_empty() {
         writeln!(
             out,
-            "These packages will be {}:",
+            "The following packages will be {}:\n",
             style("upgraded").green().bold()
         )?;
         let table = Table::new(&upgrade_rows)
@@ -167,7 +167,7 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
     if !downgrade_rows.is_empty() {
         writeln!(
             out,
-            "These packages will be {}:",
+            "The following packages will be {}:\n",
             style("downgraded").yellow().bold()
         )?;
         let table = Table::new(&downgrade_rows)
@@ -182,7 +182,7 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
     if !remove_rows.is_empty() {
         writeln!(
             out,
-            "These packages will be {}:",
+            "The following packages will be {}:\n",
             style("removed").red().bold()
         )?;
         let table = Table::new(&remove_rows)
@@ -197,7 +197,7 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
     if !configure_rows.is_empty() {
         writeln!(
             out,
-            "These packages will be {}:",
+            "The following packages will be {}:\n",
             style("configured").blue().bold()
         )?;
         let table = Table::new(&configure_rows)
@@ -220,7 +220,7 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
     writeln!(
         out,
         "{} {}{}",
-        style("Estimated total size change:").bold(),
+        style("Estimated change in storage usage:").bold(),
         symbol,
         HumanBytes(abs_install_size_change)
     )?;
