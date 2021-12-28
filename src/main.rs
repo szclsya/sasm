@@ -126,7 +126,7 @@ async fn try_main(opts: &Opts) -> Result<()> {
         Blueprints::from_files(config_root.join("user.blueprint"), &vendor_blueprint_paths)?;
 
     // Do stuff
-    warn!("Omakase is still in early alpha stage. DO NOT use me on production systems!");
+    warn!("Omakase is currently under construction and active testing. Proceed with caution on production systems!");
     actions::fullfill_command(&config, opts, &mut blueprint).await?;
     // Write back blueprint.
     // They will determine if it really need to write back user blueprint
