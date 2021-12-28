@@ -39,16 +39,16 @@ fn upstream_version(i: &str) -> IResult<&str, &str> {
 /// See more at https://wiki.aosc.io/developer/packaging/package-styling-manual/#versioning-variables
 fn standard_parse_version(i: &str) -> IResult<&str, PkgVersion> {
     let (i, epoch) = match context(
-        "parsing epoch",
+        "Parsing epoch...",
         pair::<_, _, _, nom::error::Error<&str>, _, _>(digit1, char(':')),
     )(i)
     {
         Ok((i, (epoch, _))) => (i, epoch.parse().unwrap()),
         Err(_) => (i, 0),
     };
-    let (i, upstream_version) = context("parsing upstream_version", upstream_version)(i)?;
+    let (i, upstream_version) = context("Parsing upstream_version...", upstream_version)(i)?;
     let (i, revision) = match context(
-        "parsing revision",
+        "Parsing revision...",
         pair::<_, _, _, nom::error::Error<&str>, _, _>(char('-'), digit1),
     )(i)
     {
@@ -77,14 +77,14 @@ fn alt_upstream_version(i: &str) -> IResult<&str, &str> {
 /// TODO: For compatibilities only. Remove me!
 fn alt_parse_version(i: &str) -> IResult<&str, PkgVersion> {
     let (i, epoch) = match context(
-        "parsing epoch",
+        "Parsing epoch...",
         nom::sequence::pair::<_, _, _, nom::error::Error<&str>, _, _>(digit1, char(':')),
     )(i)
     {
         Ok((i, (epoch, _))) => (i, epoch.parse().unwrap()),
         Err(_) => (i, 0),
     };
-    let (i, upstream_version) = context("parsing upstream_version", alt_upstream_version)(i)?;
+    let (i, upstream_version) = context("Parsing upstream_version...", alt_upstream_version)(i)?;
 
     let res = PkgVersion {
         epoch,
@@ -98,15 +98,15 @@ fn alt_parse_version(i: &str) -> IResult<&str, PkgVersion> {
 /// A public interface for parsing versions. Will try to parse it with standard first.
 /// If that doesn't work, parse it with compatible method
 pub fn parse_version(i: &str) -> IResult<&str, PkgVersion> {
-    let (i, res) = match context("parsing PkgVersion", standard_parse_version)(i) {
+    let (i, res) = match context("parsing PkgVersion...", standard_parse_version)(i) {
         Ok(res) => res,
         Err(_) => {
             use crate::warn;
             warn!(
-                "Version {} cannot be parsed with standard, trying compatible mode",
+                "Unable to parse version {} with standard parser, switching to compatible mode...",
                 i
             );
-            context("parsing PkgVersion with compatible mode", alt_parse_version)(i)?
+            context("Parsing PkgVersion with compatible mode...", alt_parse_version)(i)?
         }
     };
     Ok((i, res))
@@ -115,7 +115,7 @@ pub fn parse_version(i: &str) -> IResult<&str, PkgVersion> {
 impl TryFrom<&str> for PkgVersion {
     type Error = anyhow::Error;
     fn try_from(s: &str) -> Result<Self> {
-        let (_, res) = parse_version(s).map_err(|e| format_err!("Malformed version: {}", e))?;
+        let (_, res) = parse_version(s).map_err(|e| format_err!("Malformed version: {} .", e))?;
         Ok(res)
     }
 }
@@ -235,11 +235,11 @@ impl PartialOrd for PkgVersion {
 
 fn parse_version_string(s: &str) -> Result<Vec<(String, Option<u128>)>> {
     if s.is_empty() {
-        bail!("Empty version string")
+        bail!("Empty version string.")
     }
 
     if !s.starts_with(|c: char| c.is_ascii_digit()) {
-        bail!("Version string must start with digit")
+        bail!("Version string must start with a digit.")
     }
 
     let mut in_digit = true;
@@ -263,7 +263,7 @@ fn parse_version_string(s: &str) -> Result<Vec<(String, Option<u128>)>> {
             in_digit = true;
         } else {
             // This should not happen, we should have sanitized input
-            bail!("Invalid character in version")
+            bail!("Invalid character in version string.")
         }
     }
 
