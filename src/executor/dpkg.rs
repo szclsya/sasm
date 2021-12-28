@@ -15,11 +15,11 @@ pub async fn execute_pkg_actions(
 ) -> Result<()> {
     // Download packages
     let download_jobs = get_download_jobs(&actions);
-    info!("Fetching required packages...");
+    info!("Fetching requested packages...");
     let download_res = downloader
         .fetch(download_jobs, &root.join(crate::PKG_CACHE_PATH))
         .await
-        .context("Failed to fetch packages from repository")?;
+        .context("Failed to fetch requested packages from repository.")?;
 
     let mut install_deb_paths: Vec<String> = actions
         .install
@@ -48,7 +48,7 @@ pub async fn execute_pkg_actions(
         let mut pkgnames: Vec<String> =
             actions.purge.into_iter().map(|(name, _, _)| name).collect();
         cmd.append(&mut pkgnames);
-        dpkg_run(&cmd, root, unsafe_io).context("Purge packages failed")?;
+        dpkg_run(&cmd, root, unsafe_io).context("Failed to purge package configuration(s).")?;
     }
     // Remove stuff
     if !actions.remove.is_empty() {
@@ -59,25 +59,25 @@ pub async fn execute_pkg_actions(
             .map(|(name, _, _)| name)
             .collect();
         cmd.append(&mut pkgnames);
-        dpkg_run(&cmd, root, unsafe_io).context("Remove packages failed")?;
+        dpkg_run(&cmd, root, unsafe_io).context("Failed to remove package(s).")?;
     }
     // Configure stuff
     if !actions.configure.is_empty() {
         let mut cmd = vec!["--configure".to_string()];
         cmd.append(&mut actions.configure);
-        dpkg_run(&cmd, root, unsafe_io).context("Configure packages failed")?;
+        dpkg_run(&cmd, root, unsafe_io).context("Failed to configure package(s).")?;
     }
     // Install stuff
     if !install_deb_paths.is_empty() {
         let mut cmd = vec!["--install".to_string()];
         cmd.append(&mut install_deb_paths);
-        dpkg_run(&cmd, root, unsafe_io).context("Install packages failed")?;
+        dpkg_run(&cmd, root, unsafe_io).context("Failed to install package(s).")?;
     }
     // Unpack stuff
     if !unpack_deb_paths.is_empty() {
         let mut cmd = vec!["--unpack".to_string()];
         cmd.append(&mut unpack_deb_paths);
-        dpkg_run(&cmd, root, unsafe_io).context("Unpack packages failed")?;
+        dpkg_run(&cmd, root, unsafe_io).context("Failed to unpack package(s).")?;
     }
 
     Ok(())
@@ -103,11 +103,11 @@ fn dpkg_run<T: AsRef<std::ffi::OsStr>>(args: &[T], root: &Path, unsafe_io: bool)
     // Tell the signal handler we are going to run dpkg
     crate::DPKG_RUNNING.store(true, Ordering::Relaxed);
     // Run it!
-    let res = cmd.status().context("dpkg command execution failed")?;
+    let res = cmd.status().context("Failed to execute dpkg command(s).")?;
     if !res.success() {
         match res.code() {
-            Some(code) => bail!("dpkg exited with non-zero return code {}", code),
-            None => bail!("dpkg exited by signal"),
+            Some(code) => bail!("dpkg exited with non-zero return code: {}.", code),
+            None => bail!("dpkg process was terminated by signal."),
         }
     }
 
