@@ -23,13 +23,13 @@ pub fn show_provide_file(
 ) -> Result<()> {
     let content_dbs: Vec<PathBuf> = local_db
         .get_all_contents_db()
-        .context("Cannot initialize local db for searching")?
+        .context("Failed to initialize local database for searching!")?
         .into_iter()
         .map(|(_, path)| path)
         .collect();
 
     // Find a list of package names that provide the designated file
-    debug!("Searching Contents databases...");
+    debug!("Searching Contents metadata...");
     let mut pkgnames = Vec::from_iter(package_name_provide_file(
         &content_dbs,
         filename,
@@ -42,10 +42,10 @@ pub fn show_provide_file(
     debug!("Constructing package pool...");
     let dbs = local_db
         .get_all_package_db()
-        .context("Cannot initialize local db for searching")?;
+        .context("Failed to initialize local database for searching!")?;
     let pool = pool::source::create_pool(&dbs, &[])?;
 
-    debug!("Generating detailed package info...");
+    debug!("Generating detailed package information...");
     for (pkgname, paths) in pkgnames {
         if let Some(pkgs) = pool.get_pkgs_by_name(&pkgname) {
             // This is safe unless the pool is broken
