@@ -1,6 +1,6 @@
 [package]
 name = "omakase"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 authors = ["Leo Shen <i@szclsya.me>"]
 license = "GPL-2.0-or-later"
 edition = "2021"
@@ -19,8 +19,8 @@ varisat = "0.2"
 petgraph = "0.6"
 # Dealing with deb control files and InRelease
 debcontrol = "0.1"
-sequoia-openpgp = "1.6"
-sha2 = "0.9"
+sequoia-openpgp = "1.7"
+sha2 = "0.10"
 hex = "0.4"
 # cli
 console = "0.15"
@@ -35,7 +35,7 @@ toml = "0.5"
 nom = "7"
 # Network stack
 futures-util = "0.3"
-tokio = { version = "1.14", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
+tokio = { version = "1.15", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
 bytes = "1"
 reqwest = { version = "0.11", features = ["rustls-tls"], default-features = false }
 async-compression = { version = "0.3", features = ["tokio", "gzip", "xz"] }
