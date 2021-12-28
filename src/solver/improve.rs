@@ -55,6 +55,14 @@ pub fn reduce(pool: &dyn PkgPool, res: &mut Vec<usize>, to_install: &[usize]) ->
     let cycles = sort_pkgs_to_cycles(pool, res)?;
     let mut assumes = Vec::new();
     for cycle in &cycles {
+        // Check if this cycle contains mandatory package
+        // If so, don't reduce
+        for id in cycle {
+            if to_install.contains(id) {
+                continue;
+            }
+        }
+
         let mut no_ids: Vec<Lit> = cycle
             .iter()
             .map(|id| !Lit::from_dimacs(*id as isize))
@@ -70,7 +78,6 @@ pub fn reduce(pool: &dyn PkgPool, res: &mut Vec<usize>, to_install: &[usize]) ->
 
     solver.assume(&assumes);
     *res = solve(&mut solver).unwrap();
-    // Reset solver
     Ok(())
 }
 
