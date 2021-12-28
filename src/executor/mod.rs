@@ -23,18 +23,18 @@ impl MachineStatus {
         // Load or create dpkg's status db
         let status_file_dir = root.join("var/lib/dpkg");
         if !status_file_dir.is_dir() {
-            fs::create_dir_all(&status_file_dir).context("Failed to initialize dpkg dir")?;
+            fs::create_dir_all(&status_file_dir).context("Failed to initialize dpkg directory.")?;
         }
         let stauts_file_path = root.join("var/lib/dpkg/status");
         let status_file = if stauts_file_path.is_file() {
-            fs::File::open(&stauts_file_path).context("Failed to open dpkg status file")?
+            fs::File::open(&stauts_file_path).context("Failed to open dpkg status file.")?
         } else {
             fs::OpenOptions::new()
                 .create(true)
                 .read(true)
                 .write(true)
                 .open(&stauts_file_path)
-                .context("Failed to initialize dpkg status file")?
+                .context("Failed to initialize dpkg status file.")?
         };
 
         let mut buf_parse = BufParse::new(status_file, 16384);
