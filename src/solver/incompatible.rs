@@ -13,12 +13,12 @@ pub fn find_incompatible_friendly(pool: &dyn PkgPool, to_install: &[usize]) -> S
     } else if pkgs.len() == 1 {
         let pkg = pkgs.get(0).unwrap();
         format!(
-            "{}({}) cannot be installed on its own. Please contact package maintainer",
+            "{}({}) appears to have dependency issues that prevents it from being installed. Please contact your package maintainers.",
             pkg.name,
             console::style(&pkg.version).dim().to_string()
         )
     } else {
-        let mut res = String::from("Packages cannot be installed simultaneously: ");
+        let mut res = String::from("The following packages cannot be installed simultaneously: ");
         res.push_str("");
         let mut pkgs = pkgs.into_iter().peekable();
         while let Some(pkg) = pkgs.next() {
