@@ -235,5 +235,8 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
 
     // Wait until pager exits
     pager_process.wait()?;
+    // Un-set subprocess pid
+    crate::SUBPROCESS.store(-1, Ordering::SeqCst);
+
     Ok(())
 }

@@ -29,7 +29,7 @@ static VERBOSE: AtomicBool = AtomicBool::new(false);
 // Global states
 static DPKG_RUNNING: AtomicBool = AtomicBool::new(false);
 static LOCKED: AtomicBool = AtomicBool::new(false);
-static SUBPROCESS: AtomicI32 = AtomicI32::new(0);
+static SUBPROCESS: AtomicI32 = AtomicI32::new(-1);
 // Global constants
 const DB_KEY_PATH: &str = "etc/omakase/keys";
 const DB_CACHE_PATH: &str = "var/cache/omakase/db";
