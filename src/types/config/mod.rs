@@ -98,7 +98,7 @@ pub enum SubCmd {
     #[clap(display_order = 5, aliases = &["update"])]
     Refresh,
     /// Install and upgrade all packages according to Blueprint
-    #[clap(display_order = 4, aliases = &["upgrade"])]
+    #[clap(display_order = 4, aliases = &["upgrade", "full-upgrade", "dist-upgrade"])]
     Execute,
     /// Search packages from package database
     #[clap(display_order = 11)]
