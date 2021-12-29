@@ -137,6 +137,11 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         .as_mut()
         .expect("Cannot use stdin as pager.");
 
+    // Show help message about how to exit review view
+    if pager_name == &"less" {
+        writeln!(out, "Press {} to finish review.\n", style("q").bold())?;
+    }
+
     if !install_rows.is_empty() {
         writeln!(
             out,
