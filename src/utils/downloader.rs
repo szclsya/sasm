@@ -2,6 +2,7 @@ use crate::{msg, types::Checksum};
 
 use anyhow::{bail, format_err, Result};
 use async_compression::tokio::write::{GzipDecoder, XzDecoder};
+use console::style;
 use futures_util::future::select_all;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::Client;
@@ -67,11 +68,15 @@ impl Downloader {
         &self,
         mut to_download: Vec<DownloadJob>,
         download_path: &Path,
+        global_progess: bool,
     ) -> Result<HashMap<String, PathBuf>> {
         // Create download dir
         if !download_path.is_dir() {
             tokio::fs::create_dir_all(download_path).await?;
         }
+
+        // Calculate total size
+        let total_size: u64 = to_download.iter().map(|job| job.size.unwrap_or(0)).sum();
 
         let mut position = (0, to_download.len(), to_download.len().to_string().len());
         let mut res = HashMap::new();
@@ -92,16 +97,28 @@ impl Downloader {
         let barsty = ProgressStyle::default_bar()
             .template(bar_template)
             .progress_chars("=>-");
+        // Create a global bar if some files specified size
+        let mut finished = 0;
+        let global_bar = if total_size > 0 && global_progess {
+            let bar = multibar.insert(0, ProgressBar::new(total_size));
+            bar.set_style(barsty.clone());
+            Some(bar)
+        } else {
+            None
+        };
+
+        // Down them all!
         while !to_download.is_empty() {
             while handles.len() < self.max_concurrent && !to_download.is_empty() {
                 let job = to_download.pop().unwrap();
                 let client = self.client.clone();
                 let path = download_path.to_owned();
                 let bar = multibar.insert(0, ProgressBar::new(job.size.unwrap_or(0)));
+                let global_bar = global_bar.clone();
                 bar.set_style(barsty.clone());
                 position.0 += 1;
                 let handle = tokio::spawn(async move {
-                    try_download_file(client, path, job, 0, position, bar).await
+                    try_download_file(client, path, job, 0, position, bar, global_bar).await
                 });
                 handles.push(handle);
             }
@@ -112,6 +129,8 @@ impl Downloader {
             match download_res.unwrap() {
                 Ok((name, path)) => {
                     res.insert(name, path);
+                    finished += 1;
+                    update_global_bar(&global_bar, position.1, finished, position.2);
                 }
                 Err(err) => {
                     // Handling download errors
@@ -120,8 +139,16 @@ impl Downloader {
                         let c = self.client.clone();
                         let path = download_path.to_owned();
                         let handle = tokio::spawn(async move {
-                            try_download_file(c, path, err.job, err.retry + 1, err.pos, err.bar)
-                                .await
+                            try_download_file(
+                                c,
+                                path,
+                                err.job,
+                                err.retry + 1,
+                                err.pos,
+                                err.bar,
+                                err.global_bar,
+                            )
+                            .await
                         });
                         handles.push(handle);
                     } else {
@@ -137,6 +164,8 @@ impl Downloader {
             match download_res.unwrap() {
                 Ok((url, path)) => {
                     res.insert(url, path);
+                    finished += 1;
+                    update_global_bar(&global_bar, position.1, finished, position.2);
                 }
                 Err(err) => {
                     // Handling download errors
@@ -145,8 +174,16 @@ impl Downloader {
                         let c = self.client.clone();
                         let path = download_path.to_owned();
                         let handle = tokio::spawn(async move {
-                            try_download_file(c, path, err.job, err.retry + 1, err.pos, err.bar)
-                                .await
+                            try_download_file(
+                                c,
+                                path,
+                                err.job,
+                                err.retry + 1,
+                                err.pos,
+                                err.bar,
+                                err.global_bar,
+                            )
+                            .await
                         });
                         handles.push(handle);
                     } else {
@@ -165,6 +202,7 @@ struct DownloadError {
     retry: usize,
     pos: (usize, usize, usize),
     bar: ProgressBar,
+    global_bar: Option<ProgressBar>,
 }
 
 async fn try_download_file(
@@ -174,8 +212,18 @@ async fn try_download_file(
     retry: usize,
     pos: (usize, usize, usize),
     bar: ProgressBar,
+    global_bar: Option<ProgressBar>,
 ) -> Result<(String, PathBuf), DownloadError> {
-    match download_file(&client, &path, job.clone(), pos, bar.clone()).await {
+    match download_file(
+        &client,
+        &path,
+        job.clone(),
+        pos,
+        bar.clone(),
+        global_bar.clone(),
+    )
+    .await
+    {
         Ok(res) => Ok(res),
         Err(error) => Err({
             bar.reset();
@@ -185,6 +233,7 @@ async fn try_download_file(
                 retry: retry + 1,
                 pos,
                 bar,
+                global_bar,
             }
         }),
     }
@@ -196,6 +245,7 @@ async fn download_file(
     job: DownloadJob,
     pos: (usize, usize, usize),
     bar: ProgressBar,
+    global_bar: Option<ProgressBar>,
 ) -> Result<(String, PathBuf)> {
     let mut resp = client.get(&job.url).send().await?;
     resp.error_for_status_ref()?;
@@ -278,7 +328,12 @@ async fn download_file(
         };
         while let Some(chunk) = resp.chunk().await? {
             writer.write_all(&chunk).await?;
-            bar.inc(chunk.len() as u64);
+            let len = chunk.len().try_into().unwrap();
+            bar.inc(len);
+            // Increase global bar, if applicable
+            if let Some(ref global_bar) = global_bar {
+                global_bar.inc(len);
+            }
             if let Some(ref mut validator) = validator {
                 validator.update(&chunk);
             }
@@ -309,4 +364,31 @@ async fn download_file(
         &msg
     ));
     Ok((job.url, file_path))
+}
+
+#[inline]
+fn update_global_bar(
+    bar: &Option<ProgressBar>,
+    total: usize,
+    finished: usize,
+    total_text_len: usize,
+) {
+    if let Some(bar) = bar {
+        bar.set_message(
+            style(gen_global_bar_message(total, finished, total_text_len))
+                .bright()
+                .bold()
+                .to_string(),
+        );
+    }
+}
+
+#[inline]
+fn gen_global_bar_message(total: usize, finished: usize, total_text_len: usize) -> String {
+    format!(
+        "Total Progress: [{:0width$}/{}]",
+        finished,
+        total,
+        width = total_text_len
+    )
 }

@@ -132,7 +132,7 @@ impl LocalDb {
                 compression: Compression::None(None),
             })
             .collect();
-        downloader.fetch(inrelease_urls, &self.root).await?;
+        downloader.fetch(inrelease_urls, &self.root, false).await?;
 
         // Step 2: Verify InRelease with PGP
         for (name, repo) in &self.repos {
@@ -227,7 +227,7 @@ impl LocalDb {
 
         // Step 4: Call Downloader to down them all!
         // The downloader will verify the checksum for us
-        downloader.fetch(dbs_to_download, &self.root).await?;
+        downloader.fetch(dbs_to_download, &self.root, false).await?;
 
         Ok(())
     }

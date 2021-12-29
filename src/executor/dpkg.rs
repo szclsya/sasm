@@ -17,7 +17,7 @@ pub async fn execute_pkg_actions(
     let download_jobs = get_download_jobs(&actions);
     info!("Fetching requested packages...");
     let download_res = downloader
-        .fetch(download_jobs, &root.join(crate::PKG_CACHE_PATH))
+        .fetch(download_jobs, &root.join(crate::PKG_CACHE_PATH), true)
         .await
         .context("Failed to fetch requested packages from repository.")?;
 
