@@ -4,7 +4,7 @@ use super::PkgActions;
 use anyhow::Result;
 use console::style;
 use indicatif::HumanBytes;
-use std::io::Write;
+use std::{io::Write, sync::atomic::Ordering};
 use tabled::{Alignment, Column, Full, Modify, Style, Table, Tabled};
 
 #[derive(Tabled)]
@@ -129,6 +129,9 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         p.args(&pager_cmd_segments[1..]);
     }
     let mut pager_process = p.stdin(std::process::Stdio::piped()).spawn()?;
+    // Record PID
+    crate::SUBPROCESS.store(pager_process.id() as i32, Ordering::SeqCst);
+    // Take stdin so we can write to it
     let out = pager_process
         .stdin
         .as_mut()

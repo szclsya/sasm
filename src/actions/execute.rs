@@ -26,7 +26,7 @@ pub async fn execute(
     opts: &Opts,
     config: &Config,
     request: UserRequest,
-) -> Result<()> {
+) -> Result<i32> {
     // Check if operating in alt-root mode
     let mut alt_root = false;
     if opts.root != std::path::Path::new("/") {
@@ -104,46 +104,45 @@ pub async fn execute(
 
     if actions.is_empty() {
         success!("There is nothing to do.");
+        return Ok(0);
+    }
+
+    // There is something to do. Show it.
+    info!("Omakase will perform the following actions:");
+    if opts.no_pager {
+        actions.show();
     } else {
-        info!("Omakase will perform the following actions:");
-        if opts.no_pager {
-            actions.show();
-        } else {
-            actions.show_tables()?;
-        }
-        crate::WRITER.writeln("", "")?;
-        actions.show_size_change();
+        actions.show_tables()?;
+    }
+    crate::WRITER.writeln("", "")?;
+    actions.show_size_change();
 
-        // Additional confirmation if removing essential packages
-        if actions.remove_essential() {
-            if config.r#unsafe.allow_remove_essential {
-                let prefix = style("DANGER").red().to_string();
-                crate::WRITER.writeln(
-                    &prefix,
-                    "Some ESSENTIAL packages will be removed/purged. Are you REALLY sure?",
-                )?;
-                let confirm_msg =
-                    format!("{}{}", cli::gen_prefix(""), "Is this supposed to happen?");
-                if !Confirm::new().with_prompt(confirm_msg).interact()? {
-                    bail!("User cancelled operation.");
-                }
-            } else {
-                bail!("Some ESSENTIAL packages will be removed. Aborting...")
+    // Additional confirmation if removing essential packages
+    if actions.remove_essential() {
+        if config.r#unsafe.allow_remove_essential {
+            let prefix = style("DANGER").red().to_string();
+            crate::WRITER.writeln(
+                &prefix,
+                "Some ESSENTIAL packages will be removed/purged. Are you REALLY sure?",
+            )?;
+            let confirm_msg = format!("{}{}", cli::gen_prefix(""), "Is this supposed to happen?");
+            if !Confirm::new().with_prompt(confirm_msg).interact()? {
+                bail!("User cancelled operation.");
             }
-        }
-
-        if Confirm::new()
-            .with_prompt(format!("{}{}", cli::gen_prefix(""), "Proceed?"))
-            .interact()?
-        {
-            // Run it!
-            dpkg::execute_pkg_actions(actions, &opts.root, downloader, config.r#unsafe.unsafe_io)
-                .await?;
         } else {
-            crate::utils::lock::unlock(&opts.root)?;
-            std::process::exit(2);
+            bail!("Some ESSENTIAL packages will be removed. Aborting...")
         }
     }
 
-    Ok(())
+    if Confirm::new()
+        .with_prompt(format!("{}{}", cli::gen_prefix(""), "Proceed?"))
+        .interact()?
+    {
+        // Run it!
+        dpkg::execute_pkg_actions(actions, &opts.root, downloader, config.r#unsafe.unsafe_io)
+            .await?;
+        Ok(0)
+    } else {
+        Ok(2)
+    }
 }

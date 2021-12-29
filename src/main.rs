@@ -11,11 +11,13 @@ use types::config::{Blueprints, Config, Opts};
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use lazy_static::lazy_static;
+use nix::sys::signal;
 use std::{
     fs::{read_dir, File},
     io::Read,
+    path::Path,
     process::exit,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::atomic::{AtomicBool, AtomicI32, Ordering},
 };
 
 // Initialize writer
@@ -24,9 +26,10 @@ lazy_static! {
 }
 // Debug flag
 static VERBOSE: AtomicBool = AtomicBool::new(false);
-// Lock control
+// Global states
 static DPKG_RUNNING: AtomicBool = AtomicBool::new(false);
 static LOCKED: AtomicBool = AtomicBool::new(false);
+static SUBPROCESS: AtomicI32 = AtomicI32::new(0);
 // Global constants
 const DB_KEY_PATH: &str = "etc/omakase/keys";
 const DB_CACHE_PATH: &str = "var/cache/omakase/db";
@@ -52,37 +55,22 @@ async fn main() {
     // Set up SIGINT handler
     {
         let root = opts.root.to_owned();
-        ctrlc::set_handler(move || {
-            // Dealing with lock
-            if LOCKED.load(Ordering::Relaxed) {
-                if crate::DPKG_RUNNING.load(Ordering::Relaxed) {
-                    warn!("You may not interrupt Omakase when dpkg is running.");
-                } else {
-                    // Thanks to stateless, we can just exit
-                    utils::lock::unlock(&root).expect("Failed to unlock instance.");
-                    std::process::exit(2);
-                }
-            }
-
-            // Show cursor. This is not a big deal so we won't panic on this.
-            let _ = WRITER.show_cursor();
-        })
-        .expect("Error setting SIGINT handler.");
+        ctrlc::set_handler(move || sigint_handler(&root)).expect("Error setting SIGINT handler.");
     }
 
     // Run main logic
-    let mut return_code = 0;
-    if let Err(err) = try_main(&opts).await {
-        // Create a new line first, for visual distinction
-        WRITER.writeln("", "").ok();
-        error!("{}", err.to_string());
-        err.chain().skip(1).for_each(|cause| {
-            due_to!("{}", cause);
-        });
-
-        // Set return code
-        return_code = 1;
-    }
+    let exit_code = match try_main(&opts).await {
+        Ok(exit_code) => exit_code,
+        Err(err) => {
+            // Create a new line first, for visual distinction
+            WRITER.writeln("", "").ok();
+            error!("{}", err.to_string());
+            err.chain().skip(1).for_each(|cause| {
+                due_to!("{}", cause);
+            });
+            1
+        }
+    };
 
     // Unlock if current process locked
     if LOCKED.load(Ordering::Relaxed) {
@@ -90,10 +78,14 @@ async fn main() {
             error!("{}", e);
         }
     }
-    exit(return_code);
+
+    // Always show cursor, just in case
+    let _ = WRITER.show_cursor();
+
+    exit(exit_code);
 }
 
-async fn try_main(opts: &Opts) -> Result<()> {
+async fn try_main(opts: &Opts) -> Result<i32> {
     // Start reading configs
     let config_root = opts
         .root
@@ -148,10 +140,35 @@ async fn try_main(opts: &Opts) -> Result<()> {
 
     // Do stuff
     warn!("Omakase is currently under construction and active testing. Proceed with caution on production systems!");
-    actions::fullfill_command(&config, opts, &mut blueprint).await?;
+    let exit = actions::fullfill_command(&config, opts, &mut blueprint).await?;
     // Write back blueprint.
     // They will determine if it really need to write back user blueprint
     blueprint.export()?;
 
-    Ok(())
+    Ok(exit)
+}
+
+fn sigint_handler(root: &Path) {
+    if crate::DPKG_RUNNING.load(Ordering::Relaxed) {
+        warn!("You may not interrupt Omakase when dpkg is running.");
+        // Don't exit. Important things are happening
+        return;
+    }
+
+    // Kill subprocess
+    let subprocess_pid = SUBPROCESS.load(Ordering::Relaxed);
+    if subprocess_pid > 0 {
+        let pid = nix::unistd::Pid::from_raw(subprocess_pid);
+        signal::kill(pid, signal::SIGTERM).expect("Failed to kill child process.");
+    }
+
+    // Dealing with lock
+    if LOCKED.load(Ordering::Relaxed) {
+        utils::lock::unlock(&root).expect("Failed to unlock instance.");
+    }
+
+    // Show cursor before exiting.
+    // This is not a big deal so we won't panic on this.
+    let _ = WRITER.show_cursor();
+    std::process::exit(2);
 }
