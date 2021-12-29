@@ -78,7 +78,6 @@ impl Downloader {
         // Calculate total size
         let total_size: u64 = to_download.iter().map(|job| job.size.unwrap_or(0)).sum();
 
-        let mut position = (0, to_download.len(), to_download.len().to_string().len());
         let mut res = HashMap::new();
         // Handles for download processes
         let mut handles = Vec::with_capacity(self.max_concurrent);
@@ -98,6 +97,8 @@ impl Downloader {
             .template(bar_template)
             .progress_chars("=>-");
         // Create a global bar if some files specified size
+        let total = to_download.len();
+        let total_str_len = total.to_string().len();
         let mut finished = 0;
         let global_bar = if total_size > 0 && global_progess {
             let bar = multibar.insert(0, ProgressBar::new(total_size));
@@ -116,9 +117,8 @@ impl Downloader {
                 let bar = multibar.insert(0, ProgressBar::new(job.size.unwrap_or(0)));
                 let global_bar = global_bar.clone();
                 bar.set_style(barsty.clone());
-                position.0 += 1;
                 let handle = tokio::spawn(async move {
-                    try_download_file(client, path, job, 0, position, bar, global_bar).await
+                    try_download_file(client, path, job, 0, bar, global_bar).await
                 });
                 handles.push(handle);
             }
@@ -130,29 +130,21 @@ impl Downloader {
                 Ok((name, path)) => {
                     res.insert(name, path);
                     finished += 1;
-                    update_global_bar(&global_bar, position.1, finished, position.2);
+                    update_global_bar(&global_bar, total, finished, total_str_len);
                 }
-                Err(err) => {
+                Err(e) => {
                     // Handling download errors
                     // If have remaining reties, do it
-                    if err.retry < self.max_retry {
+                    if e.retry < self.max_retry {
                         let c = self.client.clone();
                         let path = download_path.to_owned();
                         let handle = tokio::spawn(async move {
-                            try_download_file(
-                                c,
-                                path,
-                                err.job,
-                                err.retry + 1,
-                                err.pos,
-                                err.bar,
-                                err.global_bar,
-                            )
-                            .await
+                            try_download_file(c, path, e.job, e.retry + 1, e.bar, e.global_bar)
+                                .await
                         });
                         handles.push(handle);
                     } else {
-                        return Err(err.error);
+                        return Err(e.error);
                     }
                 }
             }
@@ -165,29 +157,21 @@ impl Downloader {
                 Ok((url, path)) => {
                     res.insert(url, path);
                     finished += 1;
-                    update_global_bar(&global_bar, position.1, finished, position.2);
+                    update_global_bar(&global_bar, total, finished, total_str_len);
                 }
-                Err(err) => {
+                Err(e) => {
                     // Handling download errors
                     // If have remaining reties, do it
-                    if err.retry < self.max_retry {
+                    if e.retry < self.max_retry {
                         let c = self.client.clone();
                         let path = download_path.to_owned();
                         let handle = tokio::spawn(async move {
-                            try_download_file(
-                                c,
-                                path,
-                                err.job,
-                                err.retry + 1,
-                                err.pos,
-                                err.bar,
-                                err.global_bar,
-                            )
-                            .await
+                            try_download_file(c, path, e.job, e.retry + 1, e.bar, e.global_bar)
+                                .await
                         });
                         handles.push(handle);
                     } else {
-                        return Err(err.error);
+                        return Err(e.error);
                     }
                 }
             }
@@ -200,7 +184,6 @@ struct DownloadError {
     error: anyhow::Error,
     job: DownloadJob,
     retry: usize,
-    pos: (usize, usize, usize),
     bar: ProgressBar,
     global_bar: Option<ProgressBar>,
 }
@@ -210,20 +193,10 @@ async fn try_download_file(
     path: PathBuf,
     job: DownloadJob,
     retry: usize,
-    pos: (usize, usize, usize),
     bar: ProgressBar,
     global_bar: Option<ProgressBar>,
 ) -> Result<(String, PathBuf), DownloadError> {
-    match download_file(
-        &client,
-        &path,
-        job.clone(),
-        pos,
-        bar.clone(),
-        global_bar.clone(),
-    )
-    .await
-    {
+    match download_file(&client, &path, job.clone(), bar.clone(), global_bar.clone()).await {
         Ok(res) => Ok(res),
         Err(error) => Err({
             bar.reset();
@@ -231,7 +204,6 @@ async fn try_download_file(
                 error,
                 job,
                 retry: retry + 1,
-                pos,
                 bar,
                 global_bar,
             }
@@ -243,7 +215,6 @@ async fn download_file(
     client: &Client,
     path: &Path,
     job: DownloadJob,
-    pos: (usize, usize, usize),
     bar: ProgressBar,
     global_bar: Option<ProgressBar>,
 ) -> Result<(String, PathBuf)> {
@@ -305,7 +276,7 @@ async fn download_file(
     };
 
     // Prepare progress bar
-    let mut progress_text = format!("({:0width$}/{}) {}", pos.0, pos.1, msg, width = pos.2);
+    let mut progress_text = msg.to_owned();
     if console::measure_text_width(&progress_text) > 48 {
         progress_text = console::truncate_str(&progress_text, 45, "...").to_string();
     }
