@@ -49,6 +49,27 @@ async fn main() {
     // Set-up debug globally
     VERBOSE.store(opts.verbose, Ordering::Relaxed);
 
+    // Set up SIGINT handler
+    {
+        let root = opts.root.to_owned();
+        ctrlc::set_handler(move || {
+            // Dealing with lock
+            if LOCKED.load(Ordering::Relaxed) {
+                if crate::DPKG_RUNNING.load(Ordering::Relaxed) {
+                    warn!("You may not interrupt Omakase when dpkg is running.");
+                } else {
+                    // Thanks to stateless, we can just exit
+                    utils::lock::unlock(&root).expect("Failed to unlock instance.");
+                    std::process::exit(2);
+                }
+            }
+
+            // Show cursor. This is not a big deal so we won't panic on this.
+            let _ = WRITER.show_cursor();
+        })
+        .expect("Error setting SIGINT handler.");
+    }
+
     // Run main logic
     let mut return_code = 0;
     if let Err(err) = try_main(&opts).await {

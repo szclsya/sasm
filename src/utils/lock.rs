@@ -1,4 +1,4 @@
-use crate::{debug, warn, LOCK_PATH};
+use crate::{debug, LOCK_PATH};
 use anyhow::{bail, Context, Result};
 use nix::unistd::Uid;
 use serde::{Deserialize, Serialize};
@@ -48,21 +48,6 @@ pub fn lock(root: &Path) -> Result<()> {
 
     // Set global lock parameter
     crate::LOCKED.store(true, Ordering::Relaxed);
-
-    // Set up SIGINT handler
-    {
-        let root = root.to_owned();
-        ctrlc::set_handler(move || {
-            if crate::DPKG_RUNNING.load(Ordering::Relaxed) {
-                warn!("You may not interrupt Omakase when dpkg is running.");
-            } else {
-                // Thanks to stateless, we can just exit
-                unlock(&root).expect("Failed to unlock instance.");
-                std::process::exit(2);
-            }
-        })
-        .expect("Error setting SIGINT handler.");
-    }
 
     // Create directory if not created yet
     let prefix = lock_path.parent().unwrap();
