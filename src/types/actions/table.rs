@@ -1,10 +1,11 @@
 /// Show actions in tables
 use super::PkgActions;
+use crate::utils::pager::Pager;
 
 use anyhow::Result;
 use console::style;
 use indicatif::HumanBytes;
-use std::{io::Write, sync::atomic::Ordering};
+use std::io::Write;
 use tabled::{Alignment, Column, Full, Modify, Style, Table, Tabled};
 
 #[derive(Tabled)]
@@ -116,29 +117,12 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         configure_rows.push(row);
     }
 
-    // Set-up pager
-    let pager_cmd = std::env::var("PAGER").unwrap_or_else(|_| "less".to_owned());
-    let pager_cmd_segments: Vec<&str> = pager_cmd.split_ascii_whitespace().collect();
-    let pager_name = pager_cmd_segments.get(0).unwrap_or(&"less");
-    let mut p = std::process::Command::new(&pager_name);
-    if pager_name == &"less" {
-        p.arg("-R"); // Show ANSI escape sequences correctly
-        p.arg("-c"); // Start from the top of the screen
-        p.env("LESSCHARSET", "UTF-8"); // Rust uses UTF-8
-    } else if pager_cmd_segments.len() > 1 {
-        p.args(&pager_cmd_segments[1..]);
-    }
-    let mut pager_process = p.stdin(std::process::Stdio::piped()).spawn()?;
-    // Record PID
-    crate::SUBPROCESS.store(pager_process.id() as i32, Ordering::SeqCst);
-    // Take stdin so we can write to it
-    let out = pager_process
-        .stdin
-        .as_mut()
-        .expect("Cannot use stdin as pager.");
+    let mut pager = Pager::new()?;
+    let pager_name = pager.pager_name().to_owned();
+    let out = pager.get_writer()?;
 
     // Show help message about how to exit review view
-    if pager_name == &"less" {
+    if pager_name == "less" {
         writeln!(out, "Press {} to finish review.\n", style("q").bold())?;
     }
 
@@ -234,9 +218,7 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
     )?;
 
     // Wait until pager exits
-    pager_process.wait()?;
-    // Un-set subprocess pid
-    crate::SUBPROCESS.store(-1, Ordering::SeqCst);
+    pager.wait_for_exit()?;
 
     Ok(())
 }
