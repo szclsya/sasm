@@ -114,6 +114,9 @@ pub enum SubCmd {
     /// Delete local package cache (optionally metadata cache)
     #[clap(display_order = 21)]
     Clean(CleanConfig),
+    /// Benchmark and pick optimal mirrors
+    #[clap(display_order = 31)]
+    Bench,
 }
 
 #[derive(Parser)]

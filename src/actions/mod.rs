@@ -1,3 +1,4 @@
+mod bench;
 mod execute;
 mod local;
 mod pick;
@@ -181,6 +182,10 @@ pub async fn fullfill_command(
                 }
             }
 
+            Ok(0)
+        }
+        SubCmd::Bench => {
+            bench::bench(opts, config, localdb, &downloader).await?;
             Ok(0)
         }
     }
