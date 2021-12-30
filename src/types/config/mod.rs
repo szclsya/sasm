@@ -36,7 +36,12 @@ impl Config {
                     );
                 }
             }
+            // Check there're at least one mirror for each repo
+            if repo.url.is_empty() {
+                bail!("Repository {} requires at least one URL.", name);
+            }
         }
+
         Ok(())
     }
 }
@@ -47,7 +52,7 @@ fn key_filename_char(c: char) -> bool {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct RepoConfig {
-    pub url: String,
+    pub url: Vec<String>,
     pub distribution: String,
     pub components: Vec<String>,
     pub keys: Vec<String>,

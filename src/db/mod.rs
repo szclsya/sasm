@@ -53,14 +53,14 @@ impl LocalDb {
             if !arch.is_file() {
                 bail!("Local repository catalog is corrupted or out-of-date.");
             }
-            files.push((repo.url.clone(), self.root.join(arch)));
+            files.push((repo.url[0].clone(), self.root.join(arch)));
             // Then prepare noarch repo, if exists
             let noarch = self.root.join(format!(
                 "{}/Packages_{}_{}_{}",
                 &name, &repo.distribution, component, "all"
             ));
             if noarch.is_file() {
-                files.push((repo.url.clone(), self.root.join(noarch)));
+                files.push((repo.url[0].clone(), self.root.join(noarch)));
             }
         }
 
@@ -92,14 +92,14 @@ impl LocalDb {
             if !arch.is_file() {
                 bail!("Local package content metadata is corrupted or out-of-date.");
             }
-            files.push((repo.url.clone(), self.root.join(arch)));
+            files.push((repo.url[0].clone(), self.root.join(arch)));
             // Then prepare noarch repo, if exists
             let noarch = self.root.join(format!(
                 "{}/Contents_{}_{}_{}.gz",
                 &name, &repo.distribution, component, "all"
             ));
             if noarch.is_file() {
-                files.push((repo.url.clone(), self.root.join(noarch)));
+                files.push((repo.url[0].clone(), self.root.join(noarch)));
             }
         }
 
@@ -125,7 +125,7 @@ impl LocalDb {
             .repos
             .iter()
             .map(|(name, repo)| DownloadJob {
-                url: format!("{}/dists/{}/InRelease", repo.url, repo.distribution),
+                url: format!("{}/dists/{}/InRelease", repo.url[0], repo.distribution),
                 description: Some(format!("Repository metadata for {}", style(name).bold())),
                 filename: Some(format!("InRelease_{}", name)),
                 size: None,
@@ -176,7 +176,7 @@ impl LocalDb {
                         dbs_to_download.push(DownloadJob {
                             url: format!(
                                 "{}/dists/{}/{}",
-                                repo.url, repo.distribution, compressed_rel_url
+                                repo.url[0], repo.distribution, compressed_rel_url
                             ),
                             description: Some(format!(
                                 "Repository catalog for {} ({}).",
@@ -201,7 +201,7 @@ impl LocalDb {
                         dbs_to_download.push(DownloadJob {
                             url: format!(
                                 "{}/dists/{}/{}",
-                                repo.url, repo.distribution, &compressed_rel_url
+                                repo.url[0], repo.distribution, &compressed_rel_url
                             ),
                             description: Some(format!(
                                 "Package contents metadata for {} ({}).",
