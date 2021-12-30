@@ -3,14 +3,23 @@ pub use blueprint::{Blueprints, PkgRequest};
 
 use anyhow::{bail, Result};
 use clap::Parser;
-use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf};
+use serde::{Deserialize, Serialize, Serializer};
+use std::{collections::{BTreeMap, HashMap}, path::PathBuf};
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Config {
     pub arch: String,
+    #[serde(serialize_with = "ordered_map")]
     pub repo: HashMap<String, RepoConfig>,
     pub r#unsafe: Option<UnsafeConfig>,
+}
+
+fn ordered_map<S>(value: &HashMap<String, RepoConfig>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let ordered: BTreeMap<_, _> = value.iter().collect();
+    ordered.serialize(serializer)
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -21,6 +30,21 @@ pub struct UnsafeConfig {
     pub unsafe_io: bool,
     #[serde(default)]
     pub allow_remove_essential: bool,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct RepoConfig {
+    pub url: Mirror,
+    pub distribution: String,
+    pub components: Vec<String>,
+    pub keys: Vec<String>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum Mirror {
+    Single(String),
+    Multiple(Vec<String>),
 }
 
 impl Config {
@@ -36,10 +60,7 @@ impl Config {
                     );
                 }
             }
-            // Check there're at least one mirror for each repo
-            if repo.url.is_empty() {
-                bail!("Repository {} requires at least one URL.", name);
-            }
+            repo.check_sanity(name)?;
         }
 
         Ok(())
@@ -50,12 +71,25 @@ fn key_filename_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.'
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct RepoConfig {
-    pub url: Vec<String>,
-    pub distribution: String,
-    pub components: Vec<String>,
-    pub keys: Vec<String>,
+impl RepoConfig {
+    /// Check if there's some mirror available
+    pub fn check_sanity(&self, name: &str) -> Result<()> {
+        // Check there're at least one mirror for each repo
+        if let Mirror::Multiple(mirrors) = &self.url {
+            if mirrors.is_empty() {
+                bail!("Repository {} requires at least one URL.", name);
+            }
+        }
+        Ok(())
+    }
+
+    /// Get the first choice mirror
+    pub fn get_url(&self) -> &str {
+        match &self.url {
+            Mirror::Single(m) => m.as_str(),
+            Mirror::Multiple(m) => m[0].as_str(),
+        }
+    }
 }
 
 #[derive(Parser)]

@@ -2,7 +2,7 @@ use crate::{
     db::LocalDb,
     info,
     types::{
-        config::{Config, Opts},
+        config::{Config, Mirror, Opts},
         Checksum, ChecksumValidator,
     },
     utils::{downloader::Downloader, pager::Pager},
@@ -35,7 +35,18 @@ pub async fn bench(
     let mut config = config.clone();
     let mut results = Vec::new();
     for (name, repo) in &mut config.repo {
-        info!("Running benchmarking for repository {}", style(name).bold());
+        let urls = match &repo.url {
+            Mirror::Single(_) => {
+                info!(
+                    "Skipping repository {} because it only has one mirror.",
+                    style(name).bold()
+                );
+                continue;
+            }
+            Mirror::Multiple(urls) => urls,
+        };
+
+        info!("Running benchmarking for repository {}...", style(name).bold());
         let mut res = Vec::new();
         // Fetch Contents-all.gz for specified repo
         let contents_filename = format!(
@@ -60,7 +71,7 @@ pub async fn bench(
         let local_hash = Checksum::from_file_sha256(local_path)?;
         let validator = local_hash.get_validator();
 
-        for url in &repo.url {
+        for url in urls {
             let contents_url = format!(
                 "{}/dists/{}/{}/Contents-{}.gz",
                 url, repo.distribution, repo.components[0], config.arch
@@ -82,7 +93,7 @@ pub async fn bench(
         res.sort_by_key(|(_, time)| time.unwrap_or(Duration::MAX));
         // Generate new urls
         let new_urls = res.iter().map(|(url, _)| url.clone()).collect();
-        repo.url = new_urls;
+        repo.url = Mirror::Multiple(new_urls);
         // Push result of this repo to results
         results.push((name.as_str(), size, res));
     }
