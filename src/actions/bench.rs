@@ -1,12 +1,11 @@
 use crate::{
     db::LocalDb,
-    info,
+    info, msg, success,
     types::{
         config::{Config, Mirror, Opts},
         Checksum, ChecksumValidator,
     },
     utils::{downloader::Downloader, pager::Pager},
-    warn,
 };
 
 use anyhow::{bail, Result};
@@ -20,7 +19,7 @@ use std::{
     path::PathBuf,
     time::{Duration, Instant},
 };
-use tabled::{Alignment, Full, Head, Header, Modify, Style, Table, Tabled};
+use tabled::{Alignment, Column, Full, Head, Header, Modify, Style, Table, Tabled};
 
 pub async fn bench(
     opts: &Opts,
@@ -31,13 +30,14 @@ pub async fn bench(
     // First, update local db
     db.update(downloader).await?;
 
+    info!("Starting benchmarks...");
     let client = Client::new();
     let mut config = config.clone();
     let mut results = Vec::new();
     for (name, repo) in &mut config.repo {
         let urls = match &repo.url {
             Mirror::Single(_) => {
-                info!(
+                msg!(
                     "Skipping repository {} because it only has one mirror.",
                     style(name).bold()
                 );
@@ -46,7 +46,7 @@ pub async fn bench(
             Mirror::Multiple(urls) => urls,
         };
 
-        info!("Running benchmarking for repository {}...", style(name).bold());
+        msg!("Running benchmark for repository {}...", style(name).bold());
         let mut res = Vec::new();
         // Fetch Contents-all.gz for specified repo
         let contents_filename = format!(
@@ -84,7 +84,7 @@ pub async fn bench(
                     res.push((url.clone(), Some(time)));
                 }
                 Err(e) => {
-                    warn!("Mirror {} failed to complete benchmark: {}", url, e);
+                    msg!("Mirror {} failed to complete benchmark: {}", url, e);
                     res.push((url.clone(), None));
                 }
             }
@@ -106,7 +106,7 @@ pub async fn bench(
         .with_prompt(format!(
             "{}{}",
             crate::cli::gen_prefix(""),
-            "Apply optimal mirrors?"
+            "Apply optimal mirrors based on benchmark result?"
         ))
         .interact()?
     {
@@ -118,6 +118,10 @@ pub async fn bench(
             .unwrap()
             .join("config.toml");
         std::fs::write(config_path, new_config)?;
+        success!(
+            "New repository configuration has been written to {}.",
+            style("config.toml").bold()
+        );
     }
 
     Ok(())
@@ -149,8 +153,20 @@ struct BenchResultRow {
 
 #[inline]
 fn show_bench_results(results: &[(&str, u64, Vec<(String, Option<Duration>)>)]) -> Result<()> {
+    info!("Benchmark result:");
+
     let mut pager = Pager::new()?;
+    let pager_name = pager.pager_name().to_owned();
     let writer = pager.get_writer()?;
+
+    if pager_name == "less" {
+        writeln!(
+            writer,
+            "Press {} to finish reviewing benchmark result.",
+            style("q").bold()
+        )?;
+        writeln!(writer)?;
+    }
 
     for (name, size, repo_results) in results {
         let mut rows = Vec::new();
@@ -182,12 +198,15 @@ fn show_bench_results(results: &[(&str, u64, Vec<(String, Option<Duration>)>)]) 
             )))
             .with(Modify::new(Full).with(Alignment::left()))
             .with(Modify::new(Head).with(Alignment::center_horizontal()))
-            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
+            // Best column should be aligned to the center
+            .with(Modify::new(Column(0..1)).with(Alignment::center_horizontal()))
+            .with(Modify::new(Column(1..)).with(|s: &str| format!(" {} ", s)))
             .with(Style::pseudo_clean());
         writeln!(writer, "{}\n", table)?;
     }
 
     pager.wait_for_exit()?;
+    msg!("");
 
     Ok(())
 }

@@ -4,7 +4,10 @@ pub use blueprint::{Blueprints, PkgRequest};
 use anyhow::{bail, Result};
 use clap::Parser;
 use serde::{Deserialize, Serialize, Serializer};
-use std::{collections::{BTreeMap, HashMap}, path::PathBuf};
+use std::{
+    collections::{BTreeMap, HashMap},
+    path::PathBuf,
+};
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Config {

@@ -185,6 +185,10 @@ pub async fn fullfill_command(
             Ok(0)
         }
         SubCmd::Bench => {
+            // This operation has side effects (refresh)
+            lock::ensure_unlocked(&opts.root)?;
+            lock::lock(&opts.root)?;
+
             bench::bench(opts, config, localdb, &downloader).await?;
             Ok(0)
         }
