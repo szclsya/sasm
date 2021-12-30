@@ -36,6 +36,9 @@ pub async fn execute(
         alt_root = true;
     }
 
+    // Load unsafe configs
+    let unsafe_config = config.r#unsafe.clone().unwrap_or_default();
+
     debug!("Parsing dpkg database...");
     let dbs = local_db
         .get_all_package_db()
@@ -96,7 +99,7 @@ pub async fn execute(
     // Translating result to list of actions
     let root = &opts.root;
     let machine_status = MachineStatus::new(root)?;
-    let mut actions = machine_status.gen_actions(res.as_slice(), config.r#unsafe.purge_on_remove);
+    let mut actions = machine_status.gen_actions(res.as_slice(), unsafe_config.purge_on_remove);
     if alt_root {
         let modifier = modifier::UnpackOnly::default();
         modifier.apply(&mut actions);
@@ -119,7 +122,7 @@ pub async fn execute(
 
     // Additional confirmation if removing essential packages
     if actions.remove_essential() {
-        if config.r#unsafe.allow_remove_essential {
+        if unsafe_config.allow_remove_essential {
             let prefix = style("DANGER").red().to_string();
             crate::WRITER.writeln(
                 &prefix,
@@ -139,8 +142,7 @@ pub async fn execute(
         .interact()?
     {
         // Run it!
-        dpkg::execute_pkg_actions(actions, &opts.root, downloader, config.r#unsafe.unsafe_io)
-            .await?;
+        dpkg::execute_pkg_actions(actions, &opts.root, downloader, unsafe_config.unsafe_io).await?;
         Ok(0)
     } else {
         Ok(2)

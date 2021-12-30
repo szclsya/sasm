@@ -6,15 +6,14 @@ use clap::Parser;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Config {
     pub arch: String,
     pub repo: HashMap<String, RepoConfig>,
-    #[serde(default)]
-    pub r#unsafe: UnsafeConfig,
+    pub r#unsafe: Option<UnsafeConfig>,
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct UnsafeConfig {
     #[serde(default)]
     pub purge_on_remove: bool,
@@ -27,6 +26,7 @@ pub struct UnsafeConfig {
 impl Config {
     pub fn check_sanity(&self) -> Result<()> {
         for (name, repo) in &self.repo {
+            // Check public key names
             for key_filename in &repo.keys {
                 if key_filename.contains(|c| !key_filename_char(c)) {
                     bail!(
