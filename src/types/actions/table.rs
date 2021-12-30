@@ -38,7 +38,7 @@ struct ConfigureRow {
     name: String,
 }
 
-pub fn show_table(actions: &PkgActions) -> Result<()> {
+pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
     let mut install_rows = Vec::new();
     let mut upgrade_rows = Vec::new();
     let mut downgrade_rows = Vec::new();
@@ -117,12 +117,12 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         configure_rows.push(row);
     }
 
-    let mut pager = Pager::new()?;
+    let mut pager = Pager::new(no_pager)?;
     let pager_name = pager.pager_name().to_owned();
-    let out = pager.get_writer()?;
+    let mut out = pager.get_writer()?;
 
     // Show help message about how to exit review view
-    if pager_name == "less" {
+    if pager_name == Some("less") {
         writeln!(out, "Press {} to finish review.\n", style("q").bold())?;
     }
 
@@ -217,6 +217,8 @@ pub fn show_table(actions: &PkgActions) -> Result<()> {
         HumanBytes(abs_install_size_change)
     )?;
 
+    // Finish writing
+    drop(out);
     // Wait until pager exits
     pager.wait_for_exit()?;
 

@@ -178,8 +178,8 @@ impl PkgActions<'_> {
         crate::WRITER.write_chunks(&purge_prefix, &purges).unwrap();
     }
 
-    pub fn show_tables(&self) -> Result<()> {
-        table::show_table(self)
+    pub fn show_tables(&self, no_pager: bool) -> Result<()> {
+        table::show_table(self, no_pager)
     }
 
     pub fn show_size_change(&self) {

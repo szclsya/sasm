@@ -115,7 +115,7 @@ pub async fn execute(
     if opts.no_pager {
         actions.show();
     } else {
-        actions.show_tables()?;
+        actions.show_tables(opts.no_pager)?;
     }
     crate::WRITER.writeln("", "")?;
     actions.show_size_change();

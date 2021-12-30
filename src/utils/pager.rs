@@ -1,16 +1,17 @@
 use anyhow::{format_err, Result};
-use std::{
-    process::{Child, ChildStdin},
-    sync::atomic::Ordering,
-};
+use std::{io::Write, process::Child, sync::atomic::Ordering};
 
-pub struct Pager {
-    pager_name: String,
-    child: Child,
+pub enum Pager {
+    Plain,
+    External((String, Child)),
 }
 
 impl Pager {
-    pub fn new() -> Result<Self> {
+    pub fn new(no_pager: bool) -> Result<Self> {
+        if no_pager {
+            return Ok(Pager::Plain);
+        }
+
         let pager_cmd = std::env::var("PAGER").unwrap_or_else(|_| "less".to_owned());
         let pager_cmd_segments: Vec<&str> = pager_cmd.split_ascii_whitespace().collect();
         let pager_name = pager_cmd_segments.get(0).unwrap_or(&"less");
@@ -26,28 +27,37 @@ impl Pager {
         // Record PID
         crate::SUBPROCESS.store(pager_process.id() as i32, Ordering::SeqCst);
 
-        let res = Pager {
-            pager_name: pager_name.to_string(),
-            child: pager_process,
+        let res = Pager::External((pager_name.to_string(), pager_process));
+        Ok(res)
+    }
+
+    pub fn pager_name(&self) -> Option<&str> {
+        match self {
+            Pager::Plain => None,
+            Pager::External((name, _)) => Some(name.as_str()),
+        }
+    }
+
+    pub fn get_writer(&self) -> Result<Box<dyn Write + '_>> {
+        let res = match self {
+            Pager::Plain => crate::WRITER.get_writer(),
+            Pager::External((_, child)) => {
+                let stdin = child
+                    .stdin
+                    .as_ref()
+                    .ok_or_else(|| format_err!("Failed to take pager's stdin"))?;
+                let res: Box<dyn Write> = Box::new(stdin);
+                res
+            }
         };
         Ok(res)
     }
 
-    pub fn pager_name(&self) -> &str {
-        &self.pager_name
-    }
-
-    pub fn get_writer<'a>(&'a mut self) -> Result<&'a mut ChildStdin> {
-        let stdin = self
-            .child
-            .stdin
-            .as_mut()
-            .ok_or_else(|| format_err!("Failed to take pager's stdin"))?;
-        Ok(stdin)
-    }
-
     pub fn wait_for_exit(&mut self) -> Result<()> {
-        let _ = self.child.wait()?;
+        if let Pager::External((_, child)) = self {
+            let _ = child.wait()?;
+        }
+
         Ok(())
     }
 }

@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use console::Term;
+use std::io::Write;
 
 const PREFIX_LEN: u16 = 10;
 
@@ -34,6 +35,10 @@ impl Writer {
 
     pub fn get_max_len(&self) -> u16 {
         self.term.size_checked().unwrap_or((25, 80)).1 - PREFIX_LEN
+    }
+
+    pub fn get_writer(&self) -> Box<dyn Write> {
+        Box::new(self.term.clone())
     }
 
     fn write_prefix(&self, prefix: &str) -> Result<()> {

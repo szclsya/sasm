@@ -99,7 +99,7 @@ pub async fn bench(
     }
 
     // Show results
-    show_bench_results(results.as_slice())?;
+    show_bench_results(results.as_slice(), opts.no_pager)?;
 
     // Ask if to write back results
     if Confirm::new()
@@ -152,14 +152,17 @@ struct BenchResultRow {
 }
 
 #[inline]
-fn show_bench_results(results: &[(&str, u64, Vec<(String, Option<Duration>)>)]) -> Result<()> {
+fn show_bench_results(
+    results: &[(&str, u64, Vec<(String, Option<Duration>)>)],
+    no_pager: bool,
+) -> Result<()> {
     info!("Benchmark result:");
 
-    let mut pager = Pager::new()?;
+    let mut pager = Pager::new(no_pager)?;
     let pager_name = pager.pager_name().to_owned();
-    let writer = pager.get_writer()?;
+    let mut writer = pager.get_writer()?;
 
-    if pager_name == "less" {
+    if pager_name == Some("less") {
         writeln!(
             writer,
             "Press {} to finish reviewing benchmark result.",
@@ -205,6 +208,7 @@ fn show_bench_results(results: &[(&str, u64, Vec<(String, Option<Duration>)>)]) 
         writeln!(writer, "{}\n", table)?;
     }
 
+    drop(writer);
     pager.wait_for_exit()?;
     msg!("");
 
