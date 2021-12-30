@@ -9,6 +9,7 @@ pub enum Checksum {
     Sha512(Vec<u8>),
 }
 
+#[derive(Clone)]
 pub enum ChecksumValidator {
     Sha256((Vec<u8>, Sha256)),
     Sha512((Vec<u8>, Sha512)),
@@ -31,6 +32,17 @@ impl ChecksumValidator {
 }
 
 impl Checksum {
+    pub fn from_file_sha256(path: &Path) -> Result<Self> {
+        let mut file = File::open(path).context(format!(
+            "Failed to open {} for checking checksum",
+            path.display()
+        ))?;
+        let mut hasher = Sha256::new();
+        io::copy(&mut file, &mut hasher)?;
+        let hash = hasher.finalize().to_vec();
+        Ok(Self::Sha256(hash))
+    }
+
     /// This function does not do input sanitization, so do checks before!
     pub fn from_sha256_str(s: &str) -> Result<Self> {
         if s.len() != 64 {
@@ -78,6 +90,7 @@ impl Checksum {
             }
         }
     }
+
     pub fn cmp_file(&self, path: &Path) -> Result<bool> {
         let file = File::open(path).context(format!(
             "Failed to open {} for checking checksum",

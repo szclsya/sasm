@@ -4,7 +4,7 @@ pub mod config;
 mod version;
 
 pub use actions::{PkgActionModifier, PkgActions, PkgInstallAction};
-pub use checksum::Checksum;
+pub use checksum::{Checksum, ChecksumValidator};
 pub use version::{parse_version, parse_version_requirement, PkgVersion, VersionRequirement};
 
 use serde::{Deserialize, Serialize};
