@@ -164,7 +164,7 @@ fn sigint_handler(root: &Path) {
 
     // Dealing with lock
     if LOCKED.load(Ordering::Relaxed) {
-        utils::lock::unlock(&root).expect("Failed to unlock instance.");
+        utils::lock::unlock(root).expect("Failed to unlock instance.");
     }
 
     // Show cursor before exiting.
