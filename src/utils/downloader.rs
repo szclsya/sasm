@@ -356,9 +356,10 @@ fn update_global_bar(
 
 #[inline]
 fn gen_global_bar_message(total: usize, finished: usize, total_text_len: usize) -> String {
+    let finished_str = finished.to_string();
     format!(
-        "Total Progress: [{:0width$}/{}]",
-        finished,
+        "Total Progress: [{: >width$}/{}]",
+        finished_str,
         total,
         width = total_text_len
     )
