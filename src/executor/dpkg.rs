@@ -91,8 +91,14 @@ fn dpkg_run<T: AsRef<std::ffi::OsStr>>(args: &[T], root: &Path, unsafe_io: bool)
     // Add root position
     cmd.arg("--root");
     cmd.arg(root.as_os_str());
-    // Force all!
-    cmd.arg("--force-all");
+    // Ignore dependency/break checks and essential. These will be guaranteed by Omakase
+    cmd.args(&[
+        "--force-downgrade",
+        "--force-breaks",
+        "--force-conflicts",
+        "--force-depends",
+        "--force-remove-essential",
+    ]);
     // If no stuff is specified, success automatically
     if args.len() <= 1 {
         return Ok(());
