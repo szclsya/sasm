@@ -245,8 +245,14 @@ async fn download_file(
                 let p = file_path.clone();
                 let res = tokio::task::spawn_blocking(move || checksum.cmp_file(&p)).await?;
                 if res.is_ok() && res.unwrap() {
+                    // Checksum matched.
                     bar.finish_and_clear();
-                    if crate::verbose() {
+                    // Reduce global bar length, since we don't need to download this file
+                    if let Some(ref global_bar) = global_bar {
+                        global_bar.set_length(global_bar.length() - len);
+                    }
+
+                    if crate::verbose() || global_bar.is_some() {
                         bar.println(format!(
                             "{}{} (not modified)",
                             crate::cli::gen_prefix(&console::style("SKIP").dim().to_string()),
