@@ -16,9 +16,6 @@ struct InstallRow {
     version: String,
     #[header("Installed Size")]
     size: String,
-    // Show details to this specific installation
-    #[header("Details")]
-    detail: String,
 }
 
 #[derive(Tabled)]
@@ -65,7 +62,6 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
                 None => new.version.to_string(),
             },
             size: install_size_change_str,
-            detail: String::new(),
         };
         // Insert to different row based on operation
         if let Some(old) = old {
