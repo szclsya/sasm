@@ -40,12 +40,12 @@ pub struct InstallRequest {
     modify: bool,
 }
 
-/// bool in return type indicated whether the blueprint is altered
+/// bool in return type indicated whether user cancelled operation 
 pub async fn fullfill_command(
     config: &Config,
     opts: &Opts,
     blueprints: &mut Blueprints,
-) -> Result<i32> {
+) -> Result<bool> {
     let downloader = crate::utils::downloader::Downloader::new();
     // Directory that stores trusted public keys for repos
     let key_root = opts.root.join(crate::DB_KEY_PATH);
@@ -82,9 +82,9 @@ pub async fn fullfill_command(
             // Update local db
             localdb.update(&downloader).await?;
             // Execute blueprint
-            let exit = execute(&localdb, &downloader, blueprints, opts, config, req).await?;
+            let cancelled = execute(&localdb, &downloader, blueprints, opts, config, req).await?;
 
-            Ok(exit)
+            Ok(cancelled)
         }
         SubCmd::Remove(rm) => {
             // This operation has side effects
@@ -101,9 +101,9 @@ pub async fn fullfill_command(
             // Update local db
             localdb.update(&downloader).await?;
             // Apply stuff
-            let exit = execute(&localdb, &downloader, blueprints, opts, config, req).await?;
+            let cancelled = execute(&localdb, &downloader, blueprints, opts, config, req).await?;
 
-            Ok(exit)
+            Ok(cancelled)
         }
         SubCmd::Pick(pick) => {
             // This operation has side effects
@@ -114,9 +114,9 @@ pub async fn fullfill_command(
             // Update local db
             localdb.update(&downloader).await?;
             // Apply stuff
-            let exit = execute(&localdb, &downloader, blueprints, opts, config, req).await?;
+            let cancelled = execute(&localdb, &downloader, blueprints, opts, config, req).await?;
 
-            Ok(exit)
+            Ok(cancelled)
         }
         SubCmd::Refresh => {
             // This operation has side effects
@@ -125,7 +125,7 @@ pub async fn fullfill_command(
 
             localdb.update(&downloader).await?;
             success!("Omakase has successfully refreshed local package metadata.");
-            Ok(0)
+            Ok(false)
         }
         SubCmd::Execute => {
             // This operation has side effects
@@ -145,7 +145,7 @@ pub async fn fullfill_command(
         SubCmd::Search(search) => {
             let machine_status = MachineStatus::new(&opts.root)?;
             search::search_deb_db(&localdb, &search.keyword, &machine_status)?;
-            Ok(0)
+            Ok(false)
         }
         SubCmd::Provide(provide) => {
             let machine_status = MachineStatus::new(&opts.root)?;
@@ -155,7 +155,7 @@ pub async fn fullfill_command(
                 &provide.file,
                 provide.first_only,
             )?;
-            Ok(0)
+            Ok(false)
         }
         SubCmd::Clean(cleanconfig) => {
             // This operation has side effects
@@ -182,7 +182,7 @@ pub async fn fullfill_command(
                 }
             }
 
-            Ok(0)
+            Ok(false)
         }
         SubCmd::Bench => {
             // This operation has side effects (refresh)
@@ -190,7 +190,7 @@ pub async fn fullfill_command(
             lock::lock(&opts.root)?;
 
             bench::bench(opts, config, localdb, &downloader).await?;
-            Ok(0)
+            Ok(false)
         }
     }
 }

@@ -140,12 +140,16 @@ async fn try_main(opts: &Opts) -> Result<i32> {
 
     // Do stuff
     warn!("Omakase is currently under construction and active testing. Proceed with caution on production systems!");
-    let exit = actions::fullfill_command(&config, opts, &mut blueprint).await?;
-    // Write back blueprint.
-    // They will determine if it really need to write back user blueprint
-    blueprint.export()?;
-
-    Ok(exit)
+    let cancelled = actions::fullfill_command(&config, opts, &mut blueprint).await?;
+    if !cancelled {
+        // Write back blueprint.
+        // They will determine if it really need to write back user blueprint
+        blueprint.export()?;
+        Ok(0)
+    } else {
+        // User cancelled operation. Don't write back blueprint
+        Ok(2)
+    }
 }
 
 fn sigint_handler(root: &Path) {

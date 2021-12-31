@@ -18,7 +18,7 @@ use anyhow::{bail, Context, Result};
 use console::style;
 use dialoguer::Confirm;
 
-#[inline]
+// -> Result<UserCancelled?>
 pub async fn execute(
     local_db: &LocalDb,
     downloader: &Downloader,
@@ -26,7 +26,7 @@ pub async fn execute(
     opts: &Opts,
     config: &Config,
     request: UserRequest,
-) -> Result<i32> {
+) -> Result<bool> {
     // Check if operating in alt-root mode
     let mut alt_root = false;
     if opts.root != std::path::Path::new("/") {
@@ -107,7 +107,7 @@ pub async fn execute(
 
     if actions.is_empty() {
         success!("There is nothing to do.");
-        return Ok(0);
+        return Ok(false);
     }
 
     // There is something to do. Show it.
@@ -143,8 +143,8 @@ pub async fn execute(
     {
         // Run it!
         dpkg::execute_pkg_actions(actions, &opts.root, downloader, unsafe_config.unsafe_io).await?;
-        Ok(0)
+        Ok(false)
     } else {
-        Ok(2)
+        Ok(true)
     }
 }
