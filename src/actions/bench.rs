@@ -204,7 +204,7 @@ fn show_bench_results(
             // Best column should be aligned to the center
             .with(Modify::new(Column(0..1)).with(Alignment::center_horizontal()))
             .with(Modify::new(Column(1..)).with(|s: &str| format!(" {} ", s)))
-            .with(Style::pseudo_clean());
+            .with(Style::PSEUDO_CLEAN);
         writeln!(writer, "{}\n", table)?;
     }
 

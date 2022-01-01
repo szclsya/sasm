@@ -40,7 +40,7 @@ pub struct InstallRequest {
     modify: bool,
 }
 
-/// bool in return type indicated whether user cancelled operation 
+/// bool in return type indicated whether user cancelled operation
 pub async fn fullfill_command(
     config: &Config,
     opts: &Opts,
