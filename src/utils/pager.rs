@@ -1,5 +1,5 @@
 use anyhow::{format_err, Result};
-use std::{io::Write, process::Child, sync::atomic::Ordering};
+use std::{env::var, io::Write, process::Child, sync::atomic::Ordering};
 
 pub enum Pager {
     Plain,
@@ -12,7 +12,13 @@ impl Pager {
             return Ok(Pager::Plain);
         }
 
-        let pager_cmd = std::env::var("PAGER").unwrap_or_else(|_| "less".to_owned());
+        // Use plain mode for dumb terminals
+        let term = var("TERM").unwrap_or_default();
+        if term == "dumb" || term == "dialup" {
+            return Ok(Pager::Plain);
+        }
+
+        let pager_cmd = var("PAGER").unwrap_or_else(|_| "less".to_owned());
         let pager_cmd_segments: Vec<&str> = pager_cmd.split_ascii_whitespace().collect();
         let pager_name = pager_cmd_segments.get(0).unwrap_or(&"less");
         let mut p = std::process::Command::new(&pager_name);
