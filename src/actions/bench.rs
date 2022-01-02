@@ -10,7 +10,6 @@ use crate::{
 
 use anyhow::{bail, Result};
 use console::style;
-use dialoguer::Confirm;
 use indicatif::HumanBytes;
 use reqwest::Client;
 use std::{
@@ -102,14 +101,7 @@ pub async fn bench(
     show_bench_results(results.as_slice(), opts.no_pager)?;
 
     // Ask if to write back results
-    if Confirm::new()
-        .with_prompt(format!(
-            "{}{}",
-            crate::cli::gen_prefix(""),
-            "Apply optimal mirrors based on benchmark result?"
-        ))
-        .interact()?
-    {
+    if crate::cli::ask_confirm(opts, "Apply optimal mirrors based on benchmark result?")? {
         let new_config = toml::to_string(&config)?;
         let config_path = opts
             .root

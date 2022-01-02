@@ -16,7 +16,6 @@ use crate::{
 
 use anyhow::{bail, Context, Result};
 use console::style;
-use dialoguer::Confirm;
 
 // -> Result<UserCancelled?>
 pub async fn execute(
@@ -112,7 +111,7 @@ pub async fn execute(
 
     // There is something to do. Show it.
     info!("Omakase will perform the following actions:");
-    if opts.no_pager {
+    if opts.yes && opts.no_pager {
         actions.show();
     } else {
         actions.show_tables(opts.no_pager)?;
@@ -128,8 +127,7 @@ pub async fn execute(
                 &prefix,
                 "Some ESSENTIAL packages will be removed/purged. Are you REALLY sure?",
             )?;
-            let confirm_msg = format!("{}{}", cli::gen_prefix(""), "Is this supposed to happen?");
-            if !Confirm::new().with_prompt(confirm_msg).interact()? {
+            if cli::ask_confirm(opts, "Is this supposed to happen?")? {
                 bail!("User cancelled operation.");
             }
         } else {
@@ -137,10 +135,7 @@ pub async fn execute(
         }
     }
 
-    if Confirm::new()
-        .with_prompt(format!("{}{}", cli::gen_prefix(""), "Proceed?"))
-        .interact()?
-    {
+    if cli::ask_confirm(opts, "Proceed?")? {
         // Run it!
         dpkg::execute_pkg_actions(actions, &opts.root, downloader, unsafe_config.unsafe_io).await?;
         Ok(false)

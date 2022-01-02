@@ -1,3 +1,6 @@
+mod prompt;
+pub use prompt::ask_confirm;
+
 use anyhow::{Context, Result};
 use console::Term;
 use std::io::Write;

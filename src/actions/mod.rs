@@ -64,7 +64,7 @@ pub async fn fullfill_command(
 
             let names = if add.local {
                 let paths: Vec<PathBuf> = add.names.iter().map(PathBuf::from).collect();
-                local::add(&paths, &opts.root)?
+                local::add(opts, &paths)?
             } else {
                 add.names.clone()
             };

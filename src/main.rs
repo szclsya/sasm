@@ -48,9 +48,13 @@ fn verbose() -> bool {
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     // Initial setup
-    let opts: Opts = Opts::parse();
+    let mut opts: Opts = Opts::parse();
     // Set-up debug globally
     VERBOSE.store(opts.verbose, Ordering::Relaxed);
+    // If yes mode is enabled, pager will be disabled
+    if opts.yes {
+        opts.no_pager = true;
+    }
 
     // Set up SIGINT handler
     {

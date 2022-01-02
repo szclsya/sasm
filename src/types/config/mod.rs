@@ -112,14 +112,16 @@ pub struct Opts {
         help = "Position of the config folder"
     )]
     pub config_root: PathBuf,
+    #[clap(display_order = 3, long, help = "Say yes to every prompt")]
+    pub yes: bool,
     #[clap(
-        display_order = 3,
+        display_order = 4,
         short,
         long,
         help = "Print additional debug information"
     )]
     pub verbose: bool,
-    #[clap(display_order = 4, long, help = "Don't pipe long output into a pager")]
+    #[clap(display_order = 5, long, help = "Don't pipe long output into a pager")]
     pub no_pager: bool,
     #[clap(subcommand)]
     pub subcmd: SubCmd,

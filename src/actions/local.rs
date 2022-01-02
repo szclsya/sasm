@@ -3,19 +3,19 @@ use crate::{
     executor::{MachineStatus, PkgState},
     info,
     pool::source::local,
+    types::config::Opts,
 };
 
 use anyhow::{bail, Result};
 use console::style;
-use dialoguer::Confirm;
 use std::{
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
 };
 
-pub fn add(paths: &[PathBuf], root: &Path) -> Result<Vec<String>> {
-    let local_repo_root = root.join(crate::LOCAL_REPO_PATH);
+pub fn add(opts: &Opts, paths: &[PathBuf]) -> Result<Vec<String>> {
+    let local_repo_root = opts.root.join(crate::LOCAL_REPO_PATH);
 
     let mut jobs = Vec::new();
     for path in paths {
@@ -26,10 +26,7 @@ pub fn add(paths: &[PathBuf], root: &Path) -> Result<Vec<String>> {
             style(&pkgmeta.name).bold(),
             pkgmeta.version
         );
-        if !Confirm::new()
-            .with_prompt(format!("{}{}", cli::gen_prefix(""), "Confirm?"))
-            .interact()?
-        {
+        if cli::ask_confirm(opts, "Confirm?")? {
             bail!("User cancelled operation.");
         }
 
