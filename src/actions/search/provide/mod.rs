@@ -1,10 +1,11 @@
+mod parse;
+
 use super::PkgInfo;
 use crate::{db::LocalDb, debug, executor::MachineStatus, pool};
 
 use anyhow::{Context, Result};
 use console::style;
 use flate2::read::GzDecoder;
-use regex::Regex;
 use std::{
     cmp::Reverse,
     collections::{HashMap, HashSet},
@@ -13,7 +14,7 @@ use std::{
     path::PathBuf,
 };
 
-const READ_BUFFER_SIZE: usize = 1000;
+const READ_BUFFER_SIZE: usize = 8000;
 
 pub fn show_provide_file(
     local_db: &LocalDb,
@@ -83,9 +84,6 @@ pub fn package_name_provide_file(
     dbs: Vec<Box<dyn Read>>,
     filename: &str,
 ) -> Result<HashMap<String, HashSet<String>>> {
-    let regex =
-        Regex::new(r"^(?P<path>[^\s]+) +[a-zA-Z0-9]+/(?P<pkgname>[-a-zA-Z0-9.+]+)$").unwrap();
-
     let mut res = HashMap::new();
     for db in dbs {
         let mut bufreader = BufReader::new(db);
@@ -97,7 +95,7 @@ pub fn package_name_provide_file(
                 break;
             }
             bufreader.read_until(b'\n', &mut buffer)?;
-            scan_buffer(&buffer, &mut res, filename, &regex)?;
+            scan_buffer(&buffer, &mut res, filename)?;
         }
     }
 
@@ -108,7 +106,6 @@ fn scan_buffer(
     buffer: &[u8],
     results: &mut HashMap<String, HashSet<String>>,
     filename: &str,
-    regex: &Regex,
 ) -> Result<()> {
     let substring = format!("{} ", filename);
     for occurence in memchr::memmem::find_iter(buffer, &substring) {
@@ -131,22 +128,22 @@ fn scan_buffer(
 
         let slice = &buffer[start..end];
         let line = std::str::from_utf8(slice)?;
-        let captures = regex.captures(line).unwrap();
-        let pkgname = captures.name("pkgname").unwrap().as_str().to_owned();
-        let mut path = captures.name("path").unwrap().as_str().to_owned();
-        // Add `/` to the front of path, because Contents file uses relative path
-        if path.starts_with("./") {
-            path.remove(0);
-        } else {
-            path.insert(0, '/');
-        }
-
-        if let Some(list) = results.get_mut(&pkgname) {
-            list.insert(path);
-        } else {
-            let mut set = HashSet::new();
-            set.insert(path);
-            results.insert(pkgname, set);
+        match parse::parse_contents_line(line) {
+            Ok((path, packages)) =>{
+                let mut path = path.to_owned();
+                // Add `/` to the front of path, because Contents file uses relative path
+                path.insert(0, '/');
+                for (_, pkgname) in packages {
+                    if let Some(list) = results.get_mut(pkgname) {
+                        list.insert(path.clone());
+                    } else {
+                        let mut set = HashSet::new();
+                        set.insert(path.clone());
+                        results.insert(pkgname.to_owned(), set);
+                    }
+                }
+            }
+            Err(e) => { debug!("{}", e); },
         }
     }
 
