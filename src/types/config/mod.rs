@@ -198,9 +198,9 @@ pub struct SearchPkg {
 pub struct ProvideFile {
     /// Partial or full path for searching
     pub file: String,
-    /// Only search for the first result
+    /// Search binary files only
     #[clap(long)]
-    pub first_only: bool,
+    pub bin: bool,
 }
 
 #[derive(Parser)]

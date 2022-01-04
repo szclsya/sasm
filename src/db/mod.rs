@@ -115,6 +115,45 @@ impl LocalDb {
         Ok(res)
     }
 
+    pub fn get_bincontents_db(&self, name: &str) -> Result<Vec<(String, PathBuf)>> {
+        let repo = match self.repos.get(name) {
+            Some(repo) => repo,
+            None => bail!("Repository with name {} not found.", name),
+        };
+
+        let mut files: Vec<(String, PathBuf)> = Vec::new();
+        for component in &repo.components {
+            // First prepare arch-specific repo
+            let arch = self.root.join(format!(
+                "{}/BinContents_{}_{}_{}",
+                &name, &repo.distribution, component, &self.arch
+            ));
+            if !arch.is_file() {
+                bail!("Local package content metadata is corrupted or out-of-date.");
+            }
+            files.push((repo.get_url().to_owned(), self.root.join(arch)));
+            // Then prepare noarch repo, if exists
+            let noarch = self.root.join(format!(
+                "{}/BinContents_{}_{}_{}",
+                &name, &repo.distribution, component, "all"
+            ));
+            if noarch.is_file() {
+                files.push((repo.get_url().to_owned(), self.root.join(noarch)));
+            }
+        }
+
+        Ok(files)
+    }
+
+    // Get (BaseURL, FilePath) of all configured repos
+    pub fn get_all_bincontents_db(&self) -> Result<Vec<(String, PathBuf)>> {
+        let mut res = Vec::new();
+        for repo in &self.repos {
+            res.append(&mut self.get_bincontents_db(repo.0)?);
+        }
+        Ok(res)
+    }
+
     pub async fn update(&self, downloader: &Downloader) -> Result<()> {
         info!("Refreshing local repository metadata...");
 
@@ -215,6 +254,30 @@ impl LocalDb {
                             filename: Some(filename),
                             size: Some(compressed_meta.0),
                             compression: Compression::None(Some(compressed_meta.1.clone())),
+                        });
+                    }
+                    // 3. Download BinContents db
+                    let rel_url = format!("{}/BinContents-{}", component, arch);
+                    if let Some(meta) = dbs.get(name).unwrap().get(&rel_url) {
+                        let filename = format!(
+                            "{}/BinContents_{}_{}_{}",
+                            &name, &repo.distribution, &component, arch
+                        );
+                        dbs_to_download.push(DownloadJob {
+                            url: format!(
+                                "{}/dists/{}/{}",
+                                repo.get_url(),
+                                repo.distribution,
+                                &rel_url
+                            ),
+                            description: Some(format!(
+                                "Package contents metadata for {} ({}).",
+                                style(name).bold(),
+                                arch
+                            )),
+                            filename: Some(filename),
+                            size: Some(meta.0),
+                            compression: Compression::None(Some(meta.1.clone())),
                         });
                     }
                 }

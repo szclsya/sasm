@@ -19,30 +19,40 @@ pub fn show_provide_file(
     local_db: &LocalDb,
     machine_status: &MachineStatus,
     filename: &str,
-    first_only: bool,
+    bin: bool,
 ) -> Result<()> {
-    let content_dbs: Vec<PathBuf> = local_db
-        .get_all_contents_db()
-        .context("Failed to initialize local database for searching!")?
-        .into_iter()
-        .map(|(_, path)| path)
-        .collect();
+    let content_paths: Vec<PathBuf> = if bin {
+        local_db.get_all_bincontents_db()
+    } else {
+        local_db.get_all_contents_db()
+    }
+    .context("Failed to initialize local database for searching!")?
+    .into_iter()
+    .map(|(_, path)| path)
+    .collect();
+
+    let mut content_dbs: Vec<Box<dyn Read>> = Vec::with_capacity(content_paths.len());
+    for path in &content_paths {
+        let f = File::open(path)?;
+        if bin {
+            // BinContents are not compressed
+            content_dbs.push(Box::new(f));
+        } else {
+            // Contents are Gzip compressed
+            let f = GzDecoder::new(f);
+            content_dbs.push(Box::new(f));
+        }
+    }
 
     // Find a list of package names that provide the designated file
     debug!("Searching Contents metadata...");
-    let mut pkgnames = Vec::from_iter(package_name_provide_file(
-        &content_dbs,
-        filename,
-        first_only,
-    )?);
+    let mut pkgnames = Vec::from_iter(package_name_provide_file(content_dbs, filename)?);
     // Sort based on number of matched paths
     pkgnames.sort_by_key(|(_, paths)| Reverse(paths.len()));
 
     // Create a Solver so we can get more info    let mut solver = Solver::new();
     debug!("Constructing package pool...");
-    let dbs = local_db
-        .get_all_package_db()
-        .context("Failed to initialize local database for searching!")?;
+    let dbs = local_db.get_all_package_db()?;
     let pool = pool::source::create_pool(&dbs, &[])?;
 
     debug!("Generating detailed package information...");
@@ -70,19 +80,15 @@ pub fn show_provide_file(
 
 // Given a filename or path, find package names that provide such file
 pub fn package_name_provide_file(
-    dbs: &[PathBuf],
+    dbs: Vec<Box<dyn Read>>,
     filename: &str,
-    first_only: bool,
 ) -> Result<HashMap<String, HashSet<String>>> {
     let regex =
         Regex::new(r"^(?P<path>[^\s]+) +[a-zA-Z0-9]+/(?P<pkgname>[-a-zA-Z0-9.+]+)$").unwrap();
 
     let mut res = HashMap::new();
     for db in dbs {
-        let f = File::open(db)?;
-        let f = GzDecoder::new(f);
-        let mut bufreader = BufReader::new(f);
-
+        let mut bufreader = BufReader::new(db);
         let mut buffer = vec![0u8; READ_BUFFER_SIZE];
         loop {
             let len = bufreader.read(&mut buffer)?;
@@ -91,10 +97,7 @@ pub fn package_name_provide_file(
                 break;
             }
             bufreader.read_until(b'\n', &mut buffer)?;
-            // Stop searching if we just want one result
-            if scan_buffer(&buffer, &mut res, filename, &regex, first_only)? {
-                break;
-            }
+            scan_buffer(&buffer, &mut res, filename, &regex)?;
         }
     }
 
@@ -106,8 +109,7 @@ fn scan_buffer(
     results: &mut HashMap<String, HashSet<String>>,
     filename: &str,
     regex: &Regex,
-    first_only: bool,
-) -> Result<bool> {
+) -> Result<()> {
     let substring = format!("{} ", filename);
     for occurence in memchr::memmem::find_iter(buffer, &substring) {
         // Find line start
@@ -129,12 +131,15 @@ fn scan_buffer(
 
         let slice = &buffer[start..end];
         let line = std::str::from_utf8(slice)?;
-
         let captures = regex.captures(line).unwrap();
         let pkgname = captures.name("pkgname").unwrap().as_str().to_owned();
         let mut path = captures.name("path").unwrap().as_str().to_owned();
         // Add `/` to the front of path, because Contents file uses relative path
-        path.insert(0, '/');
+        if path.starts_with("./") {
+            path.remove(0);
+        } else {
+            path.insert(0, '/');
+        }
 
         if let Some(list) = results.get_mut(&pkgname) {
             list.insert(path);
@@ -143,11 +148,7 @@ fn scan_buffer(
             set.insert(path);
             results.insert(pkgname, set);
         }
-
-        if first_only {
-            return Ok(true);
-        }
     }
 
-    Ok(false)
+    Ok(())
 }
