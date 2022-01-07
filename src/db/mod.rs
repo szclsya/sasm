@@ -50,10 +50,9 @@ impl LocalDb {
                 "{}/Packages_{}_{}_{}",
                 &name, &repo.distribution, component, &self.arch
             ));
-            if !arch.is_file() {
-                bail!("Local repository catalog is corrupted or out-of-date.");
+            if arch.is_file() {
+                files.push((repo.get_url().to_owned(), self.root.join(arch)));
             }
-            files.push((repo.get_url().to_owned(), self.root.join(arch)));
             // Then prepare noarch repo, if exists
             let noarch = self.root.join(format!(
                 "{}/Packages_{}_{}_{}",
@@ -62,6 +61,10 @@ impl LocalDb {
             if noarch.is_file() {
                 files.push((repo.get_url().to_owned(), self.root.join(noarch)));
             }
+        }
+
+        if files.is_empty() {
+            bail!("Local repository catalog is corrupted or out-of-date.");
         }
 
         Ok(files)
@@ -89,10 +92,9 @@ impl LocalDb {
                 "{}/Contents_{}_{}_{}.gz",
                 &name, &repo.distribution, component, &self.arch
             ));
-            if !arch.is_file() {
-                bail!("Local package content metadata is corrupted or out-of-date.");
+            if arch.is_file() {
+                files.push((repo.get_url().to_owned(), self.root.join(arch)));
             }
-            files.push((repo.get_url().to_owned(), self.root.join(arch)));
             // Then prepare noarch repo, if exists
             let noarch = self.root.join(format!(
                 "{}/Contents_{}_{}_{}.gz",
@@ -101,6 +103,10 @@ impl LocalDb {
             if noarch.is_file() {
                 files.push((repo.get_url().to_owned(), self.root.join(noarch)));
             }
+        }
+
+        if files.is_empty() {
+            bail!("Local package content metadata is corrupted or out-of-date.");
         }
 
         Ok(files)
@@ -128,10 +134,9 @@ impl LocalDb {
                 "{}/BinContents_{}_{}_{}",
                 &name, &repo.distribution, component, &self.arch
             ));
-            if !arch.is_file() {
-                bail!("Local package content metadata is corrupted or out-of-date.");
+            if arch.is_file() {
+                files.push((repo.get_url().to_owned(), self.root.join(arch)));
             }
-            files.push((repo.get_url().to_owned(), self.root.join(arch)));
             // Then prepare noarch repo, if exists
             let noarch = self.root.join(format!(
                 "{}/BinContents_{}_{}_{}",
@@ -140,6 +145,10 @@ impl LocalDb {
             if noarch.is_file() {
                 files.push((repo.get_url().to_owned(), self.root.join(noarch)));
             }
+        }
+
+        if files.is_empty() {
+            bail!("Local package content metadata is corrupted or out-of-date.");
         }
 
         Ok(files)
