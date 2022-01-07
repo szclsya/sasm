@@ -108,11 +108,13 @@ fn parse_debcontrol_fields(mut f: HashMap<&str, String>, p: &Path) -> Result<Pkg
             Some(suggests) => Some(parse_pkg_list(suggests)?),
             None => None,
         },
+        // Installed-Size is in kilobytes, multiply by 1024 to convert it to bytes
         install_size: f
             .remove("Installed-Size")
             .ok_or_else(|| format_err!("deb control file does not contain the Installed-Size field."))?
             .as_str()
-            .parse()?,
+            .parse()
+            .map(|kb: u64| 1024 * kb)?,
         essential: match f.get("Essential") {
             Some(word) => match word.as_str() {
                 "yes" => true,

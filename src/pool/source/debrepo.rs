@@ -99,11 +99,13 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
         depends: parse_pkg_list(f.get("Depends").unwrap_or(&String::new()))?,
         breaks: parse_pkg_list(f.get("Breaks").unwrap_or(&String::new()))?,
         conflicts: parse_pkg_list(f.get("Conflicts").unwrap_or(&String::new()))?,
+        // Installed-Size is in kilobytes, multiply by 1024 to convert it to bytes
         install_size: f
             .remove("Installed-Size")
             .ok_or_else(|| format_err!("Metadata for package {} does not contain the Installed-Size field.", name))?
             .as_str()
-            .parse()?,
+            .parse()
+            .map(|kb: u64| 1024 * kb)?,
         recommends: match f.get("Recommends") {
             Some(recomm) => Some(parse_pkg_list(recomm)?),
             None => None,

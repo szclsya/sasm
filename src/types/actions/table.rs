@@ -47,8 +47,6 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
         if let Some((_, oldsize)) = old {
             install_size_change -= *oldsize as i128;
         }
-        // Installed-Size is in KiB, but HumanBytes counts in bytes
-        install_size_change *= 1024;
         let mut install_size_change_str = HumanBytes(install_size_change.abs() as u64).to_string();
         if install_size_change >= 0 {
             install_size_change_str.insert(0, '+');

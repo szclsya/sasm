@@ -248,8 +248,6 @@ impl PkgActions<'_> {
             res -= i128::from(purge.1);
         }
 
-        // Installed-Size is in kilobytes
-        res *= 1024;
         res
     }
 

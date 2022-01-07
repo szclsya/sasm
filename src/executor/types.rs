@@ -73,6 +73,7 @@ impl TryFrom<HashMap<&str, String>> for PkgStatus {
             "Malformed dpkg status database: cannot parse version for {}.",
             name
         ))?;
+        // Installed-Size is in kilobytes, multiply by 1024 to convert it to bytes
         let install_size: u64 = f
             .remove("Installed-Size")
             .ok_or_else(|| {
@@ -81,7 +82,8 @@ impl TryFrom<HashMap<&str, String>> for PkgStatus {
                     name
                 )
             })?
-            .parse()?;
+            .parse()
+            .map(|kb: u64| 1024 * kb)?;
         let essential = if let Some(word) = f.remove("Essential") {
             match word.as_str() {
                 "yes" => true,
