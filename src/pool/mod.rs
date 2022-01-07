@@ -8,7 +8,7 @@ use crate::{
     warn,
 };
 
-use anyhow::{bail, format_err, Result};
+use anyhow::{bail, format_err, Result, anyhow, Context};
 use console::style;
 use varisat::{lit::Lit, CnfFormula, ExtendFormula};
 
@@ -47,18 +47,30 @@ pub trait PkgPool: BasicPkgPool {
                     );
                 }
             };
-            for dep_pkgid in available {
-                let p = self.get_pkg_by_id(dep_pkgid).unwrap();
+            for dep_pkgid in &available {
+                let p = self.get_pkg_by_id(*dep_pkgid).unwrap();
                 if dep.1.within(&p.version) {
-                    deps_id.push(dep_pkgid);
+                    deps_id.push(*dep_pkgid);
                 }
             }
             if deps_id.is_empty() {
-                bail!(
-                    "Cannot fulfill dependency {} for {}.",
+                let error = anyhow!(
+                    "{} requires {} ({}), but only the following version(s) are available: {}.",
+                    pkg.name,
+                    dep.0,
+                    dep.1,
+                    available
+                        .iter()
+                        .map(|id| self.get_pkg_by_id(*id).unwrap().version.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                );
+                let context = format!(
+                    "Cannot fulfill dependency {} for {}: no suitable version.",
                     style(&dep.0).bold(),
                     style(&pkg.name).bold()
                 );
+                return Err(error).context(context);
             } else {
                 res.push(deps_id);
             }
