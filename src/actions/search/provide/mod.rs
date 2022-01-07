@@ -129,7 +129,7 @@ fn scan_buffer(
         let slice = &buffer[start..end];
         let line = std::str::from_utf8(slice)?;
         match parse::parse_contents_line(line) {
-            Ok((path, packages)) =>{
+            Ok((path, packages)) => {
                 let mut path = path.to_owned();
                 // Add `/` to the front of path, because Contents file uses relative path
                 path.insert(0, '/');
@@ -143,7 +143,9 @@ fn scan_buffer(
                     }
                 }
             }
-            Err(e) => { debug!("{}", e); },
+            Err(e) => {
+                debug!("{}", e);
+            }
         }
     }
 

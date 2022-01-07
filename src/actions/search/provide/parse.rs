@@ -1,5 +1,5 @@
 /// Parse Contents files
-use anyhow::{ Result, bail };
+use anyhow::{bail, Result};
 use nom::{
     bytes::complete::tag,
     bytes::complete::take_until1,
@@ -10,7 +10,7 @@ use nom::{
     IResult, InputTakeAtPosition,
 };
 
-pub fn parse_contents_line(i: &str) -> Result<(&str, Vec<( &str, &str )>)> {
+pub fn parse_contents_line(i: &str) -> Result<(&str, Vec<(&str, &str)>)> {
     let (_, (path, packages)) = match contents_line(i) {
         Ok(res) => res,
         Err(e) => bail!("Invalid Contents line: {}", e),

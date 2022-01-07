@@ -6,7 +6,7 @@ use crate::{
     utils::downloader::{Compression, DownloadJob, Downloader},
     warn,
 };
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use console::style;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -64,7 +64,11 @@ impl LocalDb {
         }
 
         if files.is_empty() {
-            bail!("Local repository catalog is corrupted or out-of-date.");
+            let err = anyhow!("Local repository catalog is corrupted or out-of-date.");
+            return Err(err).context(format!(
+                "Local catalog doesn't contain any valid package data for {}, {}",
+                name, self.arch
+            ));
         }
 
         Ok(files)
@@ -106,7 +110,11 @@ impl LocalDb {
         }
 
         if files.is_empty() {
-            bail!("Local package content metadata is corrupted or out-of-date.");
+            let err = anyhow!("Local repository catalog is corrupted or out-of-date.");
+            return Err(err).context(format!(
+                "Local catalog doesn't contain any valid contents data for {}, {}",
+                name, self.arch
+            ));
         }
 
         Ok(files)
@@ -148,7 +156,11 @@ impl LocalDb {
         }
 
         if files.is_empty() {
-            bail!("Local package content metadata is corrupted or out-of-date.");
+            let err = anyhow!("Local repository catalog is corrupted or out-of-date.");
+            return Err(err).context(format!(
+                "Local catalog doesn't contain any valid BinContents data for {}, {}",
+                name, self.arch
+            ));
         }
 
         Ok(files)
