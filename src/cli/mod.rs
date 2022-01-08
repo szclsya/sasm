@@ -1,5 +1,5 @@
 mod prompt;
-pub use prompt::ask_confirm;
+pub use prompt::{ask_confirm, OmaTheme};
 
 use anyhow::{Context, Result};
 use console::Term;

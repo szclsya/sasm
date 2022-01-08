@@ -9,7 +9,6 @@ use crate::{
 
 use anyhow::{bail, Context, Result};
 use console::style;
-use std::fmt;
 
 pub fn pick(
     pkgname: &str,
@@ -73,7 +72,7 @@ pub fn pick(
     // Display them
     let choices_str: Vec<&str> = choices.iter().map(|ver| ver.0.as_str()).collect();
     info!("Please choose a version for {}:", style(pkgname).bold());
-    let i = dialoguer::Select::with_theme(&OmaTheme::default())
+    let i = dialoguer::Select::with_theme(&crate::cli::OmaTheme::default())
         .items(&choices_str)
         .default(0)
         .interact()?;
@@ -96,23 +95,4 @@ pub fn pick(
     }]);
 
     Ok(req)
-}
-
-#[derive(Default)]
-pub struct OmaTheme;
-
-impl dialoguer::theme::Theme for OmaTheme {
-    fn format_select_prompt_item(
-        &self,
-        f: &mut dyn fmt::Write,
-        text: &str,
-        active: bool,
-    ) -> fmt::Result {
-        let prefix = match active {
-            true => (crate::cli::gen_prefix(&style("->").bold().to_string())),
-            false => (crate::cli::gen_prefix("")),
-        };
-
-        write!(f, "{}{}", prefix, text)
-    }
 }

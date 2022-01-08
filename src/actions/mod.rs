@@ -1,10 +1,10 @@
 mod bench;
+mod download;
 mod execute;
 mod local;
 mod pick;
 mod search;
 use execute::execute;
-//use search::search_deb_db;
 
 use crate::{
     db::LocalDb,
@@ -184,6 +184,17 @@ pub async fn fullfill_command(
             lock::lock(&opts.root)?;
 
             bench::bench(opts, config, localdb, &downloader).await?;
+            Ok(false)
+        }
+        SubCmd::Download(download) => {
+            let mut latest = download.latest;
+            if opts.yes {
+                // If yesman, then use latest version automatically
+                latest = true;
+            }
+
+            download::download(&download.pkgname, &localdb, &downloader, latest).await?;
+            success!("Requested package has been downloaded to current working directory.");
             Ok(false)
         }
     }

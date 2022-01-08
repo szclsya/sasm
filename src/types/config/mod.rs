@@ -156,6 +156,9 @@ pub enum SubCmd {
     /// Benchmark and pick optimal mirrors
     #[clap(display_order = 31)]
     Bench,
+    /// Download a package from remote repository
+    #[clap(display_order = 32)]
+    Download(DownloadPkg),
 }
 
 #[derive(Parser)]
@@ -208,4 +211,13 @@ pub struct CleanConfig {
     /// Remove both package cache and local database
     #[clap(short, long)]
     pub all: bool,
+}
+
+#[derive(Parser)]
+pub struct DownloadPkg {
+    /// Name of package
+    pub pkgname: String,
+    /// Use latest version automatically
+    #[clap(long)]
+    pub latest: bool,
 }
