@@ -8,7 +8,7 @@ use crate::{
     warn,
 };
 
-use anyhow::{bail, format_err, Result, anyhow, Context};
+use anyhow::{anyhow, bail, format_err, Context, Result};
 use console::style;
 use varisat::{lit::Lit, CnfFormula, ExtendFormula};
 

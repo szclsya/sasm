@@ -33,6 +33,8 @@ struct RemoveRow {
 struct ConfigureRow {
     #[header("Name")]
     name: String,
+    #[header("Version")]
+    version: String,
 }
 
 pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
@@ -106,8 +108,11 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
         remove_rows.push(row);
     }
 
-    for name in &actions.configure {
-        let row = ConfigureRow { name: name.clone() };
+    for (name, version) in &actions.configure {
+        let row = ConfigureRow {
+            name: name.clone(),
+            version: version.to_string(),
+        };
         configure_rows.push(row);
     }
 

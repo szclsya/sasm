@@ -8,7 +8,7 @@ use anyhow::{bail, Context, Result};
 use std::{path::Path, process::Command, sync::atomic::Ordering};
 
 pub async fn execute_pkg_actions(
-    mut actions: PkgActions<'_>,
+    actions: PkgActions<'_>,
     root: &Path,
     downloader: &Downloader,
     unsafe_io: bool,
@@ -64,7 +64,12 @@ pub async fn execute_pkg_actions(
     // Configure stuff
     if !actions.configure.is_empty() {
         let mut cmd = vec!["--configure".to_string()];
-        cmd.append(&mut actions.configure);
+        let mut pkgnames: Vec<String> = actions
+            .configure
+            .into_iter()
+            .map(|(name, _)| name)
+            .collect();
+        cmd.append(&mut pkgnames);
         dpkg_run(&cmd, root, unsafe_io).context("Failed to configure package(s).")?;
     }
     // Install stuff

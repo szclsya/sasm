@@ -84,7 +84,8 @@ impl MachineStatus {
                     | PkgState::TriggerAwaited
                     | PkgState::TriggerPending => {
                         // Reconfigure this package, then if have updates, do it
-                        res.configure.push(oldpkg.name.clone());
+                        res.configure
+                            .push((oldpkg.name.clone(), oldpkg.version.clone()));
                         if oldpkg.version != newpkg.version {
                             res.install
                                 .push((newpkg, Some((oldpkg.version, oldpkg.install_size))));

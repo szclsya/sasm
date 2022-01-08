@@ -13,7 +13,7 @@ pub struct PkgActions<'a> {
     // (Name, InstallSize, Essential?)
     pub remove: Vec<(String, u64, bool)>,
     pub purge: Vec<(String, u64, bool)>,
-    pub configure: Vec<String>,
+    pub configure: Vec<(String, PkgVersion)>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -143,8 +143,13 @@ impl PkgActions<'_> {
             .unwrap();
 
         let configure_prefix = style("CONFIGURE").on_white().bold().to_string();
+        let configure_pkgnames: Vec<&str> = self
+            .configure
+            .iter()
+            .map(|(name, _)| name.as_str())
+            .collect();
         crate::WRITER
-            .write_chunks(&configure_prefix, &self.configure)
+            .write_chunks(&configure_prefix, configure_pkgnames.as_slice())
             .unwrap();
 
         let removes: Vec<String> = self
