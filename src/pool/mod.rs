@@ -129,8 +129,8 @@ pub trait PkgPool: BasicPkgPool {
         }
     }
 
-    fn find_provide(&self, name: &str, ver_req: Option<VersionRequirement>) -> Option<String> {
-        let ver_req = ver_req.unwrap_or_default();
+    fn find_provide(&self, name: &str, ver_req: &Option<VersionRequirement>) -> Option<String> {
+        let ver_req = ver_req.clone().unwrap_or_default();
         for (_, pkg) in self.pkgid_iter() {
             if let Some(provides) = &pkg.provides {
                 for provide in provides {

@@ -14,7 +14,7 @@ use crate::{
     utils::downloader::Downloader,
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use console::style;
 
 // -> Result<UserCancelled?>
@@ -47,12 +47,26 @@ pub async fn execute(
         std::fs::create_dir_all(&local_repo)?;
     }
     let pool = pool::source::create_pool(&dbs, &[local_repo])?;
-    let solver = Solver::from(pool);
 
     debug!("Processing user request...");
     match request {
         UserRequest::Install(list) => {
             for install in list {
+                // Check if this package actually exists
+                if pool.get_pkgs_by_name(&install.pkgname).is_none() {
+                    // Check if provides
+                    if let Some(provider) = pool.find_provide(&install.pkgname, &install.ver_req) {
+                        let e = anyhow!(
+                            "Standalone package {} not found. However, {} provides package with this name. Add this package instead?",
+                            style(&install.pkgname).bold(),
+                            style(provider).bold()
+                        );
+                        return Err(e.context("Failed to add new package(s)."));
+                    } else {
+                        bail!("Failed to add new package(s).");
+                    }
+                }
+
                 // Add pkg to blueprint
                 blueprint.add(
                     &install.pkgname,
@@ -62,7 +76,7 @@ pub async fn execute(
                     install.local,
                 )?;
                 if !install.local && install.install_recomm {
-                    let choices = match solver.pool.get_pkgs_by_name(&install.pkgname) {
+                    let choices = match pool.get_pkgs_by_name(&install.pkgname) {
                         Some(pkgs) => pkgs,
                         None => bail!(
                             "Failed to add recommended packages for {} .",
@@ -70,7 +84,7 @@ pub async fn execute(
                         ),
                     };
                     let choice = choices.get(0).unwrap();
-                    let meta = solver.pool.get_pkg_by_id(*choice).unwrap();
+                    let meta = pool.get_pkg_by_id(*choice).unwrap();
                     if let Some(recommends) = &meta.recommends {
                         for recommend in recommends {
                             blueprint.add(
@@ -94,6 +108,7 @@ pub async fn execute(
     };
 
     info!("Resolving dependencies...");
+    let solver = Solver::from(pool);
     let res = solver.install(blueprint)?;
     // Translating result to list of actions
     let root = &opts.root;
