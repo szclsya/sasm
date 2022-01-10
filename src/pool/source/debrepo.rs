@@ -22,6 +22,7 @@ const INTERESTED_FIELDS: &[&str] = &[
     "Recommends",
     "Suggests",
     "Provides",
+    "Replaces",
     "Installed-Size",
     "Size",
     "SHA256",
@@ -117,6 +118,10 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
         },
         provides: match f.get("Provides") {
             Some(provides) => Some(parse_pkg_list(provides)?),
+            None => None,
+        },
+        replaces: match f.get("Replaces") {
+            Some(replaces) => Some(parse_pkg_list(replaces)?),
             None => None,
         },
         essential: match f.get("Essential") {

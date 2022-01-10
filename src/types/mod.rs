@@ -28,6 +28,7 @@ pub struct PkgMeta {
     pub recommends: Option<Vec<(String, VersionRequirement)>>,
     pub suggests: Option<Vec<(String, VersionRequirement)>>,
     pub provides: Option<Vec<(String, VersionRequirement)>>,
+    pub replaces: Option<Vec<(String, VersionRequirement)>>,
     pub install_size: u64,
 
     pub essential: bool,

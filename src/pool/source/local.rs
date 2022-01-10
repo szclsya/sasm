@@ -112,6 +112,10 @@ fn parse_debcontrol_fields(mut f: HashMap<&str, String>, p: &Path) -> Result<Pkg
             Some(provides) => Some(parse_pkg_list(provides)?),
             None => None,
         },
+        replaces: match f.get("Replaces") {
+            Some(replaces) => Some(parse_pkg_list(replaces)?),
+            None => None,
+        },
         // Installed-Size is in kilobytes, multiply by 1024 to convert it to bytes
         install_size: f
             .remove("Installed-Size")
