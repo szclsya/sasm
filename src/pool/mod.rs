@@ -129,6 +129,21 @@ pub trait PkgPool: BasicPkgPool {
         }
     }
 
+    fn find_provide(&self, name: &str, ver_req: Option<VersionRequirement>) -> Option<String> {
+        let ver_req = ver_req.unwrap_or_default();
+        for (_, pkg) in self.pkgid_iter() {
+            if let Some(provides) = &pkg.provides {
+                for provide in provides {
+                    if provide.0 == name && provide.1.combine(&ver_req).is_ok() {
+                        return Some(pkg.name.to_owned());
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
     fn pkg_to_rule(&self, pkgid: usize, subset: Option<&[usize]>) -> Result<Vec<Vec<Lit>>> {
         let pkg = self.get_pkg_by_id(pkgid).unwrap();
         let mut res = Vec::new();

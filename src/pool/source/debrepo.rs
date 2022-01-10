@@ -12,19 +12,20 @@ use std::{collections::HashMap, fs::File, path::Path};
 
 const INTERESTED_FIELDS: &[&str] = &[
     "Package",
+    "Description",
     "Filename",
     "Section",
     "Version",
     "Depends",
     "Breaks",
     "Conflicts",
+    "Recommends",
+    "Suggests",
+    "Provides",
     "Installed-Size",
     "Size",
     "SHA256",
     "SHA512",
-    "Recommends",
-    "Suggests",
-    "Description",
     "Essential",
 ];
 
@@ -112,6 +113,10 @@ fn fields_to_packagemeta(mut f: HashMap<String, String>, baseurl: &str) -> Resul
         },
         suggests: match f.get("Suggests") {
             Some(suggests) => Some(parse_pkg_list(suggests)?),
+            None => None,
+        },
+        provides: match f.get("Provides") {
+            Some(provides) => Some(parse_pkg_list(provides)?),
             None => None,
         },
         essential: match f.get("Essential") {
