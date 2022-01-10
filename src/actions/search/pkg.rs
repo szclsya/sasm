@@ -17,9 +17,7 @@ pub fn search_deb_db(
     let mut pkgs = search_pkg_helper(pool.as_ref(), keyword);
 
     // Sort pkg in descending order based on relevance to keyword
-    pkgs.sort_by_cached_key(|pkg| {
-        Reverse((255.0 * strsim::jaro_winkler(&pkg.pkg.name, keyword)) as u8)
-    });
+    pkgs.sort_by_cached_key(|pkg| Reverse(pkg_score(pkg, keyword)));
 
     // Display result
     for pkg in pkgs {
@@ -63,7 +61,33 @@ where
             };
             res.insert(&meta.name, pkginfo);
         }
+
+        // Search if provides
+        if let Some(provides) = &meta.provides {
+            for provide in provides {
+                if keyword == provide.0 {
+                    let pkginfo = PkgInfo {
+                        pkg: meta,
+                        has_dbg_pkg: false,
+                        additional_info: Vec::new(),
+                    };
+                    res.insert(&meta.name, pkginfo);
+                }
+            }
+        }
     }
 
     res.into_values().collect()
+}
+
+fn pkg_score(pkg: &PkgInfo, keyword: &str) -> u8 {
+    if let Some(provides) = &pkg.pkg.provides {
+        for provide in provides {
+            if provide.0 == keyword {
+                return u8::MAX;
+            }
+        }
+    }
+
+    (255.0 * strsim::jaro_winkler(&pkg.pkg.name, keyword)) as u8
 }

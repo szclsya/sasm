@@ -43,6 +43,20 @@ impl<'a> PkgInfo<'a> {
         // Write package description
         crate::WRITER.writeln("", &self.pkg.description)?;
 
+        // Write provided packages
+        if let Some(provides) = &self.pkg.provides {
+            let prefix = style("Provides:").dim().to_string();
+            let mut chunks = vec![prefix];
+            for (name, ver_req) in provides {
+                let mut chunk = name.clone();
+                if !ver_req.is_arbitary() {
+                    chunk.push_str(&format!(" ({})", ver_req));
+                }
+                chunks.push(chunk);
+            }
+            crate::WRITER.write_chunks("", &chunks)?;
+        }
+
         // Write recommended packages
         if let Some(recommends) = &self.pkg.recommends {
             let prefix = style("Recommends:").dim().to_string();
