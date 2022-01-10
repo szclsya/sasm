@@ -1,10 +1,11 @@
 use super::UserRequest;
 use crate::{
-    cli,
+    cli::{self, ask_confirm},
     db::LocalDb,
     debug,
     executor::{dpkg, modifier, MachineStatus},
-    info, pool,
+    info,
+    pool::{self, PkgPool},
     solver::Solver,
     success,
     types::{
@@ -12,6 +13,7 @@ use crate::{
         PkgActionModifier,
     },
     utils::downloader::Downloader,
+    warn,
 };
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -49,7 +51,69 @@ pub async fn execute(
     let pool = pool::source::create_pool(&dbs, &[local_repo])?;
 
     debug!("Processing user request...");
-    match request {
+    process_user_request(request, &pool, blueprint)?;
+
+    debug!("Applying replaces according to package catalog...");
+    apply_replaces(opts, &pool, blueprint)?;
+
+    info!("Resolving dependencies...");
+    let solver = Solver::from(pool);
+    let res = solver.install(blueprint)?;
+    // Translating result to list of actions
+    let root = &opts.root;
+    let machine_status = MachineStatus::new(root)?;
+    let mut actions = machine_status.gen_actions(res.as_slice(), unsafe_config.purge_on_remove);
+    if alt_root {
+        let modifier = modifier::UnpackOnly::default();
+        modifier.apply(&mut actions);
+    }
+
+    if actions.is_empty() {
+        success!("There is nothing to do.");
+        return Ok(false);
+    }
+
+    // There is something to do. Show it.
+    info!("Omakase will perform the following actions:");
+    if opts.yes && opts.no_pager {
+        actions.show();
+    } else {
+        actions.show_tables(opts.no_pager)?;
+    }
+    crate::WRITER.writeln("", "")?;
+    actions.show_size_change();
+
+    // Additional confirmation if removing essential packages
+    if actions.remove_essential() {
+        if unsafe_config.allow_remove_essential {
+            let prefix = style("DANGER").red().to_string();
+            crate::WRITER.writeln(
+                &prefix,
+                "Some ESSENTIAL packages will be removed/purged. Are you REALLY sure?",
+            )?;
+            if cli::ask_confirm(opts, "Is this supposed to happen?")? {
+                bail!("User cancelled operation.");
+            }
+        } else {
+            bail!("Some ESSENTIAL packages will be removed. Aborting...")
+        }
+    }
+
+    if ask_confirm(opts, "Proceed?")? {
+        // Run it!
+        dpkg::execute_pkg_actions(actions, &opts.root, downloader, unsafe_config.unsafe_io).await?;
+        Ok(false)
+    } else {
+        Ok(true)
+    }
+}
+
+fn process_user_request(
+    req: UserRequest,
+    pool: &Box<dyn PkgPool>,
+    blueprint: &mut Blueprints,
+) -> Result<()> {
+    match req {
         UserRequest::Install(list) => {
             for install in list {
                 // Check if this package actually exists
@@ -107,54 +171,27 @@ pub async fn execute(
         UserRequest::Upgrade => (),
     };
 
-    info!("Resolving dependencies...");
-    let solver = Solver::from(pool);
-    let res = solver.install(blueprint)?;
-    // Translating result to list of actions
-    let root = &opts.root;
-    let machine_status = MachineStatus::new(root)?;
-    let mut actions = machine_status.gen_actions(res.as_slice(), unsafe_config.purge_on_remove);
-    if alt_root {
-        let modifier = modifier::UnpackOnly::default();
-        modifier.apply(&mut actions);
-    }
+    Ok(())
+}
 
-    if actions.is_empty() {
-        success!("There is nothing to do.");
-        return Ok(false);
-    }
-
-    // There is something to do. Show it.
-    info!("Omakase will perform the following actions:");
-    if opts.yes && opts.no_pager {
-        actions.show();
-    } else {
-        actions.show_tables(opts.no_pager)?;
-    }
-    crate::WRITER.writeln("", "")?;
-    actions.show_size_change();
-
-    // Additional confirmation if removing essential packages
-    if actions.remove_essential() {
-        if unsafe_config.allow_remove_essential {
-            let prefix = style("DANGER").red().to_string();
-            crate::WRITER.writeln(
-                &prefix,
-                "Some ESSENTIAL packages will be removed/purged. Are you REALLY sure?",
-            )?;
-            if cli::ask_confirm(opts, "Is this supposed to happen?")? {
-                bail!("User cancelled operation.");
+fn apply_replaces(opts: &Opts, pool: &Box<dyn PkgPool>, blueprint: &mut Blueprints) -> Result<()> {
+    // For every package in blueprint, check if they are replaced
+    for pkg in blueprint.get_pkg_requests() {
+        if let Some(replacement) = pool.find_replacement(&pkg.name, &pkg.version) {
+            // Found a replacement!
+            // If in user blueprint, ask if to replace it
+            if blueprint.user_list_contains(&pkg.name) {
+                if cli::ask_confirm(opts, &format!("Replace {} with {}?", pkg.name, replacement))? {
+                    blueprint.remove(&pkg.name, true)?;
+                    blueprint.add(&replacement, false, None, None, false)?;
+                } else {
+                    warn!("Package {} has been replaced by {}. Please update or edit vendor blueprint to use the new package.",
+                          style(&pkg.name).bold(),
+                          style(&replacement).bold());
+                }
             }
-        } else {
-            bail!("Some ESSENTIAL packages will be removed. Aborting...")
         }
     }
 
-    if cli::ask_confirm(opts, "Proceed?")? {
-        // Run it!
-        dpkg::execute_pkg_actions(actions, &opts.root, downloader, unsafe_config.unsafe_io).await?;
-        Ok(false)
-    } else {
-        Ok(true)
-    }
+    Ok(())
 }
