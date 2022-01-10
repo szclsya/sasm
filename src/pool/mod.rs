@@ -49,7 +49,7 @@ pub trait PkgPool: BasicPkgPool {
             };
             for dep_pkgid in &available {
                 let p = self.get_pkg_by_id(*dep_pkgid).unwrap();
-                if dep.1.within(&p.version) {
+                if dep.1.contains(&p.version) {
                     deps_id.push(*dep_pkgid);
                 }
             }
@@ -106,7 +106,7 @@ pub trait PkgPool: BasicPkgPool {
                 // Safe unless the pool is broken
                 let pkg = self.get_pkg_by_id(id).unwrap();
                 let is_local = matches!(pkg.source, PkgSource::Local(_));
-                if ver_req.within(&pkg.version) {
+                if ver_req.contains(&pkg.version) {
                     if need_local == is_local {
                         return Ok(id);
                     } else if first_valid_version {
@@ -144,6 +144,20 @@ pub trait PkgPool: BasicPkgPool {
         None
     }
 
+    fn find_replacement(&self, name: &str, ver_req: &VersionRequirement) -> Option<String> {
+        for (_, pkg) in self.pkgid_iter() {
+            if let Some(replaces) = &pkg.replaces {
+                for replace in replaces {
+                    if replace.0 == name && replace.1.within(ver_req) {
+                        return Some(pkg.name.to_owned());
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
     fn pkg_to_rule(&self, pkgid: usize, subset: Option<&[usize]>) -> Result<Vec<Vec<Lit>>> {
         let pkg = self.get_pkg_by_id(pkgid).unwrap();
         let mut res = Vec::new();
@@ -170,7 +184,7 @@ pub trait PkgPool: BasicPkgPool {
 
             for dep_pkgid in available {
                 let p = self.get_pkg_by_id(dep_pkgid).unwrap();
-                if dep.1.within(&p.version) {
+                if dep.1.contains(&p.version) {
                     clause.push(Lit::from_dimacs(dep_pkgid as isize));
                 }
             }
@@ -204,7 +218,7 @@ pub trait PkgPool: BasicPkgPool {
 
             for bk_pkgid in breakable {
                 let p = self.get_pkg_by_id(bk_pkgid).unwrap();
-                if bk.1.within(&p.version) {
+                if bk.1.contains(&p.version) {
                     let clause = vec![
                         !Lit::from_dimacs(pkgid as isize),
                         !Lit::from_dimacs(bk_pkgid as isize),
@@ -232,7 +246,7 @@ pub trait PkgPool: BasicPkgPool {
 
             for conflict_pkgid in conflicable {
                 let p = self.get_pkg_by_id(conflict_pkgid).unwrap();
-                if conflict.1.within(&p.version) {
+                if conflict.1.contains(&p.version) {
                     let clause = vec![
                         !Lit::from_dimacs(pkgid as isize),
                         !Lit::from_dimacs(conflict_pkgid as isize),

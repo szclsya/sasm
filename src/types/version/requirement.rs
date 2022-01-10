@@ -83,7 +83,7 @@ impl VersionRequirement {
     }
 
     /// Check if a PkgVersion satisfies this VersionRequirement
-    pub fn within(&self, ver: &PkgVersion) -> bool {
+    pub fn contains(&self, ver: &PkgVersion) -> bool {
         if let Some(lower) = &self.lower_bond {
             // If inclusive
             if lower.1 {
@@ -107,6 +107,19 @@ impl VersionRequirement {
         }
 
         true
+    }
+
+    // Check if that VersionRequirement is within this VersionRequirement
+    pub fn within(&self, that: &VersionRequirement) -> bool {
+        let lower_within = self.lower_bond.is_none()
+            || self.lower_bond.is_some()
+                && that.lower_bond.is_some()
+                && self.lower_bond.as_ref().unwrap() <= that.lower_bond.as_ref().unwrap();
+        let upper_within = self.upper_bond.is_none()
+            || self.upper_bond.is_some()
+                && that.upper_bond.is_some()
+                && self.upper_bond.as_ref().unwrap() >= that.upper_bond.as_ref().unwrap();
+        lower_within && upper_within
     }
 }
 
