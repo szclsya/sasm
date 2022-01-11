@@ -125,6 +125,21 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
         writeln!(out, "Press {} to finish review.\n", style("q").bold())?;
     }
 
+    if !remove_rows.is_empty() {
+        writeln!(
+            out,
+            "The following packages will be {}:\n",
+            style("REMOVED").red().bold()
+        )?;
+        let table = Table::new(&remove_rows)
+            .with(Modify::new(Full).with(Alignment::left()))
+            // Install Size column should align right
+            .with(Modify::new(Column(1..2)).with(Alignment::right()))
+            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
+            .with(Style::PSQL);
+        writeln!(out, "{}", table)?;
+    }
+
     if !install_rows.is_empty() {
         writeln!(
             out,
@@ -162,21 +177,6 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
             style("downgraded").yellow().bold()
         )?;
         let table = Table::new(&downgrade_rows)
-            .with(Modify::new(Full).with(Alignment::left()))
-            // Install Size column should align right
-            .with(Modify::new(Column(1..2)).with(Alignment::right()))
-            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
-            .with(Style::PSQL);
-        writeln!(out, "{}", table)?;
-    }
-
-    if !remove_rows.is_empty() {
-        writeln!(
-            out,
-            "The following packages will be {}:\n",
-            style("removed").red().bold()
-        )?;
-        let table = Table::new(&remove_rows)
             .with(Modify::new(Full).with(Alignment::left()))
             // Install Size column should align right
             .with(Modify::new(Column(1..2)).with(Alignment::right()))
