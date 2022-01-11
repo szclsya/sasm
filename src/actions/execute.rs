@@ -51,10 +51,10 @@ pub async fn execute(
     let pool = pool::source::create_pool(&dbs, &[local_repo])?;
 
     debug!("Processing user request...");
-    process_user_request(request, &pool, blueprint)?;
+    process_user_request(request, pool.as_ref(), blueprint)?;
 
     debug!("Applying replaces according to package catalog...");
-    apply_replaces(opts, &pool, blueprint)?;
+    apply_replaces(opts, pool.as_ref(), blueprint)?;
 
     info!("Resolving dependencies...");
     let solver = Solver::from(pool);
@@ -110,7 +110,7 @@ pub async fn execute(
 
 fn process_user_request(
     req: UserRequest,
-    pool: &Box<dyn PkgPool>,
+    pool: &dyn PkgPool,
     blueprint: &mut Blueprints,
 ) -> Result<()> {
     match req {
@@ -174,7 +174,7 @@ fn process_user_request(
     Ok(())
 }
 
-fn apply_replaces(opts: &Opts, pool: &Box<dyn PkgPool>, blueprint: &mut Blueprints) -> Result<()> {
+fn apply_replaces(opts: &Opts, pool: &dyn PkgPool, blueprint: &mut Blueprints) -> Result<()> {
     // For every package in blueprint, check if they are replaced
     for pkg in blueprint.get_pkg_requests() {
         if let Some(replacement) = pool.find_replacement(&pkg.name, &pkg.version) {

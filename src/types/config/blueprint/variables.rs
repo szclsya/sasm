@@ -29,9 +29,9 @@ pub fn fill_variables(rule: &str) -> Result<String> {
 fn get_kernel_version() -> Result<String> {
     let uname = nix::sys::utsname::uname();
     let version = uname.release();
-    let sections: Vec<&str> = version.split('-').collect();
-    if sections.is_empty() {
-        bail!("Failed to obtain kernel version: malformed kernel local version.");
+    let section = version.split('-').next();
+    if let Some(section) = section {
+        return Ok(section.to_string());
     }
-    Ok(sections.get(0).unwrap().to_string())
+    bail!("Failed to obtain kernel version: malformed kernel local version.");
 }
