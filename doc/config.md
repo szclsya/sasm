@@ -3,11 +3,10 @@ Omakase requires a config folder of this structure:
 ```
 CONFIG_ROOT (typically /etc/omakase)
 |--- config.toml
-|--- blueprint
+|--- user.blueprint
 |--- blueprint.d/
 |    |--- vendor-1.blueprint
 |    `--- vendor-2.blueprint
-|--- ignorerules
 `--- keys
      |--- repo1-key1.gpg
      |--- repo1-key2.asc
