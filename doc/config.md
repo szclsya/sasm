@@ -18,9 +18,6 @@ This is the main configuration file. It uses `TOML` and have a series of mandato
 
 ```toml
 arch = "amd64"
-# Whether to purge package when it's no longer needed
-# If set to true, config files of packages will also be removed when packages are removed
-purge_on_remove = true
 
 [repo.main]
 url = "https://repo.aosc.io/debs"
