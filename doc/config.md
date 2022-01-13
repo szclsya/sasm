@@ -28,6 +28,19 @@ components = ["main"]
 keys = ["main.asc"]
 ```
 
+## The Omanomicon: `unsafe` section
+Some dangerous flags of Omakase can be enabled in the `unsafe` section. This section is optional and the default config will not contain this section, but if you are sure you want to enable these features, you can manually add this section and enable the flags you want.
+
+```toml
+[unsafe]
+# When Omakase thinks it should remove a package, purge the package's config files too
+purge_on_remove = true
+# Allow dpkg to skip fsync on files. Only use on systems with battery backup.
+unsafe_io = true
+# Allow remove essential packages.
+allow_remove_essential = true
+```
+
 # Blueprints
 Blueprint are, as their name suggests, the blueprint for the system. They defines the packages users can use about the system, and omakase will ensure these packages are available. However, this also means that any package that is not included in the system blueprint is not guaranteed to be installed. For example, user might able to use a package installed as dependency, but if this package is no longer depended, it can be removed. Thus, user should always include packages they use in the blueprint files.
 
