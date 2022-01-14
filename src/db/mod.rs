@@ -44,20 +44,20 @@ impl LocalDb {
         };
 
         let mut files: Vec<(String, PathBuf)> = Vec::new();
+        let distribution = &repo.distribution;
+        let arch = &self.arch;
         for component in &repo.components {
             // First prepare arch-specific repo
-            let arch = self.root.join(format!(
-                "{}/Packages_{}_{}_{}",
-                &name, &repo.distribution, component, &self.arch
-            ));
+            let arch = self
+                .root
+                .join(format!("{name}/Packages_{distribution}_{component}_{arch}",));
             if arch.is_file() {
                 files.push((repo.get_url().to_owned(), self.root.join(arch)));
             }
             // Then prepare noarch repo, if exists
-            let noarch = self.root.join(format!(
-                "{}/Packages_{}_{}_{}",
-                &name, &repo.distribution, component, "all"
-            ));
+            let noarch = self
+                .root
+                .join(format!("{name}/Packages_{distribution}_{component}_all",));
             if noarch.is_file() {
                 files.push((repo.get_url().to_owned(), self.root.join(noarch)));
             }
@@ -66,8 +66,7 @@ impl LocalDb {
         if files.is_empty() {
             let err = anyhow!("Local repository catalog is corrupted or out-of-date.");
             return Err(err).context(format!(
-                "Local catalog doesn't contain any valid package data for {}, {}",
-                name, self.arch
+                "Local catalog doesn't contain any valid package data for {name}, {arch}"
             ));
         }
 
@@ -90,20 +89,20 @@ impl LocalDb {
         };
 
         let mut files: Vec<(String, PathBuf)> = Vec::new();
+        let distribution = &repo.distribution;
+        let arch = &self.arch;
         for component in &repo.components {
             // First prepare arch-specific repo
             let arch = self.root.join(format!(
-                "{}/Contents_{}_{}_{}.gz",
-                &name, &repo.distribution, component, &self.arch
+                "{name}/Contents_{distribution}_{component}_{arch}.gz",
             ));
             if arch.is_file() {
                 files.push((repo.get_url().to_owned(), self.root.join(arch)));
             }
             // Then prepare noarch repo, if exists
-            let noarch = self.root.join(format!(
-                "{}/Contents_{}_{}_{}.gz",
-                &name, &repo.distribution, component, "all"
-            ));
+            let noarch = self
+                .root
+                .join(format!("{name}/Contents_{distribution}_{component}_all.gz",));
             if noarch.is_file() {
                 files.push((repo.get_url().to_owned(), self.root.join(noarch)));
             }
@@ -112,8 +111,7 @@ impl LocalDb {
         if files.is_empty() {
             let err = anyhow!("Local repository catalog is corrupted or out-of-date.");
             return Err(err).context(format!(
-                "Local catalog doesn't contain any valid contents data for {}, {}",
-                name, self.arch
+                "Local catalog doesn't contain any valid contents data for {name}, {arch}",
             ));
         }
 
@@ -136,20 +134,20 @@ impl LocalDb {
         };
 
         let mut files: Vec<(String, PathBuf)> = Vec::new();
+        let distribution = &repo.distribution;
+        let arch = &self.arch;
         for component in &repo.components {
             // First prepare arch-specific repo
             let arch = self.root.join(format!(
-                "{}/BinContents_{}_{}_{}",
-                &name, &repo.distribution, component, &self.arch
+                "{name}/BinContents_{distribution}_{component}_{arch}",
             ));
             if arch.is_file() {
                 files.push((repo.get_url().to_owned(), self.root.join(arch)));
             }
             // Then prepare noarch repo, if exists
-            let noarch = self.root.join(format!(
-                "{}/BinContents_{}_{}_{}",
-                &name, &repo.distribution, component, "all"
-            ));
+            let noarch = self
+                .root
+                .join(format!("{name}/BinContents_{distribution}_{component}_all",));
             if noarch.is_file() {
                 files.push((repo.get_url().to_owned(), self.root.join(noarch)));
             }
@@ -158,8 +156,7 @@ impl LocalDb {
         if files.is_empty() {
             let err = anyhow!("Local repository catalog is corrupted or out-of-date.");
             return Err(err).context(format!(
-                "Local catalog doesn't contain any valid BinContents data for {}, {}",
-                name, self.arch
+                "Local catalog doesn't contain any valid BinContents data for {name}, {arch}",
             ));
         }
 
@@ -187,7 +184,7 @@ impl LocalDb {
             .map(|(name, repo)| DownloadJob {
                 url: format!("{}/dists/{}/InRelease", repo.get_url(), repo.distribution),
                 description: Some(format!("Repository metadata for {}", style(name).bold())),
-                filename: Some(format!("InRelease_{}", name)),
+                filename: Some(format!("InRelease_{name}")),
                 size: None,
                 compression: Compression::None(None),
             })
@@ -196,14 +193,13 @@ impl LocalDb {
 
         // Step 2: Verify InRelease with PGP
         for (name, repo) in &self.repos {
-            let inrelease_path = self.root.join(format!("InRelease_{}", name));
+            let inrelease_path = self.root.join(format!("InRelease_{name}"));
             let inrelease_contents = std::fs::read(inrelease_path)?;
             let bytes = bytes::Bytes::from(inrelease_contents);
-            let res = verify::verify_inrelease(&self.key_root, &repo.keys, &bytes).context(
-                format!("Failed to verify metadata for repository {}.", name),
-            )?;
+            let res = verify::verify_inrelease(&self.key_root, &repo.keys, &bytes)
+                .context(format!("Failed to verify metadata for repository {name}."))?;
             let repo_dbs = parse_inrelease(&res)
-                .context(format!("Failed to parse metadata for repository {}.", name))?;
+                .context(format!("Failed to parse metadata for repository {name}."))?;
             dbs.insert(name.clone(), repo_dbs);
         }
 
@@ -217,33 +213,28 @@ impl LocalDb {
             }
 
             for component in &repo.components {
+                let url = repo.get_url();
+                let distribution = &repo.distribution;
+
                 let pre_download_count = dbs_to_download.len();
                 let possible_archs = vec![self.arch.clone(), "all".to_owned()];
                 for arch in possible_archs {
                     // 1. Download Packages db
-                    let compressed_rel_url = format!("{}/binary-{}/Packages.xz", component, arch);
-                    let decompressed_rel_url = format!("{}/binary-{}/Packages", component, arch);
+                    let compressed_rel_url = format!("{component}/binary-{arch}/Packages.xz");
+                    let decompressed_rel_url = format!("{component}/binary-{arch}/Packages");
 
                     if let Some(compressed_meta) = dbs.get(name).unwrap().get(&compressed_rel_url) {
-                        let filename = format!(
-                            "{}/Packages_{}_{}_{}",
-                            &name, &repo.distribution, &component, arch
-                        );
+                        let filename =
+                            format!("{name}/Packages_{distribution}_{component}_{arch}",);
                         let decompressed_meta = match dbs.get(name).unwrap().get(&decompressed_rel_url) {
                             Some(meta) => meta,
                             None => bail!("Packages.xz exists but Packages does not, remote repository issue?")
                         };
                         dbs_to_download.push(DownloadJob {
-                            url: format!(
-                                "{}/dists/{}/{}",
-                                repo.get_url(),
-                                repo.distribution,
-                                compressed_rel_url
-                            ),
+                            url: format!("{url}/dists/{distribution}/{compressed_rel_url}",),
                             description: Some(format!(
-                                "Repository catalog for {} ({}).",
+                                "Repository catalog for {} ({arch}).",
                                 style(name).bold(),
-                                arch
                             )),
                             filename: Some(filename),
                             size: Some(compressed_meta.0),
@@ -254,23 +245,15 @@ impl LocalDb {
                         });
                     }
                     // 2. Download Contents db
-                    let compressed_rel_url = format!("{}/Contents-{}.gz", component, arch);
+                    let compressed_rel_url = format!("{component}/Contents-{arch}.gz");
                     if let Some(compressed_meta) = dbs.get(name).unwrap().get(&compressed_rel_url) {
-                        let filename = format!(
-                            "{}/Contents_{}_{}_{}.gz",
-                            &name, &repo.distribution, &component, arch
-                        );
+                        let filename =
+                            format!("{name}/Contents_{distribution}_{component}_{arch}.gz",);
                         dbs_to_download.push(DownloadJob {
-                            url: format!(
-                                "{}/dists/{}/{}",
-                                repo.get_url(),
-                                repo.distribution,
-                                &compressed_rel_url
-                            ),
+                            url: format!("{url}/dists/{distribution}/{compressed_rel_url}",),
                             description: Some(format!(
-                                "Package contents metadata for {} ({}).",
+                                "Package contents metadata for {} ({arch}).",
                                 style(name).bold(),
-                                arch
                             )),
                             filename: Some(filename),
                             size: Some(compressed_meta.0),
@@ -278,23 +261,15 @@ impl LocalDb {
                         });
                     }
                     // 3. Download BinContents db
-                    let rel_url = format!("{}/BinContents-{}", component, arch);
+                    let rel_url = format!("{component}/BinContents-{arch}");
                     if let Some(meta) = dbs.get(name).unwrap().get(&rel_url) {
-                        let filename = format!(
-                            "{}/BinContents_{}_{}_{}",
-                            &name, &repo.distribution, &component, arch
-                        );
+                        let filename =
+                            format!("{name}/BinContents_{distribution}_{component}_{arch}",);
                         dbs_to_download.push(DownloadJob {
-                            url: format!(
-                                "{}/dists/{}/{}",
-                                repo.get_url(),
-                                repo.distribution,
-                                &rel_url
-                            ),
+                            url: format!("{url}/dists/{distribution}/{rel_url}",),
                             description: Some(format!(
-                                "Package contents metadata for {} ({}).",
+                                "Package contents metadata for {} ({arch}).",
                                 style(name).bold(),
-                                arch
                             )),
                             filename: Some(filename),
                             size: Some(meta.0),
@@ -304,7 +279,7 @@ impl LocalDb {
                 }
 
                 if pre_download_count == dbs_to_download.len() {
-                    warn!("No repository available for {}/{}.", name, component);
+                    warn!("No repository available for {name}/{component}.");
                     warn!(
                         "Please check if this repository provides packages for {} architecture.",
                         self.arch

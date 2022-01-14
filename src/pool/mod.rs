@@ -33,7 +33,7 @@ pub trait PkgPool: BasicPkgPool {
     fn get_deps(&self, pkgid: usize) -> Result<Vec<Vec<usize>>> {
         let pkg = self
             .get_pkg_by_id(pkgid)
-            .ok_or_else(|| format_err!("Package with ID {} not found.", pkgid))?;
+            .ok_or_else(|| format_err!("Package with ID {pkgid} not found."))?;
         let mut res = Vec::new();
         for dep in &pkg.depends {
             let mut deps_id = Vec::new();
@@ -123,9 +123,9 @@ pub trait PkgPool: BasicPkgPool {
                 }
             }
             // We haven't found a suitable candidate
-            bail!("Cannot find a suitable version for {}.", pkgname);
+            bail!("Cannot find a suitable version for {pkgname}.");
         } else {
-            bail!("Package {} not found.", pkgname);
+            bail!("Package {pkgname} not found.");
         }
     }
 
