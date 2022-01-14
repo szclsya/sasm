@@ -10,6 +10,8 @@ pub fn ask_confirm(opts: &Opts, msg: &str) -> Result<bool> {
         return Ok(true);
     }
 
+    let prefix = super::gen_prefix("");
+    let msg = format!("{prefix}{msg}");
     let res = Confirm::new().with_prompt(msg).interact()?;
     Ok(res)
 }
