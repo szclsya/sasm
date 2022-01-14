@@ -32,6 +32,6 @@ impl Theme for OmaTheme {
             false => (crate::cli::gen_prefix("")),
         };
 
-        write!(f, "{}{}", prefix, text)
+        write!(f, "{prefix}{text}")
     }
 }

@@ -135,9 +135,9 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
             .with(Modify::new(Full).with(Alignment::left()))
             // Install Size column should align right
             .with(Modify::new(Column(1..2)).with(Alignment::right()))
-            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
+            .with(Modify::new(Full).with(|s: &str| format!(" {s} ")))
             .with(Style::PSQL);
-        writeln!(out, "{}", table)?;
+        writeln!(out, "{table}")?;
     }
 
     if !install_rows.is_empty() {
@@ -150,9 +150,9 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
             .with(Modify::new(Full).with(Alignment::left()))
             // Install Size column should align right
             .with(Modify::new(Column(2..3)).with(Alignment::right()))
-            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
+            .with(Modify::new(Full).with(|s: &str| format!(" {} ")))
             .with(Style::PSQL);
-        writeln!(out, "{}", table)?;
+        writeln!(out, "{table}")?;
     }
 
     if !upgrade_rows.is_empty() {
@@ -165,9 +165,9 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
             .with(Modify::new(Full).with(Alignment::left()))
             // Install Size column should align right
             .with(Modify::new(Column(2..3)).with(Alignment::right()))
-            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
+            .with(Modify::new(Full).with(|s: &str| format!(" {s} ")))
             .with(Style::PSQL);
-        writeln!(out, "{}", table)?;
+        writeln!(out, "{table}")?;
     }
 
     if !downgrade_rows.is_empty() {
@@ -180,9 +180,9 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
             .with(Modify::new(Full).with(Alignment::left()))
             // Install Size column should align right
             .with(Modify::new(Column(1..2)).with(Alignment::right()))
-            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
+            .with(Modify::new(Full).with(|s: &str| format!(" {s} ")))
             .with(Style::PSQL);
-        writeln!(out, "{}", table)?;
+        writeln!(out, "{table}")?;
     }
 
     if !configure_rows.is_empty() {
@@ -193,9 +193,9 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
         )?;
         let table = Table::new(&configure_rows)
             .with(Modify::new(Full).with(Alignment::left()))
-            .with(Modify::new(Full).with(|s: &str| format!(" {} ", s)))
+            .with(Modify::new(Full).with(|s: &str| format!(" {s} ")))
             .with(Style::PSQL);
-        writeln!(out, "{}", table)?;
+        writeln!(out, "{table}")?;
     }
 
     // Write size changes

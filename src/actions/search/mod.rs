@@ -50,7 +50,7 @@ impl<'a> PkgInfo<'a> {
             for (name, ver_req) in provides {
                 let mut chunk = name.clone();
                 if !ver_req.is_arbitary() {
-                    chunk.push_str(&format!(" ({})", ver_req));
+                    chunk.push_str(&format!(" ({ver_req})"));
                 }
                 chunks.push(chunk);
             }
@@ -64,7 +64,7 @@ impl<'a> PkgInfo<'a> {
             for (name, ver_req) in recommends {
                 let mut chunk = name.clone();
                 if !ver_req.is_arbitary() {
-                    chunk.push_str(&format!(" ({})", ver_req));
+                    chunk.push_str(&format!(" ({ver_req})"));
                 }
                 chunks.push(chunk);
             }
@@ -78,7 +78,7 @@ impl<'a> PkgInfo<'a> {
             for (name, ver_req) in suggests {
                 let mut chunk = name.clone();
                 if !ver_req.is_arbitary() {
-                    chunk.push_str(&format!(" ({})", ver_req));
+                    chunk.push_str(&format!(" ({ver_req})"));
                 }
                 chunks.push(chunk);
             }

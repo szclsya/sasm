@@ -83,7 +83,7 @@ pub async fn bench(
                     res.push((url.clone(), Some(time)));
                 }
                 Err(e) => {
-                    msg!("Mirror {} failed to complete benchmark: {}", url, e);
+                    msg!("Mirror {url} failed to complete benchmark: {e}");
                     res.push((url.clone(), None));
                 }
             }
@@ -197,7 +197,7 @@ fn show_bench_results(
             .with(Modify::new(Column(0..1)).with(Alignment::center_horizontal()))
             .with(Modify::new(Column(1..)).with(|s: &str| format!(" {} ", s)))
             .with(Style::PSEUDO_CLEAN);
-        writeln!(writer, "{}\n", table)?;
+        writeln!(writer, "{table}\n")?;
     }
 
     drop(writer);
