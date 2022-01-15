@@ -46,20 +46,21 @@ impl LocalDb {
         let mut files: Vec<(String, PathBuf)> = Vec::new();
         let distribution = &repo.distribution;
         let arch = &self.arch;
+        let repo_url = repo.get_url()?;
         for component in &repo.components {
             // First prepare arch-specific repo
             let arch = self
                 .root
                 .join(format!("{name}/Packages_{distribution}_{component}_{arch}",));
             if arch.is_file() {
-                files.push((repo.get_url().to_owned(), self.root.join(arch)));
+                files.push((repo_url.clone(), self.root.join(arch)));
             }
             // Then prepare noarch repo, if exists
             let noarch = self
                 .root
                 .join(format!("{name}/Packages_{distribution}_{component}_all",));
             if noarch.is_file() {
-                files.push((repo.get_url().to_owned(), self.root.join(noarch)));
+                files.push((repo_url.clone(), self.root.join(noarch)));
             }
         }
 
@@ -91,20 +92,21 @@ impl LocalDb {
         let mut files: Vec<(String, PathBuf)> = Vec::new();
         let distribution = &repo.distribution;
         let arch = &self.arch;
+        let repo_url = repo.get_url()?;
         for component in &repo.components {
             // First prepare arch-specific repo
             let arch = self.root.join(format!(
                 "{name}/Contents_{distribution}_{component}_{arch}.gz",
             ));
             if arch.is_file() {
-                files.push((repo.get_url().to_owned(), self.root.join(arch)));
+                files.push((repo_url.clone(), self.root.join(arch)));
             }
             // Then prepare noarch repo, if exists
             let noarch = self
                 .root
                 .join(format!("{name}/Contents_{distribution}_{component}_all.gz",));
             if noarch.is_file() {
-                files.push((repo.get_url().to_owned(), self.root.join(noarch)));
+                files.push((repo_url.clone(), self.root.join(noarch)));
             }
         }
 
@@ -136,20 +138,22 @@ impl LocalDb {
         let mut files: Vec<(String, PathBuf)> = Vec::new();
         let distribution = &repo.distribution;
         let arch = &self.arch;
+        let repo_url = repo.get_url()?;
+
         for component in &repo.components {
             // First prepare arch-specific repo
             let arch = self.root.join(format!(
                 "{name}/BinContents_{distribution}_{component}_{arch}",
             ));
             if arch.is_file() {
-                files.push((repo.get_url().to_owned(), self.root.join(arch)));
+                files.push((repo_url.clone(), self.root.join(arch)));
             }
             // Then prepare noarch repo, if exists
             let noarch = self
                 .root
                 .join(format!("{name}/BinContents_{distribution}_{component}_all",));
             if noarch.is_file() {
-                files.push((repo.get_url().to_owned(), self.root.join(noarch)));
+                files.push((repo_url.clone(), self.root.join(noarch)));
             }
         }
 
@@ -178,17 +182,16 @@ impl LocalDb {
         // HashMap<RepoName, HashMap<url, (size, checksum)>>
         let mut dbs: HashMap<String, HashMap<String, (u64, Checksum)>> = HashMap::new();
         // Step 1: Download InRelease for each repo
-        let inrelease_urls: Vec<DownloadJob> = self
-            .repos
-            .iter()
-            .map(|(name, repo)| DownloadJob {
-                url: format!("{}/dists/{}/InRelease", repo.get_url(), repo.distribution),
+        let mut inrelease_urls: Vec<DownloadJob> = Vec::with_capacity(self.repos.len());
+        for (name, repo) in &self.repos {
+            inrelease_urls.push(DownloadJob {
+                url: format!("{}/dists/{}/InRelease", repo.get_url()?, repo.distribution),
                 description: Some(format!("Repository metadata for {}", style(name).bold())),
                 filename: Some(format!("InRelease_{name}")),
                 size: None,
                 compression: Compression::None(None),
-            })
-            .collect();
+            });
+        }
         downloader.fetch(inrelease_urls, &self.root, false).await?;
 
         // Step 2: Verify InRelease with PGP
@@ -213,7 +216,7 @@ impl LocalDb {
             }
 
             for component in &repo.components {
-                let url = repo.get_url();
+                let url = repo.get_url()?;
                 let distribution = &repo.distribution;
 
                 let pre_download_count = dbs_to_download.len();

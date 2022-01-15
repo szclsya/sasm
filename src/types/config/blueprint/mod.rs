@@ -196,7 +196,7 @@ impl Blueprints {
             match l {
                 BlueprintLine::Comment(content) => res.push_str(&format!("#{}\n", content)),
                 BlueprintLine::EmptyLine => res.push('\n'),
-                BlueprintLine::PkgRequest(req) => res.push_str(&format!("{}\n", req.to_string())),
+                BlueprintLine::PkgRequest(req) => res.push_str(&format!("{}\n", req)),
             }
         }
 

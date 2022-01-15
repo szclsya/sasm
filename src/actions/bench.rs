@@ -11,7 +11,7 @@ use crate::{
 use anyhow::{bail, Result};
 use console::style;
 use indicatif::HumanBytes;
-use reqwest::Client;
+use reqwest::{Client, ClientBuilder};
 use std::{
     fs,
     io::Write,
@@ -19,6 +19,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tabled::{Alignment, Column, Full, Head, Header, Modify, Style, Table, Tabled};
+use toml_edit::{value, Document};
 
 pub async fn bench(
     opts: &Opts,
@@ -30,19 +31,27 @@ pub async fn bench(
     db.update(downloader).await?;
 
     info!("Starting benchmarks...");
-    let client = Client::new();
+    // Set reqwest parameters
+    let clientbuilder = ClientBuilder::new()
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(30));
+    let client = clientbuilder.build()?;
+
     let mut config = config.clone();
     let mut results = Vec::new();
     for (name, repo) in &mut config.repo {
-        let urls = match &repo.url {
-            Mirror::Single(_) => {
+        let urls = match &repo.source {
+            Mirror::Simple(_) => {
                 msg!(
                     "Skipping repository {} because it only has one mirror.",
                     style(name).bold()
                 );
                 continue;
             }
-            Mirror::Multiple(urls) => urls,
+            Mirror::MirrorList {
+                preferred: _,
+                mirrorlist: _,
+            } => repo.get_mirrors()?,
         };
 
         msg!("Running benchmark for repository {}...", style(name).bold());
@@ -70,45 +79,48 @@ pub async fn bench(
         let local_hash = Checksum::from_file_sha256(local_path)?;
         let validator = local_hash.get_validator();
 
-        for url in urls {
+        for (name, mirror) in urls {
             let contents_url = format!(
                 "{}/dists/{}/{}/Contents-{}.gz",
-                url, repo.distribution, repo.components[0], config.arch
+                mirror.url, repo.distribution, repo.components[0], config.arch
             );
             // Start counting
             let start = Instant::now();
             match try_download(&contents_url, &client, validator.clone()).await {
                 Ok(_) => {
                     let time = start.elapsed();
-                    res.push((url.clone(), Some(time)));
+                    res.push((name.clone(), mirror.url.clone(), Some(time)));
                 }
                 Err(e) => {
-                    msg!("Mirror {url} failed to complete benchmark: {e}");
-                    res.push((url.clone(), None));
+                    msg!("Mirror {name} failed to complete benchmark: {e}");
+                    res.push((name.clone(), mirror.url.clone(), None));
                 }
             }
         }
         // Sort result based on time
-        res.sort_by_key(|(_, time)| time.unwrap_or(Duration::MAX));
-        // Generate new urls
-        let new_urls = res.iter().map(|(url, _)| url.clone()).collect();
-        repo.url = Mirror::Multiple(new_urls);
+        res.sort_by_key(|(_, _, time)| time.unwrap_or(Duration::MAX));
         // Push result of this repo to results
         results.push((name.as_str(), size, res));
     }
 
     // Show results
-    show_bench_results(results.as_slice(), opts.no_pager)?;
+    show_bench_results(&results, opts.no_pager)?;
 
     // Ask if to write back results
     if crate::cli::ask_confirm(opts, "Apply optimal mirrors based on benchmark result?")? {
-        let new_config = toml::to_string(&config)?;
         let config_path = opts
             .root
             .join(&opts.config_root)
             .canonicalize()
             .unwrap()
             .join("config.toml");
+        let original_toml = fs::read_to_string(&config_path)?;
+        let mut new_config = original_toml.parse::<Document>()?;
+        for (repo_name, _, result) in &results {
+            let new_preferred = &result[0].0;
+            new_config["repo"][repo_name]["source"]["preferred"] = value(new_preferred);
+        }
+        let new_config = new_config.to_string();
         std::fs::write(config_path, new_config)?;
         success!(
             "New repository configuration has been written to {}.",
@@ -137,7 +149,9 @@ async fn try_download(url: &str, client: &Client, mut validator: ChecksumValidat
 struct BenchResultRow {
     #[header("Best")]
     best: String,
-    #[header("Mirror")]
+    #[header("Mirror Name")]
+    name: String,
+    #[header("URL")]
     url: String,
     #[header("Speed")]
     speed: String,
@@ -145,7 +159,7 @@ struct BenchResultRow {
 
 #[inline]
 fn show_bench_results(
-    results: &[(&str, u64, Vec<(String, Option<Duration>)>)],
+    results: &[(&str, u64, Vec<(String, String, Option<Duration>)>)],
     no_pager: bool,
 ) -> Result<()> {
     info!("Benchmark result:");
@@ -165,8 +179,8 @@ fn show_bench_results(
 
     for (name, size, repo_results) in results {
         let mut rows = Vec::new();
-        for (i, result) in repo_results.iter().enumerate() {
-            let speed = if let Some(duration) = result.1 {
+        for (i, (name, url, time)) in repo_results.into_iter().enumerate() {
+            let speed = if let Some(duration) = time {
                 let ms = duration.as_millis();
                 // *1024 because ms to s
                 let bytes_per_sec: u128 = *size as u128 / ms * 1024;
@@ -181,7 +195,8 @@ fn show_bench_results(
             };
             let row = BenchResultRow {
                 best,
-                url: result.0.clone(),
+                name: name.clone(),
+                url: url.clone(),
                 speed,
             };
             rows.push(row);

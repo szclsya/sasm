@@ -32,6 +32,8 @@ dialoguer = "0.9"
 # Dealing with config files
 serde = "1"
 toml = "0.5"
+toml_edit = "0.13"
+serde_yaml = "0.8"
 nom = "7"
 # Network stack
 futures-util = "0.3"

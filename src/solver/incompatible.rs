@@ -15,7 +15,7 @@ pub fn find_incompatible_friendly(pool: &dyn PkgPool, to_install: &[usize]) -> S
         format!(
             "{}({}) appears to have dependency issues that prevents it from being installed. Please contact your package maintainers.",
             pkg.name,
-            console::style(&pkg.version).dim().to_string()
+            console::style(&pkg.version).dim()
         )
     } else {
         let mut res = String::from("The following packages cannot be installed simultaneously: ");
@@ -25,7 +25,7 @@ pub fn find_incompatible_friendly(pool: &dyn PkgPool, to_install: &[usize]) -> S
             res.push_str(&format!(
                 "{}({})",
                 pkg.name,
-                console::style(&pkg.version).dim().to_string()
+                console::style(&pkg.version).dim()
             ));
             if pkgs.peek().is_some() {
                 res.push_str(", ");

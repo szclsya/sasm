@@ -1,11 +1,13 @@
 mod blueprint;
 pub use blueprint::{Blueprints, PkgRequest};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
+use console::style;
 use serde::{Deserialize, Serialize, Serializer};
 use std::{
     collections::{BTreeMap, HashMap},
+    fs,
     path::PathBuf,
 };
 
@@ -37,7 +39,7 @@ pub struct UnsafeConfig {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct RepoConfig {
-    pub url: Mirror,
+    pub source: Mirror,
     pub distribution: String,
     pub components: Vec<String>,
     pub keys: Vec<String>,
@@ -46,24 +48,32 @@ pub struct RepoConfig {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum Mirror {
-    Single(String),
-    Multiple(Vec<String>),
+    Simple(String),
+    MirrorList {
+        mirrorlist: PathBuf,
+        preferred: String,
+    },
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct MirrorList(HashMap<String, MirrorMeta>);
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct MirrorMeta {
+    pub desc: String,
+    pub url: String,
 }
 
 impl Config {
     pub fn check_sanity(&self) -> Result<()> {
         for (name, repo) in &self.repo {
             // Check public key names
-            for key_filename in &repo.keys {
-                if key_filename.contains(|c| !key_filename_char(c)) {
-                    bail!(
-                        "Invalid character in public key filename {} for repository {}.",
-                        name,
-                        key_filename
-                    );
+            for key in &repo.keys {
+                if key.contains(|c| !key_filename_char(c)) {
+                    bail!("Invalid character in public key filename {name} for repository {key}.",);
                 }
             }
-            repo.check_sanity(name)?;
+            repo.check_sanity()?;
         }
 
         Ok(())
@@ -76,23 +86,97 @@ fn key_filename_char(c: char) -> bool {
 
 impl RepoConfig {
     /// Check if there's some mirror available
-    pub fn check_sanity(&self, name: &str) -> Result<()> {
-        // Check there're at least one mirror for each repo
-        if let Mirror::Multiple(mirrors) = &self.url {
-            if mirrors.is_empty() {
-                bail!("Repository {} requires at least one URL.", name);
+    pub fn check_sanity(&self) -> Result<()> {
+        // If we are using MirrorList, test-parse here
+        if let Mirror::MirrorList {
+            preferred: _,
+            mirrorlist,
+        } = &self.source
+        {
+            let path = mirrorlist;
+            if !path.is_absolute() {
+                bail!(
+                    "Path to MirrorList must be absolute! Got: {}.",
+                    style(path.display()).bold()
+                );
+            }
+            if !path.is_file() {
+                bail!("MirrorList {} is not a file!", style(path.display()).bold());
+            }
+            let content = fs::read_to_string(&path).context(format!(
+                "Failed to read MirrorList file {}!",
+                path.display()
+            ))?;
+            let mirrorlist: MirrorList = serde_yaml::from_str(&content)
+                .context(format!("Malformed MirrorList file {}!", path.display()))?;
+            // Check if there's at least something to work with
+            if mirrorlist.0.is_empty() {
+                bail!("MirrorList {} doesn't contain any mirror!", path.display());
             }
         }
+
         Ok(())
     }
 
     /// Get the first choice mirror
-    pub fn get_url(&self) -> &str {
-        match &self.url {
-            Mirror::Single(m) => m.as_str(),
-            Mirror::Multiple(m) => m[0].as_str(),
+    pub fn get_url(&self) -> Result<String> {
+        let url = match &self.source {
+            Mirror::Simple(m) => {
+                let mut url = m.clone();
+                // Add `debs`
+                normalize_mirror_url(&mut url);
+                url
+            },
+            Mirror::MirrorList {
+                preferred,
+                mirrorlist: _,
+            } => {
+                let mirrors = self.get_mirrors()?;
+                // Check if the preferred mirror exists
+                if let Some(mirror) = mirrors.get(preferred) {
+                    mirror.url.clone()
+                } else {
+                    bail!(
+                        "Preferred mirror {} doesn't exist in MirrorList!",
+                        preferred
+                    )
+                }
+            }
+        };
+
+        Ok(url)
+    }
+
+    pub fn get_mirrors(&self) -> Result<HashMap<String, MirrorMeta>> {
+        if let Mirror::MirrorList {
+            preferred: _,
+            mirrorlist,
+        } = &self.source
+        {
+            let path = mirrorlist;
+            let content = fs::read_to_string(&path).context(format!(
+                "Failed to read MirrorList file {}!",
+                path.display()
+            ))?;
+            let mut mirrorlist: MirrorList = serde_yaml::from_str(&content)
+                .context(format!("Malformed MirrorList file {}!", path.display()))?;
+            for mirror in &mut mirrorlist.0 {
+                let url = &mut mirror.1.url;
+                normalize_mirror_url(url);
+            }
+            Ok(mirrorlist.0)
+        } else {
+            bail!("Cannot get mirrors for simple mirror!");
         }
     }
+}
+
+fn normalize_mirror_url(url: &mut String) {
+    // Add `debs`
+    if !url.ends_with('/') {
+        url.push('/');
+    }
+    url.push_str("debs");
 }
 
 #[derive(Parser)]

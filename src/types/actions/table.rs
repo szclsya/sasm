@@ -150,7 +150,7 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
             .with(Modify::new(Full).with(Alignment::left()))
             // Install Size column should align right
             .with(Modify::new(Column(2..3)).with(Alignment::right()))
-            .with(Modify::new(Full).with(|s: &str| format!(" {} ")))
+            .with(Modify::new(Full).with(|s: &str| format!(" {s} ")))
             .with(Style::PSQL);
         writeln!(out, "{table}")?;
     }
