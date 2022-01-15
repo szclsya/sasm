@@ -1,6 +1,8 @@
 mod blueprint;
 pub use blueprint::{Blueprints, PkgRequest};
 
+use crate::warn;
+
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use console::style;
@@ -56,7 +58,12 @@ pub enum Mirror {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct MirrorList(HashMap<String, MirrorMeta>);
+pub struct MirrorList {
+    default: String,
+
+    #[serde(flatten)]
+    mirrors: HashMap<String, MirrorMeta>,
+}
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct MirrorMeta {
@@ -107,11 +114,15 @@ impl RepoConfig {
                 "Failed to read MirrorList file {}!",
                 path.display()
             ))?;
-            let mirrorlist: MirrorList = serde_yaml::from_str(&content)
+            let mirrorlist: MirrorList = toml::from_str(&content)
                 .context(format!("Malformed MirrorList file {}!", path.display()))?;
             // Check if there's at least something to work with
-            if mirrorlist.0.is_empty() {
+            if mirrorlist.mirrors.is_empty() {
                 bail!("MirrorList {} doesn't contain any mirror!", path.display());
+            }
+            // Check MirrorList's default actually points to something
+            if mirrorlist.mirrors.get(&mirrorlist.default).is_none() {
+                bail!("MirrorList {} has invalid default!", path.display());
             }
         }
 
@@ -131,15 +142,13 @@ impl RepoConfig {
                 preferred,
                 mirrorlist: _,
             } => {
-                let mirrors = self.get_mirrors()?;
+                let (mirrors, default) = self.get_mirrors()?;
                 // Check if the preferred mirror exists
                 if let Some(mirror) = mirrors.get(preferred) {
                     mirror.url.clone()
                 } else {
-                    bail!(
-                        "Preferred mirror {} doesn't exist in MirrorList!",
-                        preferred
-                    )
+                    warn!("Preferred mirror {preferred} doesn't exist in MirrorList. Use default mirror.");
+                    default.url
                 }
             }
         };
@@ -147,7 +156,7 @@ impl RepoConfig {
         Ok(url)
     }
 
-    pub fn get_mirrors(&self) -> Result<HashMap<String, MirrorMeta>> {
+    pub fn get_mirrors(&self) -> Result<(HashMap<String, MirrorMeta>, MirrorMeta)> {
         if let Mirror::MirrorList {
             preferred: _,
             mirrorlist,
@@ -158,13 +167,18 @@ impl RepoConfig {
                 "Failed to read MirrorList file {}!",
                 path.display()
             ))?;
-            let mut mirrorlist: MirrorList = serde_yaml::from_str(&content)
+            let mut mirrorlist: MirrorList = toml::from_str(&content)
                 .context(format!("Malformed MirrorList file {}!", path.display()))?;
-            for mirror in &mut mirrorlist.0 {
+            for mirror in &mut mirrorlist.mirrors {
                 let url = &mut mirror.1.url;
                 normalize_mirror_url(url);
             }
-            Ok(mirrorlist.0)
+            let default = mirrorlist
+                .mirrors
+                .get(&mirrorlist.default)
+                .context("MirrorList with invalid default!")?
+                .clone();
+            Ok((mirrorlist.mirrors, default))
         } else {
             bail!("Cannot get mirrors for simple mirror!");
         }

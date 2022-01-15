@@ -40,7 +40,7 @@ pub async fn bench(
     let mut config = config.clone();
     let mut results = Vec::new();
     for (name, repo) in &mut config.repo {
-        let urls = match &repo.source {
+        let (urls, _) = match &repo.source {
             Mirror::Simple(_) => {
                 msg!(
                     "Skipping repository {} because it only has one mirror.",
