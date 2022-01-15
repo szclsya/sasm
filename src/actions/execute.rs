@@ -132,13 +132,15 @@ fn process_user_request(
                 }
 
                 // Add pkg to blueprint
-                blueprint.add(
+                if let Err(e) = blueprint.add(
                     &install.pkgname,
                     install.modify,
                     None,
                     install.ver_req,
                     install.local,
-                )?;
+                ) {
+                    warn!("Cannot add package {}: {e}", style(&install.pkgname).bold());
+                }
                 if !install.local && install.install_recomm {
                     let choices = match pool.get_pkgs_by_name(&install.pkgname) {
                         Some(pkgs) => pkgs,
@@ -151,13 +153,19 @@ fn process_user_request(
                     let meta = pool.get_pkg_by_id(*choice).unwrap();
                     if let Some(recommends) = &meta.recommends {
                         for recommend in recommends {
-                            blueprint.add(
+                            if let Err(e) = blueprint.add(
                                 &recommend.0,
                                 false,
                                 Some(&install.pkgname),
                                 Some(recommend.1.clone()),
                                 false,
-                            )?;
+                            ) {
+                                warn!(
+                                    "Cannot add {} recommended by {}: {e}",
+                                    style(&install.pkgname).bold(),
+                                    recommend.0
+                                );
+                            }
                         }
                     }
                 }
