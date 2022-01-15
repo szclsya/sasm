@@ -127,7 +127,7 @@ fn process_user_request(
                         );
                         return Err(e.context("Failed to add new package(s)."));
                     } else {
-                        bail!("Failed to add new package(s).");
+                        bail!("Failed to add new package: {}", install.pkgname);
                     }
                 }
 
