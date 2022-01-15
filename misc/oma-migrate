@@ -21,7 +21,7 @@ if [[ -n "$1" ]]; then
 fi
 
 echo "# Migrated from apt at $(date)" >> "$BLUEPRINT_PATH"
-apt-mark showmanual | xargs sudo oma install
+apt-mark showmanual | xargs sudo oma install --init
 
 if [[ $? -ne 0 ]]; then
     echo "Failed to get packages from apt. Is this system using APT?"

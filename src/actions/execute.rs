@@ -3,7 +3,7 @@ use crate::{
     cli::{self, ask_confirm},
     db::LocalDb,
     debug,
-    executor::{dpkg, modifier, MachineStatus},
+    executor::{dpkg, modifier, MachineStatus, PkgState},
     info,
     pool::{self, PkgPool},
     solver::Solver,
@@ -51,7 +51,9 @@ pub async fn execute(
     let pool = pool::source::create_pool(&dbs, &[local_repo])?;
 
     debug!("Processing user request...");
-    process_user_request(request, pool.as_ref(), blueprint)?;
+    let root = &opts.root;
+    let machine_status = MachineStatus::new(root)?;
+    process_user_request(request, pool.as_ref(), blueprint, &machine_status)?;
 
     debug!("Applying replaces according to package catalog...");
     apply_replaces(opts, pool.as_ref(), blueprint)?;
@@ -60,8 +62,6 @@ pub async fn execute(
     let solver = Solver::from(pool);
     let res = solver.install(blueprint)?;
     // Translating result to list of actions
-    let root = &opts.root;
-    let machine_status = MachineStatus::new(root)?;
     let mut actions = machine_status.gen_actions(res.as_slice(), unsafe_config.purge_on_remove);
     if alt_root {
         let modifier = modifier::UnpackOnly::default();
@@ -112,9 +112,10 @@ fn process_user_request(
     req: UserRequest,
     pool: &dyn PkgPool,
     blueprint: &mut Blueprints,
+    ms: &MachineStatus,
 ) -> Result<()> {
     match req {
-        UserRequest::Install(list) => {
+        UserRequest::Install((list, init_mode)) => {
             for install in list {
                 // Check if this package actually exists
                 if pool.get_pkgs_by_name(&install.pkgname).is_none() {
@@ -132,13 +133,14 @@ fn process_user_request(
                 }
 
                 // Add pkg to blueprint
-                if let Err(e) = blueprint.add(
+                let add_res = blueprint.add(
                     &install.pkgname,
                     install.modify,
                     None,
                     install.ver_req,
                     install.local,
-                ) {
+                );
+                if let Err(e) = add_res {
                     warn!("Cannot add package {}: {e}", style(&install.pkgname).bold());
                 }
                 if !install.local && install.install_recomm {
@@ -153,13 +155,24 @@ fn process_user_request(
                     let meta = pool.get_pkg_by_id(*choice).unwrap();
                     if let Some(recommends) = &meta.recommends {
                         for recommend in recommends {
-                            if let Err(e) = blueprint.add(
+                            if init_mode {
+                                if let Some(pkg) = ms.pkgs.get(&recommend.0) {
+                                    if pkg.state != PkgState::Installed {
+                                        // In init mode, don't add recommended packages
+                                        // that doesn't exist in the system
+                                        continue;
+                                    }
+                                }
+                            }
+
+                            let add_res = blueprint.add(
                                 &recommend.0,
                                 false,
                                 Some(&install.pkgname),
                                 Some(recommend.1.clone()),
                                 false,
-                            ) {
+                            );
+                            if let Err(e) = add_res {
                                 warn!(
                                     "Cannot add {} recommended by {}: {e}",
                                     style(&install.pkgname).bold(),

@@ -23,7 +23,8 @@ use std::path::PathBuf;
 #[derive(Debug)]
 pub enum UserRequest {
     // Vec<(PkgName, ver_req, install_recomm, added_by, local)>
-    Install(Vec<InstallRequest>),
+    // bool: Init mode, only add locally installed packages
+    Install((Vec<InstallRequest>, bool)),
     // Vec<(PkgName, remove_recomm)>
     Remove(Vec<(String, bool)>),
     Upgrade,
@@ -77,7 +78,7 @@ pub async fn fullfill_command(
                     modify: false,
                 })
                 .collect();
-            let req = UserRequest::Install(req);
+            let req = UserRequest::Install((req, add.init));
             // Update local db
             localdb.update(&downloader).await?;
             // Execute blueprint

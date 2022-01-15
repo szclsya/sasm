@@ -272,6 +272,9 @@ pub struct InstallPkg {
     /// Install local debs files rather from the repositories
     #[clap(long)]
     pub local: bool,
+    /// Only add packages that are already installed. Used for Omakase initialization.
+    #[clap(long, hide = true)]
+    pub init: bool,
 }
 
 #[derive(Parser)]
