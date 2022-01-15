@@ -42,6 +42,7 @@ pub struct UnsafeConfig {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct RepoConfig {
     pub source: Mirror,
+    pub tags: Option<Vec<String>>,
     pub distribution: String,
     pub components: Vec<String>,
     pub keys: Vec<String>,
