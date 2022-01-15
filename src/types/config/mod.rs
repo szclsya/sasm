@@ -67,7 +67,7 @@ pub struct MirrorList {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct MirrorMeta {
-    pub desc: String,
+    pub description: String,
     pub url: String,
 }
 
