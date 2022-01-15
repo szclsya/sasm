@@ -126,7 +126,7 @@ impl RepoConfig {
                 // Add `debs`
                 normalize_mirror_url(&mut url);
                 url
-            },
+            }
             Mirror::MirrorList {
                 preferred,
                 mirrorlist: _,

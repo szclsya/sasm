@@ -120,9 +120,10 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
     let pager_name = pager.pager_name().to_owned();
     let mut out = pager.get_writer()?;
 
+    write_review_help_message(&mut out)?;
     // Show help message about how to exit review view
     if pager_name == Some("less") {
-        writeln!(out, "Press {} to finish review.\n", style("q").bold())?;
+        writeln!(out, "{}", style("Press [q] to finish review.\n").bold())?;
     }
 
     if !remove_rows.is_empty() {
@@ -221,5 +222,14 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
     // Wait until pager exits
     pager.wait_for_exit()?;
 
+    Ok(())
+}
+
+fn write_review_help_message(w: &mut dyn Write) -> Result<()> {
+    writeln!(w, "{}", style("Pending Operations").bold())?;
+    writeln!(w)?;
+    writeln!(w, "Shown below is an overview of the pending changes Omakase will apply to your system, please review them carefully.")?;
+    writeln!(w, "Please note that Omakase may {}, {}, {}, {}, or {} packages in order to fulfill your requested changes.", style("install").green(), style("remove").red(), style("upgrade").green(), style("downgrade").yellow(), style("configure").blue())?;
+    writeln!(w)?;
     Ok(())
 }

@@ -179,7 +179,7 @@ fn show_bench_results(
 
     for (name, size, repo_results) in results {
         let mut rows = Vec::new();
-        for (i, (name, url, time)) in repo_results.into_iter().enumerate() {
+        for (i, (name, url, time)) in repo_results.iter().enumerate() {
             let speed = if let Some(duration) = time {
                 let ms = duration.as_millis();
                 // *1024 because ms to s
