@@ -37,4 +37,28 @@ Query string accepts Regex syntax. Note that only package titles will be searche
 oma provide FILE
 ```
 
+Possible arguments:
++ `--bin` Search binary files only. This should be significantly faster.
+
 Search what packages contain a certain file.
+
+# Pick a certain version for a package
+```bash
+oma pick PKGNAME
+```
+
+Tell Omakase to use a certain version of a package.
+
+# Benchmarking mirrors and pick the best one
+```bash
+oma bench
+```
+
+Benchmark mirrors in MirrorLists (see [config documentation](doc/config.md)) and use the best one.
+
+# Download a package from the repository
+```bash
+oma download PKGNAME
+```
+
+Download a package archive file from remote repositories.

@@ -19,7 +19,7 @@ This is the main configuration file. It uses `TOML` and have a series of mandato
 ```toml
 arch = "amd64"
 
-# Repository configuration sections are denoted by `[repo.REPO_NAME]`
+# Repository configuration sections are denoted by `[repo.REPO_NAME]`. REPO_NAME can be arbitary.
 [repo.main]
 # Omakase support loading mirrors from a mirrorlist
 # The mirrorlist path must be an absolute path
@@ -44,12 +44,12 @@ default = "origin"
 
 # And a list of mirrors
 [origin]
-description = "AOSC main repository (hosted by Aperture Science Limited)"
+description = "AOSC main repository"
 url = "https://repo.aosc.io/"
 
 [magicmirror]
 description = "Mirror built by magic"
-url = "https://magic.io/"
+url = "https://magicmirror.bruh/"
 ```
 
 ## The Omanomicon: `unsafe` section
