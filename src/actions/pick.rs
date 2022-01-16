@@ -86,13 +86,13 @@ pub fn pick(
         })
     };
     // Generate UserRequest
-    let req = UserRequest::Install(vec![InstallRequest {
+    let req = vec![InstallRequest {
         pkgname: pkgname.to_owned(),
         modify: true,
         install_recomm: false,
         ver_req,
         local: *local,
-    }]);
+    }];
 
-    Ok(req)
+    Ok(UserRequest::Install((req, false)))
 }
