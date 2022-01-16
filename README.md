@@ -4,6 +4,7 @@
 ## Build
 Requires `nettle`.
 
+The Minimum Supported Rust Version (MSRV) is **1.58.0**.
 ```bash
 cargo build --release
 install -Dm755 target/release/oma /usr/local/bin/oma
@@ -21,7 +22,8 @@ Here's a basic example of `config.toml`:
 arch = "amd64"
 
 [repo.main]
-url = "https://repo.aosc.io/debs"
+# MirrorList files are also supported. See `doc/config.md`.
+source = "https://repo.aosc.io/debs"
 distribution = "stable"
 components = ["main"]
 # GPG public key for this repository.

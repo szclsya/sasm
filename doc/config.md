@@ -19,13 +19,37 @@ This is the main configuration file. It uses `TOML` and have a series of mandato
 ```toml
 arch = "amd64"
 
+# Repository configuration sections are denoted by `[repo.REPO_NAME]`
 [repo.main]
-url = "https://repo.aosc.io/debs"
+# Omakase support loading mirrors from a mirrorlist
+# The mirrorlist path must be an absolute path
+source = { mirrorlist = "/usr/share/distro-repository-data/mirrors.toml", preferred = "origin" }
+# Or, use a simple URL
+#source = "https://repo.aosc.io"
 distribution = "stable"
 components = ["main"]
 # GPG public key for this repository.
 # Put the public keys in the `keys/` folder, and provide filenames of the key files here
 keys = ["main.asc"]
+# Tags are used by external programs to identify repositories. Omakase doesn't use them.
+tags = ["topic-template"]
+```
+
+## The MirrorList file format
+A MirrorList file defines a series of possible mirrors. Such file should use `TOML` file format. Here's an example:
+
+```toml
+# This field specifies which field should be used by default
+default = "origin"
+
+# And a list of mirrors
+[origin]
+description = "AOSC main repository (hosted by Aperture Science Limited)"
+url = "https://repo.aosc.io/"
+
+[magicmirror]
+description = "Mirror built by magic"
+url = "https://magic.io/"
 ```
 
 ## The Omanomicon: `unsafe` section
@@ -38,6 +62,7 @@ purge_on_remove = true
 # Allow dpkg to skip fsync on files. Only use on systems with battery backup.
 unsafe_io = true
 # Allow remove essential packages.
+# If not implicitly set to true, Omakase will refuse any action that involves removing essential packages
 allow_remove_essential = true
 ```
 
