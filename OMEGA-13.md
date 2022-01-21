@@ -39,6 +39,8 @@ APT
 - Too many Debian-specific features and requirements that are unhelpful in
   AOSC OS.
 - Some outputs refer to Debian distribution features, which make no sense.
+- Insufficient support for local repositories (e.g. `apt` will not run
+  properly if local sources are being synchronized).
 
 ### Commendables
 
