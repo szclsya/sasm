@@ -1,11 +1,9 @@
 Omega-13
 ========
 
-*"The truth, however, is that no one has a clue."* [✝](https://web.archive.org/web/20060218125408/https://blogs.msdn.com/michkap/archive/2005/10/16/481625.aspx)
+*"The truth, however, is that no one has a clue."* [¹](https://web.archive.org/web/20060218125408/https://blogs.msdn.com/michkap/archive/2005/10/16/481625.aspx)
 
-<pre>
-    — Michael Kaplan at the Windows Longhorn reset, "A Reset Does Not Mean Everything was Thrown Away."
-</pre>
+— Michael Kaplan at the Windows Longhorn reset, "A Reset Does Not Mean Everything was Thrown Away."
 
 Omakase needs a clearer vision, and a more realistic look at wha tcould and
 should be done. It's meant to be a evolutionary step from APT, not its
