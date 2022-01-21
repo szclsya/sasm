@@ -5,7 +5,7 @@ Omega-13
 
 — Michael Kaplan at the Windows Longhorn reset, "A Reset Does Not Mean Everything was Thrown Away."
 
-Omakase needs a clearer vision, and a more realistic look at wha tcould and
+Omakase needs a clearer vision, and a more realistic look at what could and
 should be done. It's meant to be a evolutionary step from APT, not its
 undertaker. Let's start small and from concrete issues.
 
