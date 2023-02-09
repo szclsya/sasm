@@ -1,9 +1,9 @@
-mod bench;
+//mod bench;
 mod download;
 mod execute;
 mod local;
 mod pick;
-mod search;
+//mod search;
 use execute::execute;
 
 use crate::{
@@ -48,10 +48,9 @@ pub async fn fullfill_command(
 ) -> Result<bool> {
     let downloader = crate::utils::downloader::Downloader::new();
     // Directory that stores trusted public keys for repos
-    let key_root = opts.root.join(crate::DB_KEY_PATH);
+    let _key_root = opts.root.join(crate::DB_KEY_PATH);
     let localdb = LocalDb::new(
         opts.root.join(crate::DB_CACHE_PATH),
-        key_root,
         config.repo.clone(),
         &config.arch,
     );
@@ -142,6 +141,7 @@ pub async fn fullfill_command(
 
             Ok(exit)
         }
+        /*
         SubCmd::Search(search) => {
             let machine_status = MachineStatus::new(&opts.root)?;
             search::search_deb_db(&localdb, &search.keyword, &machine_status)?;
@@ -152,6 +152,7 @@ pub async fn fullfill_command(
             search::show_provide_file(&localdb, &machine_status, &provide.file, provide.bin)?;
             Ok(false)
         }
+        */
         SubCmd::Clean(cleanconfig) => {
             // This operation has side effects
             lock::ensure_unlocked(&opts.root)?;
@@ -179,6 +180,7 @@ pub async fn fullfill_command(
 
             Ok(false)
         }
+        /*
         SubCmd::Bench => {
             // This operation has side effects (refresh)
             lock::ensure_unlocked(&opts.root)?;
@@ -187,6 +189,7 @@ pub async fn fullfill_command(
             bench::bench(opts, config, localdb, &downloader).await?;
             Ok(false)
         }
+        */
         SubCmd::Download(download) => {
             let mut latest = download.latest;
             if opts.yes {
@@ -197,6 +200,7 @@ pub async fn fullfill_command(
             download::download(&download.pkgname, &localdb, &downloader, latest).await?;
             success!("Requested package has been downloaded to current working directory.");
             Ok(false)
-        }
+        },
+        _ => unimplemented!()
     }
 }
