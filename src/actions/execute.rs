@@ -143,45 +143,6 @@ fn process_user_request(
                 if let Err(e) = add_res {
                     warn!("Cannot add package {}: {e}", style(&install.pkgname).bold());
                 }
-                if !install.local && install.install_recomm {
-                    let choices = match pool.get_pkgs_by_name(&install.pkgname) {
-                        Some(pkgs) => pkgs,
-                        None => bail!(
-                            "Failed to add recommended packages for {} .",
-                            &install.pkgname
-                        ),
-                    };
-                    let choice = choices.get(0).unwrap();
-                    let meta = pool.get_pkg_by_id(*choice).unwrap();
-                    if let Some(recommends) = &meta.recommends {
-                        for recommend in recommends {
-                            if init_mode {
-                                if let Some(pkg) = ms.pkgs.get(&recommend.0) {
-                                    if pkg.state != PkgState::Installed {
-                                        // In init mode, don't add recommended packages
-                                        // that doesn't exist in the system
-                                        continue;
-                                    }
-                                }
-                            }
-
-                            let add_res = blueprint.add(
-                                &recommend.0,
-                                false,
-                                Some(&install.pkgname),
-                                Some(recommend.1.clone()),
-                                false,
-                            );
-                            if let Err(e) = add_res {
-                                warn!(
-                                    "Cannot add {} recommended by {}: {e}",
-                                    style(&install.pkgname).bold(),
-                                    recommend.0
-                                );
-                            }
-                        }
-                    }
-                }
             }
         }
         UserRequest::Remove(list) => {

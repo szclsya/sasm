@@ -5,6 +5,7 @@ mod version;
 
 pub use actions::{PkgActionModifier, PkgActions, PkgInstallAction};
 pub use checksum::{Checksum, ChecksumValidator};
+use nom::error::VerboseError;
 pub use version::{parse_version, parse_version_requirement, PkgVersion, VersionRequirement};
 
 use serde::{Deserialize, Serialize};
@@ -23,6 +24,7 @@ pub struct PkgMeta {
     pub version: PkgVersion,
 
     pub depends: Vec<(String, VersionRequirement)>,
+    pub optional: Vec<(String, VersionRequirement)>,
     pub conflicts: Vec<(String, VersionRequirement)>,
     pub provides: Vec<(String, VersionRequirement)>,
     pub replaces: Vec<(String, VersionRequirement)>,

@@ -44,17 +44,15 @@ pub fn import(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
     todo!()
 }
 
-fn fields_to_pkgmeta(f: HashMap<String, Vec<String>>) -> Result<PkgMeta> {
+fn fields_to_pkgmeta(mut f: HashMap<String, Vec<String>>) -> Result<PkgMeta> {
     // Get name first, for error reporting
     let name = get_first_or_complain("NAME", &mut f).map_err(|e| {
-        format_err!("bad metadata: NAME missing")
+        format_err!("bad metadata: NAME missing ({e})")
     })?;
     // Generate real url
-    let path = f.get("FILENAME").ok_or_else(|| {
-        format_err!(
-            "bad metadata for {name}: FILENAME missing",
-        )
-    })?.remove(0);
+    let path = get_first_or_complain("FILENAME", &mut f).map_err(|e| {
+        format_err!("bad metadata: FILENAME missing ({e})")
+    })?;
     Ok(PkgMeta {
         name: name.clone(),
         description: get_first_or_complain("DESCRIPTION", &mut f)
@@ -62,6 +60,7 @@ fn fields_to_pkgmeta(f: HashMap<String, Vec<String>>) -> Result<PkgMeta> {
         version: PkgVersion::try_from(get_first_or_complain("VERSION", &mut f)
                                       .map_err(|e| format_err!("bad metadata for {name}: {e}"))?.as_str())?,
         depends: get_pkg_list("DEPENDS", &mut f)?,
+        optional: get_pkg_list("OPTDEPENDS", &mut f)?,
         conflicts: get_pkg_list("CONFLICTS", &mut f)?,
         install_size: get_first_or_complain("ISIZE", &mut f)?.parse()?,
         download_size: get_first_or_complain("CSIZE", &mut f)?.parse()?,
@@ -90,7 +89,7 @@ fn fields_to_pkgmeta(f: HashMap<String, Vec<String>>) -> Result<PkgMeta> {
 }
 
 fn get_first_or_complain(name: &str, f: &mut HashMap<String, Vec<String>>) -> Result<String> {
-    if let Some(values) = f.remove(name) {
+    if let Some(mut values) = f.remove(name) {
         if values.len() == 1 {
             Ok(values.remove(0))
         } else {

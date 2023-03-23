@@ -1,7 +1,7 @@
 //mod bench;
 mod download;
 mod execute;
-mod local;
+//mod local;
 mod pick;
 //mod search;
 use execute::execute;
@@ -61,12 +61,7 @@ pub async fn fullfill_command(
             lock::ensure_unlocked(&opts.root)?;
             lock::lock(&opts.root)?;
 
-            let names = if add.local {
-                let paths: Vec<PathBuf> = add.names.iter().map(PathBuf::from).collect();
-                local::add(opts, &paths)?
-            } else {
-                add.names.clone()
-            };
+            let names = add.names.clone();
             let req = names
                 .iter()
                 .map(|pkgname| InstallRequest {
@@ -167,7 +162,6 @@ pub async fn fullfill_command(
 
             info!("Purging local package cache...");
             let ms = MachineStatus::new(&opts.root)?;
-            local::clean(&ms, &opts.root)?;
 
             if cleanconfig.all {
                 info!("Purging local metadata cache...");
