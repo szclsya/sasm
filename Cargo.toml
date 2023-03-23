@@ -1,12 +1,12 @@
 [package]
-name = "omakase"
+name = "sasm"
 version = "0.1.0-beta.8"
 authors = ["Leo Shen <i@szclsya.me>"]
 license = "GPL-2.0-or-later"
 edition = "2021"
 
 [[bin]]
-name = "oma"
+name = "sasm"
 path = "src/main.rs"
 
 [dependencies]

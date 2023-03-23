@@ -94,5 +94,5 @@ pub fn pick(
         local: *local,
     }];
 
-    Ok(UserRequest::Install((req, false)))
+    Ok(UserRequest::Install(req))
 }

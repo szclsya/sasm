@@ -1223,44 +1223,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "omakase"
-version = "0.1.0-beta.8"
-dependencies = [
- "anyhow",
- "ar",
- "async-compression",
- "bytes",
- "clap",
- "console",
- "ctrlc",
- "debcontrol",
- "dialoguer",
- "flate2",
- "futures-util",
- "hex",
- "indicatif",
- "lazy_static",
- "memchr",
- "nix",
- "nom 7.1.0",
- "petgraph 0.6.0",
- "rayon",
- "regex",
- "reqwest",
- "sequoia-openpgp",
- "serde",
- "sha2",
- "strsim",
- "tabled",
- "tar",
- "tokio",
- "toml",
- "toml_edit",
- "varisat",
- "xz2",
-]
-
-[[package]]
 name = "once_cell"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1666,6 +1628,44 @@ name = "ryu"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73b4b750c782965c211b42f022f59af1fbceabdd026623714f104152f1ec149f"
+
+[[package]]
+name = "sasm"
+version = "0.1.0-beta.8"
+dependencies = [
+ "anyhow",
+ "ar",
+ "async-compression",
+ "bytes",
+ "clap",
+ "console",
+ "ctrlc",
+ "debcontrol",
+ "dialoguer",
+ "flate2",
+ "futures-util",
+ "hex",
+ "indicatif",
+ "lazy_static",
+ "memchr",
+ "nix",
+ "nom 7.1.0",
+ "petgraph 0.6.0",
+ "rayon",
+ "regex",
+ "reqwest",
+ "sequoia-openpgp",
+ "serde",
+ "sha2",
+ "strsim",
+ "tabled",
+ "tar",
+ "tokio",
+ "toml",
+ "toml_edit",
+ "varisat",
+ "xz2",
+]
 
 [[package]]
 name = "scopeguard"

@@ -23,8 +23,7 @@ use std::path::PathBuf;
 #[derive(Debug)]
 pub enum UserRequest {
     // Vec<(PkgName, ver_req, install_recomm, added_by, local)>
-    // bool: Init mode, only add locally installed packages
-    Install((Vec<InstallRequest>, bool)),
+    Install(Vec<InstallRequest>),
     // Vec<(PkgName, remove_recomm)>
     Remove(Vec<(String, bool)>),
     Upgrade,
@@ -62,7 +61,7 @@ pub async fn fullfill_command(
             lock::lock(&opts.root)?;
 
             let names = add.names.clone();
-            let req = names
+            let req: Vec<InstallRequest> = names
                 .iter()
                 .map(|pkgname| InstallRequest {
                     pkgname: pkgname.to_owned(),
@@ -72,7 +71,7 @@ pub async fn fullfill_command(
                     modify: false,
                 })
                 .collect();
-            let req = UserRequest::Install((req, add.init));
+            let req = UserRequest::Install(req);
             // Update local db
             localdb.update(&downloader).await?;
             // Execute blueprint

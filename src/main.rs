@@ -31,11 +31,11 @@ static DPKG_RUNNING: AtomicBool = AtomicBool::new(false);
 static LOCKED: AtomicBool = AtomicBool::new(false);
 static SUBPROCESS: AtomicI32 = AtomicI32::new(-1);
 // Global constants
-const DB_KEY_PATH: &str = "etc/omakase/keys";
-const DB_CACHE_PATH: &str = "var/cache/omakase/db";
-const PKG_CACHE_PATH: &str = "var/cache/omakase/pkgs";
-const LOCK_PATH: &str = "var/lib/omakase/lock";
-const LOCAL_REPO_PATH: &str = "var/lib/omakase/local_repo";
+const DB_KEY_PATH: &str = "etc/sasm/keys";
+const DB_CACHE_PATH: &str = "var/cache/sasm/db";
+const PKG_CACHE_PATH: &str = "var/cache/sasm/pkgs";
+const LOCK_PATH: &str = "var/lib/sasm/lock";
+const LOCAL_REPO_PATH: &str = "var/lib/sasm/local_repo";
 
 /// Check if in verbose mode
 fn verbose() -> bool {
@@ -96,7 +96,7 @@ async fn try_main(opts: &Opts) -> Result<i32> {
         .join(&opts.config_root)
         .canonicalize()
         .context(format!(
-            "Failed to find config_root in Omakase configuration file {} .",
+            "Failed to find config_root in Sasm configuration file {} .",
             opts.config_root.display()
         ))?;
     if !config_root.is_dir() {
@@ -143,7 +143,7 @@ async fn try_main(opts: &Opts) -> Result<i32> {
         Blueprints::from_files(config_root.join("user.blueprint"), &vendor_blueprint_paths)?;
 
     // Do stuff
-    warn!("Omakase is currently under construction and active testing. Proceed with caution on production systems!");
+    warn!("Sasm is currently under construction and active testing. Proceed with caution on production systems!");
     let cancelled = actions::fullfill_command(&config, opts, &mut blueprint).await?;
     if !cancelled {
         // Write back blueprint.
@@ -158,7 +158,7 @@ async fn try_main(opts: &Opts) -> Result<i32> {
 
 fn sigint_handler(root: &Path) {
     if crate::DPKG_RUNNING.load(Ordering::Relaxed) {
-        warn!("You may not interrupt Omakase when dpkg is running.");
+        warn!("You may not interrupt Sasm when dpkg is running.");
         // Don't exit. Important things are happening
         return;
     }

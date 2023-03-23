@@ -86,7 +86,7 @@ impl Config {
 }
 
 fn key_filename_char(c: char) -> bool {
-    c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.'
+    c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' || c == '/'
 }
 
 impl RepoConfig {
@@ -204,7 +204,7 @@ pub struct Opts {
     #[clap(
         display_order = 2,
         long,
-        default_value = "etc/omakase/",
+        default_value = "etc/sasm/",
         help = "Position of the config folder"
     )]
     pub config_root: PathBuf,
@@ -229,7 +229,7 @@ pub enum SubCmd {
     #[clap(display_order = 1)]
     Install(InstallPkg),
     /// Remove packages
-    #[clap(display_order = 2, aliases = &["purge", "autoremove"])]
+    #[clap(display_order = 2)]
     Remove(RemovePkg),
     /// Pick a specific version of a package
     #[clap(display_order = 3)]
@@ -238,7 +238,7 @@ pub enum SubCmd {
     #[clap(display_order = 5, aliases = &["update"])]
     Refresh,
     /// Install and upgrade all packages according to Blueprint
-    #[clap(display_order = 4, aliases = &["upgrade", "full-upgrade", "dist-upgrade"])]
+    #[clap(display_order = 4, aliases = &["upgrade"])]
     Execute,
     /// Search packages from package database
     #[clap(display_order = 11)]
@@ -269,9 +269,6 @@ pub struct InstallPkg {
     /// Install local debs files rather from the repositories
     #[clap(long)]
     pub local: bool,
-    /// Only add packages that are already installed. Used for Omakase initialization.
-    #[clap(long, hide = true)]
-    pub init: bool,
 }
 
 #[derive(Parser)]

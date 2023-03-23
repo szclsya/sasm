@@ -115,7 +115,7 @@ fn process_user_request(
     ms: &MachineStatus,
 ) -> Result<()> {
     match req {
-        UserRequest::Install((list, init_mode)) => {
+        UserRequest::Install(list) => {
             for install in list {
                 // Check if this package actually exists
                 if pool.get_pkgs_by_name(&install.pkgname).is_none() {
