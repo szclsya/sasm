@@ -19,19 +19,16 @@ pub struct PkgRequirement {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PkgMeta {
     pub name: String,
-    pub section: String,
     pub description: String,
     pub version: PkgVersion,
+
     pub depends: Vec<(String, VersionRequirement)>,
-    pub breaks: Vec<(String, VersionRequirement)>,
     pub conflicts: Vec<(String, VersionRequirement)>,
-    pub recommends: Option<Vec<(String, VersionRequirement)>>,
-    pub suggests: Option<Vec<(String, VersionRequirement)>>,
-    pub provides: Option<Vec<(String, VersionRequirement)>>,
-    pub replaces: Option<Vec<(String, VersionRequirement)>>,
+    pub provides: Vec<(String, VersionRequirement)>,
+    pub replaces: Vec<(String, VersionRequirement)>,
+    pub download_size: u64,
     pub install_size: u64,
 
-    pub essential: bool,
     pub source: PkgSource,
 }
 

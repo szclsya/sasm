@@ -1,5 +1,3 @@
-//mod verify;
-
 use crate::{
     info,
     types::{config::RepoConfig, Checksum},

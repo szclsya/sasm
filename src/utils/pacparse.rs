@@ -1,9 +1,14 @@
 /// Parse pacman style package database files
 use nom::{
-    bytes::complete::{take, take_till, take_until1},
-    character::complete::{alphanumeric1, anychar, char},
+    bytes::complete::{take_till, take_until1, take_while1},
+    character::complete::{alphanumeric1, char},
     IResult,
+    combinator::eof,
 };
+use anyhow::{Result, bail };
+use std::collections::HashMap;
+
+use crate::types::{ VersionRequirement, parse_version_requirement };
 
 /// Parse the key part of a paragraph, like `%NAME%`
 fn parse_key(i: &str) -> IResult<&str, &str> {
@@ -31,7 +36,6 @@ fn parse_value_with_empty_line(i: &str) -> IResult<&str, &str> {
 fn parse_value(mut i: &str) -> IResult<&str, Vec<String>> {
     let mut lines = Vec::new();
     loop {
-        eprint!("{i}bruh");
         let (x, content) = take_till(|c| c == '\n')(i)?;
         let (x, _) = char('\n')(x)?;
         i = x;
@@ -52,6 +56,37 @@ fn parse_pair(i: &str) -> IResult<&str, (String, Vec<String>)> {
     let (i, lines) = parse_value(i)?;
 
     Ok((i, (key.to_owned(), lines)))
+}
+
+pub fn parse_str(mut i: &str) -> anyhow::Result<HashMap<String, Vec<String>>> {
+    let mut res = HashMap::new();
+    let mut counter = 0;
+    while !i.is_empty() {
+        match parse_pair(i) {
+            Ok((x, pair)) => {
+                res.insert(pair.0, pair.1);
+                counter += 1;
+                i = x;
+            },
+            Err(e) => {
+                bail!("bad pacman database on paragraph {counter}: {e}");
+            }
+        }
+    }
+    Ok(res)
+}
+
+fn is_package_name_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '@' || c == '.' || c == '+' || c == '-'
+}
+
+pub fn parse_package_requirement_line(i: &str) -> IResult<&str, (&str, VersionRequirement)> {
+    // First parse the package name
+    let (i, name) = take_while1(is_package_name_char)(i)?;
+    // Then the version requirement
+    let (i, ver_req) = parse_version_requirement(i)?;
+    let (i, _) = eof(i)?;
+    Ok((i, (name, ver_req)))
 }
 
 #[cfg(test)]

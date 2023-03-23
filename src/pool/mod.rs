@@ -78,22 +78,6 @@ pub trait PkgPool: BasicPkgPool {
         Ok(res)
     }
 
-    fn has_dbg_pkg(&self, pkgid: usize) -> Result<bool> {
-        let pkg = match self.get_pkg_by_id(pkgid) {
-            Some(meta) => meta,
-            None => bail!("Bad package ID."),
-        };
-        if let Some(dbg_pkgs) = self.get_pkgs_by_name(&format!("{}-dbg", pkg.name)) {
-            for id in dbg_pkgs {
-                let dbgpkg = self.get_pkg_by_id(id).unwrap();
-                if dbgpkg.version == pkg.version && dbgpkg.section == "debug" {
-                    return Ok(true);
-                }
-            }
-        }
-        Ok(false)
-    }
-
     fn pick_best_pkg(
         &self,
         pkgname: &str,
@@ -132,11 +116,9 @@ pub trait PkgPool: BasicPkgPool {
     fn find_provide(&self, name: &str, ver_req: &Option<VersionRequirement>) -> Option<String> {
         let ver_req = ver_req.clone().unwrap_or_default();
         for (_, pkg) in self.pkgid_iter() {
-            if let Some(provides) = &pkg.provides {
-                for provide in provides {
-                    if provide.0 == name && provide.1.combine(&ver_req).is_ok() {
-                        return Some(pkg.name.to_owned());
-                    }
+            for provide in &pkg.provides {
+                if provide.0 == name && provide.1.combine(&ver_req).is_ok() {
+                    return Some(pkg.name.to_owned());
                 }
             }
         }
@@ -146,11 +128,9 @@ pub trait PkgPool: BasicPkgPool {
 
     fn find_replacement(&self, name: &str, ver_req: &VersionRequirement) -> Option<String> {
         for (_, pkg) in self.pkgid_iter() {
-            if let Some(replaces) = &pkg.replaces {
-                for replace in replaces {
-                    if replace.0 == name && replace.1.within(ver_req) {
-                        return Some(pkg.name.to_owned());
-                    }
+            for replace in &pkg.replaces {
+                if replace.0 == name && replace.1.within(ver_req) {
+                    return Some(pkg.name.to_owned());
                 }
             }
         }
@@ -196,35 +176,6 @@ pub trait PkgPool: BasicPkgPool {
                     "Cannot find an applicable version for dependency {}.",
                     style(&dep.0).bold()
                 );
-            }
-        }
-
-        // Enroll breaks
-        for bk in pkg.breaks.iter() {
-            let breakable = match self.get_pkgs_by_name(&bk.0) {
-                Some(pkgs) => match subset {
-                    Some(ids) => {
-                        let pkgs: Vec<usize> =
-                            pkgs.into_iter().filter(|id| ids.contains(id)).collect();
-                        pkgs
-                    }
-                    None => pkgs,
-                },
-                None => {
-                    // Nothing to break. Good!
-                    continue;
-                }
-            };
-
-            for bk_pkgid in breakable {
-                let p = self.get_pkg_by_id(bk_pkgid).unwrap();
-                if bk.1.contains(&p.version) {
-                    let clause = vec![
-                        !Lit::from_dimacs(pkgid as isize),
-                        !Lit::from_dimacs(bk_pkgid as isize),
-                    ];
-                    res.push(clause);
-                }
             }
         }
 
