@@ -1,5 +1,5 @@
 use crate::{
-    info,
+    info, debug,
     types::{config::RepoConfig, Checksum},
     utils::downloader::{Compression, DownloadJob, Downloader},
 };
@@ -30,13 +30,7 @@ impl LocalDb {
 
     /// Get the remote (relative) path and local path for a repository
     pub fn get_package_db(&self, name: &str) -> Result<(String, PathBuf)> {
-        let repo = match self.repos.get(name) {
-            Some(repo) => repo,
-            None => bail!("Repository with name {} not found.", name),
-        };
-
-        let arch = &self.arch;
-        let remote_relative_path = format!("/{0}/os/{1}/{0}.db", name, self.arch);
+        let remote_relative_path = format!("{0}.db", name);
         let local_path = self.root.join(self.root.join(format!("{}.db", name)));
 
         Ok((remote_relative_path, local_path))
@@ -52,13 +46,8 @@ impl LocalDb {
     }
 
     pub fn get_contents_db(&self, name: &str) -> Result<(String, PathBuf)> {
-        let repo = match self.repos.get(name) {
-            Some(repo) => repo,
-            None => bail!("Repository with name {} not found.", name),
-        };
-
         let arch = &self.arch;
-        let remote_relative_path = format!("/{0}/os/{1}/{0}.files", name, self.arch);
+        let remote_relative_path = format!("{0}.files", name);
         let local_path = self.root.join(self.root.join(format!("{}.files", name)));
 
         Ok((remote_relative_path, local_path))
@@ -77,20 +66,28 @@ impl LocalDb {
         info!("Refreshing local repository metadata...");
 
         let package_dbs = self.get_all_package_db()?;
+        if crate::verbose() {
+            for db in &package_dbs {
+                debug!("Downloading {} {}", db.0, db.1.display());
+            }
+        }
+
         let mut download_jobs = Vec::with_capacity(package_dbs.len());
         for (name, repo) in &self.repos {
             let (remote_path, local_path) = self.get_package_db(&name)?;
-            if local_path.is_file() {
+            let checksum = if local_path.is_file() {
                 // Calculate old checksum
-                let old_checksum = Checksum::from_file_sha256(&local_path)?;
-                download_jobs.push(DownloadJob {
-                    url: format!("{}/{}", repo.get_url()?, remote_path),
-                    description: Some(format!("Package database for {}", style(name).bold())),
-                    filename: Some(format!("{}.db", name)),
-                    size: None,
-                    compression: Compression::None(Some(old_checksum)),
-                })
-            }
+                Some(Checksum::from_file_sha256(&local_path)?)
+            } else {
+                None
+            };
+            download_jobs.push(DownloadJob {
+                url: format!("{}/{}", repo.get_url(name, &self.arch)?, remote_path),
+                description: Some(format!("Package database for {}", style(name).bold())),
+                filename: Some(format!("{}.db", name)),
+                size: None,
+                compression: Compression::None(checksum),
+            })
         }
 
         // The downloader will verify the checksum for us

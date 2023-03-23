@@ -1,5 +1,7 @@
 mod blueprint;
 pub use blueprint::{Blueprints, PkgRequest};
+mod repo;
+pub use repo::RepoConfig;
 
 use crate::warn;
 
@@ -18,7 +20,6 @@ pub struct Config {
     pub arch: String,
     #[serde(serialize_with = "ordered_map")]
     pub repo: HashMap<String, RepoConfig>,
-    pub r#unsafe: Option<UnsafeConfig>,
 }
 
 fn ordered_map<S>(value: &HashMap<String, RepoConfig>, serializer: S) -> Result<S::Ok, S::Error>
@@ -27,168 +28,6 @@ where
 {
     let ordered: BTreeMap<_, _> = value.iter().collect();
     ordered.serialize(serializer)
-}
-
-#[derive(Serialize, Deserialize, Default, Clone)]
-pub struct UnsafeConfig {
-    #[serde(default)]
-    pub purge_on_remove: bool,
-    #[serde(default)]
-    pub unsafe_io: bool,
-    #[serde(default)]
-    pub allow_remove_essential: bool,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct RepoConfig {
-    pub source: Mirror,
-    pub keys: Vec<String>,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-#[serde(untagged)]
-pub enum Mirror {
-    Simple(String),
-    MirrorList {
-        mirrorlist: PathBuf,
-        preferred: String,
-    },
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct MirrorList {
-    default: String,
-
-    #[serde(flatten)]
-    mirrors: HashMap<String, MirrorMeta>,
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct MirrorMeta {
-    pub description: String,
-    pub url: String,
-}
-
-impl Config {
-    pub fn check_sanity(&self) -> Result<()> {
-        for (name, repo) in &self.repo {
-            // Check public key names
-            for key in &repo.keys {
-                if key.contains(|c| !key_filename_char(c)) {
-                    bail!("Invalid character in public key filename {name} for repository {key}.",);
-                }
-            }
-            repo.check_sanity()?;
-        }
-
-        Ok(())
-    }
-}
-
-fn key_filename_char(c: char) -> bool {
-    c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' || c == '/'
-}
-
-impl RepoConfig {
-    /// Check if there's some mirror available
-    pub fn check_sanity(&self) -> Result<()> {
-        // If we are using MirrorList, test-parse here
-        if let Mirror::MirrorList {
-            preferred: _,
-            mirrorlist,
-        } = &self.source
-        {
-            let path = mirrorlist;
-            if !path.is_absolute() {
-                bail!(
-                    "Path to MirrorList must be absolute! Got: {}.",
-                    style(path.display()).bold()
-                );
-            }
-            if !path.is_file() {
-                bail!("MirrorList {} is not a file!", style(path.display()).bold());
-            }
-            let content = fs::read_to_string(&path).context(format!(
-                "Failed to read MirrorList file {}!",
-                path.display()
-            ))?;
-            let mirrorlist: MirrorList = toml::from_str(&content)
-                .context(format!("Malformed MirrorList file {}!", path.display()))?;
-            // Check if there's at least something to work with
-            if mirrorlist.mirrors.is_empty() {
-                bail!("MirrorList {} doesn't contain any mirror!", path.display());
-            }
-            // Check MirrorList's default actually points to something
-            if mirrorlist.mirrors.get(&mirrorlist.default).is_none() {
-                bail!("MirrorList {} has invalid default!", path.display());
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Get the first choice mirror
-    pub fn get_url(&self) -> Result<String> {
-        let url = match &self.source {
-            Mirror::Simple(m) => {
-                let mut url = m.clone();
-                // Add `debs`
-                normalize_mirror_url(&mut url);
-                url
-            }
-            Mirror::MirrorList {
-                preferred,
-                mirrorlist: _,
-            } => {
-                let (mirrors, default) = self.get_mirrors()?;
-                // Check if the preferred mirror exists
-                if let Some(mirror) = mirrors.get(preferred) {
-                    mirror.url.clone()
-                } else {
-                    warn!("Preferred mirror {preferred} doesn't exist in MirrorList. Use default mirror.");
-                    default.url
-                }
-            }
-        };
-
-        Ok(url)
-    }
-
-    pub fn get_mirrors(&self) -> Result<(HashMap<String, MirrorMeta>, MirrorMeta)> {
-        if let Mirror::MirrorList {
-            preferred: _,
-            mirrorlist,
-        } = &self.source
-        {
-            let path = mirrorlist;
-            let content = fs::read_to_string(&path).context(format!(
-                "Failed to read MirrorList file {}!",
-                path.display()
-            ))?;
-            let mut mirrorlist: MirrorList = toml::from_str(&content)
-                .context(format!("Malformed MirrorList file {}!", path.display()))?;
-            for mirror in &mut mirrorlist.mirrors {
-                let url = &mut mirror.1.url;
-                normalize_mirror_url(url);
-            }
-            let default = mirrorlist
-                .mirrors
-                .get(&mirrorlist.default)
-                .context("MirrorList with invalid default!")?
-                .clone();
-            Ok((mirrorlist.mirrors, default))
-        } else {
-            bail!("Cannot get mirrors for simple mirror!");
-        }
-    }
-}
-
-fn normalize_mirror_url(url: &mut String) {
-    // Add `debs`
-    if !url.ends_with('/') {
-        url.push('/');
-    }
-    url.push_str("debs");
 }
 
 #[derive(Parser)]
@@ -266,7 +105,7 @@ pub struct InstallPkg {
     /// Don't install recommended packages
     #[clap(long)]
     pub no_recommends: bool,
-    /// Install local debs files rather from the repositories
+    /// Install local package files rather from the repositories
     #[clap(long)]
     pub local: bool,
 }

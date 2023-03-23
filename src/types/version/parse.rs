@@ -74,9 +74,10 @@ fn upstream_version(i: &str) -> IResult<&str, (Vec<PkgVersionSegment>, Option<u6
        if ti.len() == 0 {
             // Our job is done here
             break;
-       } else if let Ok((_, r)) = revision(ti) {
+       } else if let Ok((i, r)) = revision(ti) {
            // We've reached the end and there's a revision
            rev = Some(r.parse().unwrap());
+           ti = i;
            break;
        } else if let Ok((i, digits)) = digit1::<_, ()>(ti) {
            // We got a digit segment!

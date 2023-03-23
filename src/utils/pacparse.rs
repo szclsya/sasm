@@ -7,6 +7,7 @@ use nom::{
 };
 use anyhow::{Result, bail };
 use std::collections::HashMap;
+use crate::debug;
 
 use crate::types::{ VersionRequirement, parse_version_requirement };
 
@@ -84,7 +85,12 @@ pub fn parse_package_requirement_line(i: &str) -> IResult<&str, (&str, VersionRe
     // First parse the package name
     let (i, name) = take_while1(is_package_name_char)(i)?;
     // Then the version requirement
-    let (i, ver_req) = parse_version_requirement(i)?;
+    let (i, ver_req) = if i.len() != 0 {
+        parse_version_requirement(i)?
+    } else {
+        (i, VersionRequirement::new())
+    };
+
     let (i, _) = eof(i)?;
     Ok((i, (name, ver_req)))
 }

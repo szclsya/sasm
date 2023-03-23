@@ -117,7 +117,6 @@ async fn try_main(opts: &Opts) -> Result<i32> {
         .read_to_string(&mut data)
         .context("Failed to read configuration file.")?;
     let config: Config = toml::from_str(&data).context("Failed to parse configuration file.")?;
-    config.check_sanity()?;
 
     // Set-up blueprints
     let mut vendor_blueprint_paths = Vec::new();

@@ -117,7 +117,7 @@ pub async fn fullfill_command(
             lock::lock(&opts.root)?;
 
             localdb.update(&downloader).await?;
-            success!("Omakase has successfully refreshed local package metadata.");
+            success!("sasm has successfully refreshed local package metadata.");
             Ok(false)
         }
         SubCmd::Execute => {

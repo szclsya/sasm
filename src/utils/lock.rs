@@ -4,7 +4,7 @@ use nix::unistd::Uid;
 use serde::{Deserialize, Serialize};
 use std::{fs, io::prelude::*, path::Path, sync::atomic::Ordering};
 
-/// Make sure only one instance of Omakase can run at one time
+/// Make sure only one instance of sasm can run at one time
 
 #[derive(Serialize, Deserialize)]
 struct LockInfo {
@@ -14,7 +14,7 @@ struct LockInfo {
 pub fn ensure_unlocked(root: &Path) -> Result<()> {
     if let Some(pid) = check(root)? {
         bail!(
-            "Another instance of Omakase is currently running at PID {}.",
+            "Another instance of sasm is currently running at PID {}.",
             pid
         );
     }

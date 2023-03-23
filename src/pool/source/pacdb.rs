@@ -1,9 +1,9 @@
 /// The pacman db reader
 use crate::{
     pool::PkgPool,
-    types::{Checksum, PkgMeta, PkgSource, PkgVersion, VersionRequirement},
-    utils::pacparse,
-    warn,
+    types::{Checksum, PkgMeta, PkgSource, PkgVersion, VersionRequirement, parse_version},
+    utils::{pacparse, downloader},
+    warn, error,
 };
 use anyhow::{bail, format_err, Result};
 use debcontrol::{BufParse, Streaming};
@@ -39,9 +39,11 @@ pub fn import(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
             let mut content = String::new();
             file.read_to_string(&mut content)?;
             let fields = pacparse::parse_str(&content)?;
+            let pkgmeta = fields_to_pkgmeta(fields)?;
+            pool.add(pkgmeta);
         }
     }
-    todo!()
+    Ok(())
 }
 
 fn fields_to_pkgmeta(mut f: HashMap<String, Vec<String>>) -> Result<PkgMeta> {
@@ -53,25 +55,25 @@ fn fields_to_pkgmeta(mut f: HashMap<String, Vec<String>>) -> Result<PkgMeta> {
     let path = get_first_or_complain("FILENAME", &mut f).map_err(|e| {
         format_err!("bad metadata: FILENAME missing ({e})")
     })?;
+
+    // Needed for source, so parse this first
+    let download_size = get_first_or_complain("CSIZE", &mut f)?.parse()?;
     Ok(PkgMeta {
         name: name.clone(),
-        description: get_first_or_complain("DESCRIPTION", &mut f)
+        description: get_first_or_complain("DESC", &mut f)
             .map_err(|e| format_err!("bad metadata for {name}: {e}"))?,
         version: PkgVersion::try_from(get_first_or_complain("VERSION", &mut f)
                                       .map_err(|e| format_err!("bad metadata for {name}: {e}"))?.as_str())?,
-        depends: get_pkg_list("DEPENDS", &mut f)?,
-        optional: get_pkg_list("OPTDEPENDS", &mut f)?,
-        conflicts: get_pkg_list("CONFLICTS", &mut f)?,
+        depends: get_pkg_list(&name, "DEPENDS", &mut f)?,
+        optional: get_pkg_list(&name, "OPTDEPENDS", &mut f)?,
+        conflicts: get_pkg_list(&name, "CONFLICTS", &mut f)?,
         install_size: get_first_or_complain("ISIZE", &mut f)?.parse()?,
-        download_size: get_first_or_complain("CSIZE", &mut f)?.parse()?,
-        provides: get_pkg_list("PROVIDES", &mut f)?,
-        replaces: get_pkg_list("REPLACES", &mut f)?,
+        download_size,
+        provides: get_pkg_list(&name, "PROVIDES", &mut f)?,
+        replaces: get_pkg_list(&name, "REPLACES", &mut f)?,
         source: PkgSource::Http((
             path,
-            f.remove("CSIZE")
-                .ok_or_else(|| format_err!("Metadata for package {} does not contain the Size field.", name))?
-                .remove(0)
-                .parse()?,
+            download_size,
             {
                 if let Some(hex) = f.get("SHA256") {
                     Checksum::from_sha256_str(&hex[0])?
@@ -100,14 +102,17 @@ fn get_first_or_complain(name: &str, f: &mut HashMap<String, Vec<String>>) -> Re
     }
 }
 
-fn get_pkg_list(name: &str, f: &mut HashMap<String, Vec<String>>) -> Result<Vec<(String, VersionRequirement)>> {
+fn get_pkg_list(pkgname: &str, field_name: &str, f: &mut HashMap<String, Vec<String>>) -> Result<Vec<(String, VersionRequirement)>> {
     let mut out = Vec::new();
-    if let Some(values) = f.remove(name) {
+    if let Some(values) = f.remove(field_name) {
         for (i, line) in values.into_iter().enumerate() {
             // Parse the package line
             match pacparse::parse_package_requirement_line(&line) {
                 Ok((_, (name, verreq))) => out.push((name.to_owned(), verreq)),
-                Err(e) => bail!("malformed package requirement at requirement line {i}: {e}")
+                Err(e) => {
+                    error!("bad package requirement when parsing {field_name}: {e}");
+                    bail!("malformed package requirement for {pkgname} at line {i}");
+                }
             }
         }
     }

@@ -37,9 +37,6 @@ pub async fn execute(
         alt_root = true;
     }
 
-    // Load unsafe configs
-    let unsafe_config = config.r#unsafe.clone().unwrap_or_default();
-
     debug!("Parsing dpkg database...");
     let dbs = local_db
         .get_all_package_db()
@@ -62,7 +59,7 @@ pub async fn execute(
     let solver = Solver::from(pool);
     let res = solver.install(blueprint)?;
     // Translating result to list of actions
-    let mut actions = machine_status.gen_actions(res.as_slice(), unsafe_config.purge_on_remove);
+    let mut actions = machine_status.gen_actions(res.as_slice(), false);
     if alt_root {
         let modifier = modifier::UnpackOnly::default();
         modifier.apply(&mut actions);
@@ -83,25 +80,9 @@ pub async fn execute(
     crate::WRITER.writeln("", "")?;
     actions.show_size_change();
 
-    // Additional confirmation if removing essential packages
-    if actions.remove_essential() {
-        if unsafe_config.allow_remove_essential {
-            let prefix = style("DANGER").red().to_string();
-            crate::WRITER.writeln(
-                &prefix,
-                "Some ESSENTIAL packages will be removed/purged. Are you REALLY sure?",
-            )?;
-            if cli::ask_confirm(opts, "Is this supposed to happen?")? {
-                bail!("User cancelled operation.");
-            }
-        } else {
-            bail!("Some ESSENTIAL packages will be removed. Aborting...")
-        }
-    }
-
     if ask_confirm(opts, "Proceed?")? {
         // Run it!
-        dpkg::execute_pkg_actions(actions, &opts.root, downloader, unsafe_config.unsafe_io).await?;
+        dpkg::execute_pkg_actions(actions, &opts.root, downloader, false).await?;
         Ok(false)
     } else {
         Ok(true)
