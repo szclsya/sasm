@@ -23,11 +23,11 @@ pub struct PkgMeta {
     pub description: String,
     pub version: PkgVersion,
 
-    pub depends: Vec<(String, VersionRequirement)>,
-    pub optional: Vec<(String, VersionRequirement)>,
-    pub conflicts: Vec<(String, VersionRequirement)>,
-    pub provides: Vec<(String, VersionRequirement)>,
-    pub replaces: Vec<(String, VersionRequirement)>,
+    pub depends: Vec<(String, VersionRequirement, Option<String>)>,
+    pub optional: Vec<(String, VersionRequirement, Option<String>)>,
+    pub conflicts: Vec<(String, VersionRequirement, Option<String>)>,
+    pub provides: Vec<(String, VersionRequirement, Option<String>)>,
+    pub replaces: Vec<(String, VersionRequirement, Option<String>)>,
     pub download_size: u64,
     pub install_size: u64,
 

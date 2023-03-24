@@ -1,9 +1,11 @@
 /// Parse pacman style package database files
 use nom::{
     bytes::complete::{take_till, take_until1, take_while1},
-    character::complete::{alphanumeric1, char},
+    character::complete::{alphanumeric1, char, space0},
     IResult,
     combinator::eof,
+    multi::many1,
+    character::complete::anychar,
 };
 use anyhow::{Result, bail };
 use std::collections::HashMap;
@@ -78,21 +80,43 @@ pub fn parse_str(mut i: &str) -> anyhow::Result<HashMap<String, Vec<String>>> {
 }
 
 fn is_package_name_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '@' || c == '.' || c == '+' || c == '-'
+    c.is_alphanumeric() || c == '@' || c == '.' || c == '+' || c == '-' || c == '_'
 }
 
-pub fn parse_package_requirement_line(i: &str) -> IResult<&str, (&str, VersionRequirement)> {
+fn is_version_requirement(i: &str) -> bool {
+    i.starts_with(">") || i.starts_with("<") || i.starts_with("=")
+}
+
+pub fn parse_package_requirement_line(i: &str) -> IResult<&str, (&str, VersionRequirement, Option<String>)> {
     // First parse the package name
     let (i, name) = take_while1(is_package_name_char)(i)?;
     // Then the version requirement
-    let (i, ver_req) = if i.len() != 0 {
-        parse_version_requirement(i)?
+    if is_version_requirement(i) {
+        let (i, ver_req) = parse_version_requirement(i)?;
+        if i.is_empty() {
+            return Ok((i, (name, ver_req, None)))
+        }
+        let (i, desc) = parse_requirement_description(i)?;
+        let (i, _) = eof(i)?;
+        Ok((i, (name, ver_req, Some(desc))))
+    } else if i.starts_with(":") {
+        let (i, desc) = parse_requirement_description(i)?;
+        let (i, _) = eof(i)?;
+        Ok((i, (name, VersionRequirement::new(), Some(desc))))
     } else {
-        (i, VersionRequirement::new())
-    };
+        let (i, _) = eof(i)?;
+        Ok((i, (name, VersionRequirement::new(), None)))
+    }
+}
 
+fn parse_requirement_description(i: &str) -> IResult<&str, String> {
+    let (i, _) = char(':')(i)?;
+    let (i, _) = space0(i)?;
+    let (i, desc) = many1(anychar)(i)?;
     let (i, _) = eof(i)?;
-    Ok((i, (name, ver_req)))
+
+    let desc_str: String = desc.into_iter().collect();
+    Ok((i, desc_str))
 }
 
 #[cfg(test)]

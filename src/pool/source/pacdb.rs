@@ -75,9 +75,9 @@ fn fields_to_pkgmeta(mut f: HashMap<String, Vec<String>>) -> Result<PkgMeta> {
             path,
             download_size,
             {
-                if let Some(hex) = f.get("SHA256") {
+                if let Some(hex) = f.get("SHA256SUM") {
                     Checksum::from_sha256_str(&hex[0])?
-                } else if let Some(hex) = f.get("SHA512") {
+                } else if let Some(hex) = f.get("SHA512SUM") {
                     Checksum::from_sha512_str(&hex[0])?
                 } else {
                     bail!(
@@ -102,13 +102,13 @@ fn get_first_or_complain(name: &str, f: &mut HashMap<String, Vec<String>>) -> Re
     }
 }
 
-fn get_pkg_list(pkgname: &str, field_name: &str, f: &mut HashMap<String, Vec<String>>) -> Result<Vec<(String, VersionRequirement)>> {
+fn get_pkg_list(pkgname: &str, field_name: &str, f: &mut HashMap<String, Vec<String>>) -> Result<Vec<(String, VersionRequirement, Option<String>)>> {
     let mut out = Vec::new();
     if let Some(values) = f.remove(field_name) {
         for (i, line) in values.into_iter().enumerate() {
             // Parse the package line
             match pacparse::parse_package_requirement_line(&line) {
-                Ok((_, (name, verreq))) => out.push((name.to_owned(), verreq)),
+                Ok((_, (name, verreq, desc))) => out.push((name.to_owned(), verreq, desc)),
                 Err(e) => {
                     error!("bad package requirement when parsing {field_name}: {e}");
                     bail!("malformed package requirement for {pkgname} at line {i}");
