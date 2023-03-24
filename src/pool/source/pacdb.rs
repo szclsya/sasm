@@ -1,45 +1,31 @@
 /// The pacman db reader
 use crate::{
     pool::PkgPool,
-    types::{Checksum, PkgMeta, PkgSource, PkgVersion, VersionRequirement, parse_version},
+    types::{Checksum, PkgMeta, PkgSource, PkgVersion, VersionRequirement},
     utils::{pacparse, downloader},
-    warn, error,
+    debug, error,
 };
-use anyhow::{bail, format_err, Result};
-use debcontrol::{BufParse, Streaming};
-use rayon::prelude::*;
+use anyhow::{bail, format_err, Result, Context};
 use std::{collections::HashMap, fs::File, path::Path, io::Read};
 
 use tar::Archive;
 use flate2::read::GzDecoder;
 
-const INTERESTED_FIELDS: &[&str] = &[
-    "NAME",
-    "VERSION",
-    "DESC",
-    "CSIZE", // Download size
-    "ISIZE", // Install size
-    "DEPENDS",
-    "OPTDEPENDS",
-    "CONFLICTS",
-    "PROVIDES",
-    "REPLACES"
-];
-
 pub fn import(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
+    debug!("Importing package database from {}", db.display());
     let f = File::open(db)?;
     let gzipdecoder = GzDecoder::new(f);
     let mut tar = Archive::new(gzipdecoder);
 
     for file in tar.entries()? {
-        let mut file = file?;
-        let path = file.header().path()?;
+        let mut file = file.context("error reading file from db")?;
+        let path = file.path()?.to_path_buf();
         if path.ends_with("desc") {
             // Now we are talking!
             let mut content = String::new();
-            file.read_to_string(&mut content)?;
-            let fields = pacparse::parse_str(&content)?;
-            let pkgmeta = fields_to_pkgmeta(fields)?;
+            file.read_to_string(&mut content).context("error reading desc file from db")?;
+            let fields = pacparse::parse_str(&content).context(format!("error parsing desc {}", path.display()))?;
+            let pkgmeta = fields_to_pkgmeta(fields).context(format!("error reading fields in {}", path.display()))?;
             pool.add(pkgmeta);
         }
     }
@@ -64,6 +50,7 @@ fn fields_to_pkgmeta(mut f: HashMap<String, Vec<String>>) -> Result<PkgMeta> {
             .map_err(|e| format_err!("bad metadata for {name}: {e}"))?,
         version: PkgVersion::try_from(get_first_or_complain("VERSION", &mut f)
                                       .map_err(|e| format_err!("bad metadata for {name}: {e}"))?.as_str())?,
+
         depends: get_pkg_list(&name, "DEPENDS", &mut f)?,
         optional: get_pkg_list(&name, "OPTDEPENDS", &mut f)?,
         conflicts: get_pkg_list(&name, "CONFLICTS", &mut f)?,

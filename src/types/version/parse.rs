@@ -9,8 +9,9 @@ use nom::{
     combinator::eof
 };
 
+
 pub fn parse_version(i: &str) -> IResult<&str, PkgVersion> {
-    let (i, epoch) = match context(
+    let (tmp_i, epoch) = match context(
         "Parsing epoch...",
         pair::<_, _, _, nom::error::Error<&str>, _, _>(digit1, char(':')),
     )(i)
@@ -18,7 +19,12 @@ pub fn parse_version(i: &str) -> IResult<&str, PkgVersion> {
         Ok((i, (epoch, _))) => (i, epoch.parse().unwrap()),
         Err(_) => (i, 0),
     };
-    let (i, (upstream_version, revision)) = upstream_version(i)?;
+
+    // Try with or without epoch
+    let (i, (upstream_version, revision)) = match upstream_version(tmp_i) {
+        Ok(x) => x,
+        Err(_) => upstream_version(i)?,
+    };
 
     let res = PkgVersion {
         epoch,
@@ -44,7 +50,7 @@ fn is_upstream_version_char(c: char) -> bool {
 }
 
 fn is_upstream_version_separater(c: char) -> bool {
-    c == '.' || c == '-' || c == '~' || c == '+'
+    c == '.' || c == '-' || c == '_' || c == '~' || c == '+'
 }
 
 fn upstream_version_separater(i: &str) -> IResult<&str, &str> {
@@ -92,7 +98,8 @@ fn upstream_version(i: &str) -> IResult<&str, (Vec<PkgVersionSegment>, Option<u6
             result.push(PkgVersionSegment::Separater(chars.to_owned()));
             ti = i;
         } else {
-           return Err(nom::Err::Error(nom::error::Error::from_error_kind(i, ErrorKind::Char)));
+           // We've reached something we don't know about. Stop parsing
+           break;
         }
     }
 

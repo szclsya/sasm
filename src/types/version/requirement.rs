@@ -127,13 +127,13 @@ impl VersionRequirement {
 pub fn parse_version_requirement(i: &str) -> IResult<&str, VersionRequirement> {
     let (i, compare) = context(
         "Parsing compare literal...",
-        alt((tag(">="), tag("<="), tag("="), tag(">>"), tag("<<"))),
+        alt((tag(">="), tag("<="), tag("="), tag(">"), tag("<"))),
     )(i)?;
     let (i, _) = space0(i)?;
     let (i, ver) = context("Parsing version in VersionRequirement...", parse_version)(i)?;
     let mut res = VersionRequirement::default();
     match compare {
-        ">>" => {
+        ">" => {
             res.lower_bond = Some((ver, false));
         }
         ">=" => {
@@ -143,7 +143,7 @@ pub fn parse_version_requirement(i: &str) -> IResult<&str, VersionRequirement> {
             res.lower_bond = Some((ver.clone(), true));
             res.upper_bond = Some((ver, true));
         }
-        "<<" => {
+        "<" => {
             res.upper_bond = Some((ver, false));
         }
         "<=" => {
