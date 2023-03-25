@@ -124,7 +124,7 @@ impl VersionRequirement {
 
     // Check if there's an overlap between two VersionRequirements
     pub fn overlap(&self, that: &VersionRequirement) -> bool {
-        todo!()
+        self.combine(that).is_ok()
     }
 }
 
@@ -190,7 +190,7 @@ impl fmt::Display for VersionRequirement {
             if lower.1 {
                 write!(f, ">={}", lower.0)?;
             } else {
-                write!(f, ">>{}", lower.0)?;
+                write!(f, ">{}", lower.0)?;
             }
             written = true;
         }
@@ -203,7 +203,7 @@ impl fmt::Display for VersionRequirement {
             if upper.1 {
                 write!(f, "<={}", upper.0)?;
             } else {
-                write!(f, "<<{}", upper.0)?;
+                write!(f, "<{}", upper.0)?;
             }
         }
         Ok(())
@@ -233,26 +233,26 @@ mod test {
             ),
             (
                 VersionRequirement::default(),
-                VersionRequirement::try_from(">>1").unwrap(),
-                VersionRequirement::try_from(">>1").unwrap(),
+                VersionRequirement::try_from(">1").unwrap(),
+                VersionRequirement::try_from(">1").unwrap(),
             ),
             (
-                VersionRequirement::try_from(">>1").unwrap(),
+                VersionRequirement::try_from(">1").unwrap(),
                 VersionRequirement::try_from(">=1").unwrap(),
-                VersionRequirement::try_from(">>1").unwrap(),
+                VersionRequirement::try_from(">1").unwrap(),
             ),
             (
-                VersionRequirement::try_from(">>1").unwrap(),
-                VersionRequirement::try_from(">>2").unwrap(),
-                VersionRequirement::try_from(">>2").unwrap(),
+                VersionRequirement::try_from(">1").unwrap(),
+                VersionRequirement::try_from(">2").unwrap(),
+                VersionRequirement::try_from(">2").unwrap(),
             ),
             (
-                VersionRequirement::try_from(">>2").unwrap(),
-                VersionRequirement::try_from(">>1").unwrap(),
-                VersionRequirement::try_from(">>2").unwrap(),
+                VersionRequirement::try_from(">2").unwrap(),
+                VersionRequirement::try_from(">1").unwrap(),
+                VersionRequirement::try_from(">2").unwrap(),
             ),
             (
-                VersionRequirement::try_from(">>1").unwrap(),
+                VersionRequirement::try_from(">1").unwrap(),
                 VersionRequirement::try_from("<=2").unwrap(),
                 VersionRequirement {
                     lower_bond: Some((PkgVersion::try_from("1").unwrap(), false)),
@@ -269,8 +269,8 @@ mod test {
     #[test]
     fn merge_ver_fail() {
         let tests = vec![(
-            VersionRequirement::try_from(">>1").unwrap(),
-            VersionRequirement::try_from("<<1").unwrap(),
+            VersionRequirement::try_from(">1").unwrap(),
+            VersionRequirement::try_from("<1").unwrap(),
         )];
 
         for t in tests {

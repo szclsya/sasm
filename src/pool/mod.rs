@@ -145,7 +145,7 @@ pub trait PkgPool: BasicPkgPool {
         let mut res = Vec::new();
         // Enroll dependencies
         for dep in &pkg.depends {
-            let mut available = match self.get_pkgs_by_name(&dep.0) {
+            let available = match self.get_pkgs_by_name(&dep.0) {
                 Some(pkgs) => match subset {
                     Some(ids) => {
                         let pkgs: Vec<usize> =
@@ -157,10 +157,9 @@ pub trait PkgPool: BasicPkgPool {
                 None => Vec::new(),
             };
             // Provides can be considered as dependencies as well
-            let mut provides: Vec<usize> = self.get_pkgs_by_provide(&dep.0, &dep.1).into_iter().map(|(i, _)| i).collect();
-            available.append(&mut provides);
+            let provides: Vec<usize> = self.get_pkgs_by_provide(&dep.0, &dep.1).into_iter().map(|(i, _)| i).collect();
 
-            if available.is_empty() {
+            if available.is_empty() && provides.is_empty() {
                 bail!("Cannot find a package which fulfills dependency {}.", style(&dep.0).bold());
             }
 
@@ -171,6 +170,10 @@ pub trait PkgPool: BasicPkgPool {
                 if dep.1.contains(&p.version) {
                     clause.push(Lit::from_dimacs(dep_pkgid as isize));
                 }
+            }
+
+            for provide_pkgid in provides {
+                clause.push(Lit::from_dimacs(provide_pkgid as isize));
             }
 
             if clause.len() > 1 {

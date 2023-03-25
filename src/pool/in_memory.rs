@@ -69,7 +69,7 @@ impl BasicPkgPool for InMemoryPool {
             .pkgs
             .par_iter()
             .enumerate()
-            .filter(|(i, pkg)| pkg.provides.iter().filter(|p| p.0 == name && ver_req.within(&p.1)).count() > 0)
+            .filter(|(_i, pkg)| pkg.provides.iter().filter(|p| p.0 == name && ver_req.overlap(&p.1)).count() > 0)
             .map(|(i, pkg)| (i+1, pkg))
             .collect();
         res
