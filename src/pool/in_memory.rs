@@ -2,12 +2,15 @@ use super::{BasicPkgPool, PkgPool};
 use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
 
 use rayon::prelude::*;
+use reqwest::header::ValueDrain;
 use std::collections::HashMap;
 
 pub struct InMemoryPool {
     pkgs: Vec<PkgMeta>,
     // The id of packages for each name, sorted by version
     name_to_ids: HashMap<String, Vec<(usize, PkgVersion)>>,
+    // The ids of packages that provide a certain package, for accelerated provide lookup
+    provide_to_ids: HashMap<String, Vec<(usize, VersionRequirement)>>,
 }
 
 impl InMemoryPool {
@@ -15,17 +18,32 @@ impl InMemoryPool {
         InMemoryPool {
             pkgs: Vec::new(),
             name_to_ids: HashMap::new(),
+            provide_to_ids: HashMap::new(),
         }
     }
 }
 
 impl BasicPkgPool for InMemoryPool {
     fn add(&mut self, meta: PkgMeta) -> usize {
+        // Find out which names are provided
+        let provide_names: Vec<(String, VersionRequirement)> = meta.provides.iter().map(|p| ( p.0.clone(), p.1.clone() )).collect();
+
         let name = meta.name.clone();
         let version = meta.version.clone();
         self.pkgs.push(meta);
         let index = self.pkgs.len();
 
+        // Add pkgid to corresponding provide dict
+        for (provide, ver_req) in provide_names {
+            if self.provide_to_ids.contains_key(&provide) {
+                let ids = self.provide_to_ids.get_mut(&provide).unwrap();
+                ids.push(( index, ver_req));
+            } else {
+                self.provide_to_ids.insert(provide, vec![(index, ver_req)]);
+            }
+        }
+
+        // Add pkgid to corresponding name dict
         if self.name_to_ids.contains_key(&name) {
             let ids = self.name_to_ids.get_mut(&name).unwrap();
             ids.push((index, version));
@@ -64,14 +82,13 @@ impl BasicPkgPool for InMemoryPool {
         }
     }
 
-    fn get_pkgs_by_provide(&self, name: &str, ver_req: &VersionRequirement) -> Vec<(usize, &PkgMeta)> {
-        let res: Vec<(usize, &PkgMeta)> = self
-            .pkgs
-            .par_iter()
-            .enumerate()
-            .filter(|(_i, pkg)| pkg.provides.iter().filter(|p| p.0 == name && ver_req.overlap(&p.1)).count() > 0)
-            .map(|(i, pkg)| (i+1, pkg))
-            .collect();
+    fn get_pkgs_by_provide(&self, name: &str, ver_req: &VersionRequirement) -> Option<Vec<usize>> {
+        let res = if let Some(provides) = self.provide_to_ids.get(name) {
+            let res = provides.into_iter().filter(|pkg| ver_req.overlap(&pkg.1)).map(|pkg| pkg.0).collect();
+            Some(res)
+        } else {
+            None
+        };
         res
     }
 

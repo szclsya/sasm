@@ -23,7 +23,7 @@ pub trait BasicPkgPool {
     // Get a list of available package IDs based on the given name
     fn get_pkgs_by_name(&self, name: &str) -> Option<Vec<usize>>;
     // Get a list of packages that provide a certain package
-    fn get_pkgs_by_provide(&self, name: &str, ver_req: &VersionRequirement) -> Vec<(usize, &PkgMeta)>;
+    fn get_pkgs_by_provide(&self, name: &str, ver_req: &VersionRequirement) -> Option<Vec<usize>>;
     // Get an Iterator of (PkgName, &[(id, PkgVersion)])
     fn pkgname_iter(&self) -> Box<dyn Iterator<Item = (&str, &[(usize, PkgVersion)])> + '_>;
     // Get an Iterator of (PkgId, PkgMeta)
@@ -157,7 +157,7 @@ pub trait PkgPool: BasicPkgPool {
                 None => Vec::new(),
             };
             // Provides can be considered as dependencies as well
-            let provides: Vec<usize> = self.get_pkgs_by_provide(&dep.0, &dep.1).into_iter().map(|(i, _)| i).collect();
+            let provides: Vec<usize> = self.get_pkgs_by_provide(&dep.0, &dep.1).unwrap_or_default();
 
             if available.is_empty() && provides.is_empty() {
                 bail!("Cannot find a package which fulfills dependency {}.", style(&dep.0).bold());
