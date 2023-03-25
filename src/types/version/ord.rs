@@ -1,5 +1,5 @@
 use super::{PkgVersion, PkgVersionSegment};
-use std::cmp::{Ord, Ordering, max};
+use std::cmp::{max, Ord, Ordering};
 
 /// the rpmvercmp algorithm
 /// Check https://fedoraproject.org/wiki/Archive:Tools/RPM/VersionComparison
@@ -13,8 +13,16 @@ impl Ord for PkgVersion {
             return Ordering::Less;
         }
 
-        let this_segments: Vec<&PkgVersionSegment> = self.version.iter().filter(|x| !matches!(x, PkgVersionSegment::Separater(_))).collect();
-        let that_segments: Vec<&PkgVersionSegment> = other.version.iter().filter(|x| !matches!(x, PkgVersionSegment::Separater(_))).collect();
+        let this_segments: Vec<&PkgVersionSegment> = self
+            .version
+            .iter()
+            .filter(|x| !matches!(x, PkgVersionSegment::Separater(_)))
+            .collect();
+        let that_segments: Vec<&PkgVersionSegment> = other
+            .version
+            .iter()
+            .filter(|x| !matches!(x, PkgVersionSegment::Separater(_)))
+            .collect();
 
         let max_len = max(this_segments.len(), that_segments.len());
         for i in 0..max_len {
@@ -22,62 +30,56 @@ impl Ord for PkgVersion {
             let that = that_segments.get(i);
 
             match this {
-                Some(PkgVersionSegment::Alphabetic(this_val)) => {
-                    match that {
-                        Some(PkgVersionSegment::Alphabetic(that_val)) => {
-                            if this_val > that_val {
-                                return Ordering::Greater;
-                            } else if this_val < that_val {
-                                return Ordering::Less;
-                            }
-                        },
-                        Some(PkgVersionSegment::Number(that_val)) => {
-                            return Ordering::Less;
-                        },
-                        Some(PkgVersionSegment::Separater(_)) => {
-                            unreachable!()
-                        },
-                        None => {
+                Some(PkgVersionSegment::Alphabetic(this_val)) => match that {
+                    Some(PkgVersionSegment::Alphabetic(that_val)) => {
+                        if this_val > that_val {
+                            return Ordering::Greater;
+                        } else if this_val < that_val {
                             return Ordering::Less;
                         }
                     }
+                    Some(PkgVersionSegment::Number(that_val)) => {
+                        return Ordering::Less;
+                    }
+                    Some(PkgVersionSegment::Separater(_)) => {
+                        unreachable!()
+                    }
+                    None => {
+                        return Ordering::Less;
+                    }
                 },
-                Some(PkgVersionSegment::Number(this_val)) => {
-                    match that {
-                        Some(PkgVersionSegment::Alphabetic(that_val)) => {
+                Some(PkgVersionSegment::Number(this_val)) => match that {
+                    Some(PkgVersionSegment::Alphabetic(that_val)) => {
+                        return Ordering::Greater;
+                    }
+                    Some(PkgVersionSegment::Number(that_val)) => {
+                        if this_val > that_val {
                             return Ordering::Greater;
-                        },
-                        Some(PkgVersionSegment::Number(that_val)) => {
-                            if this_val > that_val {
-                                return Ordering::Greater;
-                            } else if this_val < that_val {
-                                return Ordering::Less;
-                            }
-                        },
-                        Some(PkgVersionSegment::Separater(_)) => {
-                            unreachable!()
-                        },
-                        None => {
-                            return Ordering::Greater;
+                        } else if this_val < that_val {
+                            return Ordering::Less;
                         }
+                    }
+                    Some(PkgVersionSegment::Separater(_)) => {
+                        unreachable!()
+                    }
+                    None => {
+                        return Ordering::Greater;
                     }
                 },
                 Some(PkgVersionSegment::Separater(_)) => {
                     unreachable!()
-                },
-                None => {
-                    match that {
-                        Some(PkgVersionSegment::Alphabetic(that_val)) => {
-                            return Ordering::Less;
-                        },
-                        Some(PkgVersionSegment::Number(that_val)) => {
-                            return Ordering::Less;
-                        },
-                        Some(PkgVersionSegment::Separater(_)) => {
-                            unreachable!()
-                        },
-                        None => (),
+                }
+                None => match that {
+                    Some(PkgVersionSegment::Alphabetic(that_val)) => {
+                        return Ordering::Less;
                     }
+                    Some(PkgVersionSegment::Number(that_val)) => {
+                        return Ordering::Less;
+                    }
+                    Some(PkgVersionSegment::Separater(_)) => {
+                        unreachable!()
+                    }
+                    None => (),
                 },
             }
         }

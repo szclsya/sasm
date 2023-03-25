@@ -1,6 +1,7 @@
 use super::{BasicPkgPool, PkgPool};
-use crate::types::{PkgMeta, PkgVersion};
+use crate::types::{PkgMeta, PkgVersion, VersionRequirement};
 
+use rayon::prelude::*;
 use std::collections::HashMap;
 
 pub struct InMemoryPool {
@@ -61,6 +62,17 @@ impl BasicPkgPool for InMemoryPool {
             }
             None => None,
         }
+    }
+
+    fn get_pkgs_by_provide(&self, name: &str, ver_req: &VersionRequirement) -> Vec<(usize, &PkgMeta)> {
+        let res: Vec<(usize, &PkgMeta)> = self
+            .pkgs
+            .par_iter()
+            .enumerate()
+            .filter(|(i, pkg)| pkg.provides.iter().filter(|p| p.0 == name && ver_req.within(&p.1)).count() > 0)
+            .map(|(i, pkg)| (i+1, pkg))
+            .collect();
+        res
     }
 
     fn pkgname_iter(&self) -> Box<dyn Iterator<Item = (&str, &[(usize, PkgVersion)])> + '_> {

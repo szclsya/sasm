@@ -1,14 +1,13 @@
 use super::{PkgVersion, PkgVersionSegment};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use nom::{
     character::{complete::*, is_alphanumeric},
+    combinator::eof,
     error::{context, ErrorKind, ParseError},
     sequence::*,
     IResult, InputTakeAtPosition,
-    combinator::eof
 };
-
 
 pub fn parse_version(i: &str) -> IResult<&str, PkgVersion> {
     let (tmp_i, epoch) = match context(
@@ -40,7 +39,7 @@ impl TryFrom<&str> for PkgVersion {
     fn try_from(s: &str) -> Result<Self> {
         match parse_version(s) {
             Ok((_, ver)) => Ok(ver),
-            Err(e) => bail!("Error parsing package version: {e}")
+            Err(e) => bail!("Error parsing package version: {e}"),
         }
     }
 }
@@ -66,29 +65,35 @@ fn revision(i: &str) -> IResult<&str, &str> {
 
 fn upstream_version(i: &str) -> IResult<&str, (Vec<PkgVersionSegment>, Option<u64>)> {
     if i.is_empty() {
-        return Err(nom::Err::Error(nom::error::Error::from_error_kind(i, ErrorKind::Eof)));
+        return Err(nom::Err::Error(nom::error::Error::from_error_kind(
+            i,
+            ErrorKind::Eof,
+        )));
     }
 
     if !i.starts_with(|c: char| c.is_alphanumeric()) {
-        return Err(nom::Err::Error(nom::error::Error::from_error_kind(i, ErrorKind::Char)));
+        return Err(nom::Err::Error(nom::error::Error::from_error_kind(
+            i,
+            ErrorKind::Char,
+        )));
     }
 
     let mut result = Vec::new();
     let mut rev = None;
     let mut ti = i;
     loop {
-       if ti.len() == 0 {
+        if ti.len() == 0 {
             // Our job is done here
             break;
-       } else if let Ok((i, r)) = revision(ti) {
-           // We've reached the end and there's a revision
-           rev = Some(r.parse().unwrap());
-           ti = i;
-           break;
-       } else if let Ok((i, digits)) = digit1::<_, ()>(ti) {
-           // We got a digit segment!
-           result.push(PkgVersionSegment::Number(digits.parse().unwrap()));
-           ti = i;
+        } else if let Ok((i, r)) = revision(ti) {
+            // We've reached the end and there's a revision
+            rev = Some(r.parse().unwrap());
+            ti = i;
+            break;
+        } else if let Ok((i, digits)) = digit1::<_, ()>(ti) {
+            // We got a digit segment!
+            result.push(PkgVersionSegment::Number(digits.parse().unwrap()));
+            ti = i;
         } else if let Ok((i, chars)) = alpha1::<_, ()>(ti) {
             // We got a character segment!
             result.push(PkgVersionSegment::Alphabetic(chars.to_owned()));
@@ -98,8 +103,8 @@ fn upstream_version(i: &str) -> IResult<&str, (Vec<PkgVersionSegment>, Option<u6
             result.push(PkgVersionSegment::Separater(chars.to_owned()));
             ti = i;
         } else {
-           // We've reached something we don't know about. Stop parsing
-           break;
+            // We've reached something we don't know about. Stop parsing
+            break;
         }
     }
 

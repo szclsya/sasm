@@ -193,7 +193,7 @@ pub async fn fullfill_command(
             download::download(&download.pkgname, &localdb, &downloader, latest).await?;
             success!("Requested package has been downloaded to current working directory.");
             Ok(false)
-        },
-        _ => unimplemented!()
+        }
+        _ => unimplemented!(),
     }
 }

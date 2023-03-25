@@ -121,6 +121,11 @@ impl VersionRequirement {
                 && self.upper_bond.as_ref().unwrap() >= that.upper_bond.as_ref().unwrap();
         lower_within && upper_within
     }
+
+    // Check if there's an overlap between two VersionRequirements
+    pub fn overlap(&self, that: &VersionRequirement) -> bool {
+        todo!()
+    }
 }
 
 /// Use `nom` to parse a VersionRequirement string

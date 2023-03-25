@@ -144,7 +144,8 @@ fn apply_replaces(opts: &Opts, pool: &dyn PkgPool, blueprint: &mut Blueprints) -
             // Found a replacement!
             // If in user blueprint, ask if to replace it
             if blueprint.user_list_contains(&pkg.name) {
-                if cli::ask_confirm(opts, &format!("Replace {} with {}?", pkg.name, replacement))? {
+                if cli::ask_confirm(opts, &format!("Replace {} with {}?", pkg.name, replacement))?
+                {
                     blueprint.remove(&pkg.name, true)?;
                     blueprint.add(&replacement, false, None, None, false)?;
                 } else {

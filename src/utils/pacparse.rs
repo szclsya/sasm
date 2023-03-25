@@ -1,17 +1,17 @@
+use crate::debug;
+use anyhow::{bail, Result};
 /// Parse pacman style package database files
 use nom::{
     bytes::complete::{take_till, take_until1, take_while1},
+    character::complete::anychar,
     character::complete::{alphanumeric1, char, space0},
-    IResult,
     combinator::eof,
     multi::many1,
-    character::complete::anychar,
+    IResult,
 };
-use anyhow::{Result, bail };
 use std::collections::HashMap;
-use crate::debug;
 
-use crate::types::{ VersionRequirement, parse_version_requirement };
+use crate::types::{parse_version_requirement, VersionRequirement};
 
 /// Parse the key part of a paragraph, like `%NAME%`
 fn parse_key(i: &str) -> IResult<&str, &str> {
@@ -70,7 +70,7 @@ pub fn parse_str(mut i: &str) -> anyhow::Result<HashMap<String, Vec<String>>> {
                 res.insert(pair.0, pair.1);
                 counter += 1;
                 i = x;
-            },
+            }
             Err(e) => {
                 bail!("bad pacman database on paragraph {counter}: {e}");
             }
@@ -87,14 +87,16 @@ fn is_version_requirement(i: &str) -> bool {
     i.starts_with(">") || i.starts_with("<") || i.starts_with("=")
 }
 
-pub fn parse_package_requirement_line(i: &str) -> IResult<&str, (&str, VersionRequirement, Option<String>)> {
+pub fn parse_package_requirement_line(
+    i: &str,
+) -> IResult<&str, (&str, VersionRequirement, Option<String>)> {
     // First parse the package name
     let (i, name) = take_while1(is_package_name_char)(i)?;
     // Then the version requirement
     if is_version_requirement(i) {
         let (i, ver_req) = parse_version_requirement(i)?;
         if i.is_empty() {
-            return Ok((i, (name, ver_req, None)))
+            return Ok((i, (name, ver_req, None)));
         }
         let (i, desc) = parse_requirement_description(i)?;
         let (i, _) = eof(i)?;

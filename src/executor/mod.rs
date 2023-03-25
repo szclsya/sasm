@@ -20,7 +20,8 @@ impl MachineStatus {
         // Load or create dpkg's status db
         let status_file_dir = root.join("var/lib/dpkg");
         if !status_file_dir.is_dir() {
-            fs::create_dir_all(&status_file_dir).context("Failed to initialize dpkg directory.")?;
+            fs::create_dir_all(&status_file_dir)
+                .context("Failed to initialize dpkg directory.")?;
         }
         let stauts_file_path = root.join("var/lib/dpkg/status");
         let status_file = if stauts_file_path.is_file() {
@@ -53,7 +54,11 @@ impl MachineStatus {
     }
 
     /// Generate a list of actions according to machine status and package blueprint
-    pub fn gen_actions<'a>(&self, blueprint: &[&'a PkgMeta], purge_config: bool) -> PkgActions<'a> {
+    pub fn gen_actions<'a>(
+        &self,
+        blueprint: &[&'a PkgMeta],
+        purge_config: bool,
+    ) -> PkgActions<'a> {
         let mut res = PkgActions::default();
         // We will modify the list, so do a clone
         let mut old_pkgs = self.pkgs.clone();

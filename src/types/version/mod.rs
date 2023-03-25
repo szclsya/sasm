@@ -1,12 +1,11 @@
-mod parse;
 mod ord;
+mod parse;
 mod requirement;
 mod test;
 pub use parse::parse_version;
 pub use requirement::{parse_version_requirement, VersionRequirement};
 
-
-use serde::{Serialize, Serializer, Deserialize};
+use serde::{Deserialize, Serialize, Serializer};
 use std::fmt;
 
 #[derive(PartialEq, Eq, Clone, Debug, Deserialize)]
@@ -59,4 +58,3 @@ impl Serialize for PkgVersion {
         serializer.serialize_str(&res)
     }
 }
-

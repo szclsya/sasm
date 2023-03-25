@@ -1,5 +1,5 @@
 use crate::{
-    info, debug,
+    debug, info,
     types::{config::RepoConfig, Checksum},
     utils::downloader::{Compression, DownloadJob, Downloader},
 };
@@ -16,11 +16,7 @@ pub struct LocalDb {
 }
 
 impl LocalDb {
-    pub fn new(
-        root: PathBuf,
-        repos: HashMap<String, RepoConfig>,
-        arch: &str,
-    ) -> Self {
+    pub fn new(root: PathBuf, repos: HashMap<String, RepoConfig>, arch: &str) -> Self {
         LocalDb {
             root,
             arch: arch.to_owned(),

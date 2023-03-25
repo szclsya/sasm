@@ -1,4 +1,4 @@
-use anyhow::{ bail, Result };
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize, Serializer};
 use std::path::PathBuf;
 
@@ -55,5 +55,4 @@ fn normalize_mirror_url(url: &mut String) {
     }
 }
 
-pub enum MirrorlistLine {
-}
+pub enum MirrorlistLine {}

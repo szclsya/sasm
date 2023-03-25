@@ -22,6 +22,8 @@ pub trait BasicPkgPool {
     fn get_pkg_by_id(&self, id: usize) -> Option<&PkgMeta>;
     // Get a list of available package IDs based on the given name
     fn get_pkgs_by_name(&self, name: &str) -> Option<Vec<usize>>;
+    // Get a list of packages that provide a certain package
+    fn get_pkgs_by_provide(&self, name: &str, ver_req: &VersionRequirement) -> Vec<(usize, &PkgMeta)>;
     // Get an Iterator of (PkgName, &[(id, PkgVersion)])
     fn pkgname_iter(&self) -> Box<dyn Iterator<Item = (&str, &[(usize, PkgVersion)])> + '_>;
     // Get an Iterator of (PkgId, PkgMeta)
@@ -143,7 +145,7 @@ pub trait PkgPool: BasicPkgPool {
         let mut res = Vec::new();
         // Enroll dependencies
         for dep in &pkg.depends {
-            let available = match self.get_pkgs_by_name(&dep.0) {
+            let mut available = match self.get_pkgs_by_name(&dep.0) {
                 Some(pkgs) => match subset {
                     Some(ids) => {
                         let pkgs: Vec<usize> =
@@ -152,13 +154,15 @@ pub trait PkgPool: BasicPkgPool {
                     }
                     None => pkgs.iter().copied().collect(),
                 },
-                None => {
-                    bail!(
-                        "Cannot find a package which fulfills dependency {}.",
-                        style(&dep.0).bold()
-                    );
-                }
+                None => Vec::new(),
             };
+            // Provides can be considered as dependencies as well
+            let mut provides: Vec<usize> = self.get_pkgs_by_provide(&dep.0, &dep.1).into_iter().map(|(i, _)| i).collect();
+            available.append(&mut provides);
+
+            if available.is_empty() {
+                bail!("Cannot find a package which fulfills dependency {}.", style(&dep.0).bold());
+            }
 
             let mut clause = vec![!Lit::from_dimacs(pkgid as isize)];
 

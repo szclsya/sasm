@@ -1,6 +1,4 @@
 pub mod pacdb;
-//pub mod debrepo;
-//pub mod local;
 
 use super::{BasicPkgPool, InMemoryPool, PkgPool};
 use anyhow::Result;
@@ -8,7 +6,7 @@ use std::path::PathBuf;
 
 pub fn create_pool(
     pac_dbs: &[(String, PathBuf)],
-    local_deb_roots: &[PathBuf],
+    _local_deb_roots: &[PathBuf],
 ) -> Result<Box<dyn PkgPool>> {
     let mut pool = InMemoryPool::new();
     for (root_url, pac_db) in pac_dbs {
