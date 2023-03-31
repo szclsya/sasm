@@ -39,21 +39,18 @@ pub trait PkgPool: BasicPkgPool {
         let mut res = Vec::new();
         for dep in &pkg.depends {
             let mut deps_id = Vec::new();
-            let available = match self.get_pkgs_by_name(&dep.0) {
-                Some(d) => d,
-                None => {
-                    bail!(
-                        "Cannot find dependency {} for {}.",
-                        style(&dep.0).bold(),
-                        style(&pkg.name).bold()
-                    );
-                }
-            };
+            let available = self.get_pkgs_by_name(&dep.0).unwrap_or_default();
+            // Provides can be considered as dependencies as well
+            let provides = self.get_pkgs_by_provide(&dep.0, &dep.1).unwrap_or_default();
+
             for dep_pkgid in &available {
                 let p = self.get_pkg_by_id(*dep_pkgid).unwrap();
                 if dep.1.contains(&p.version) {
                     deps_id.push(*dep_pkgid);
                 }
+            }
+            for provide_pkgid in &provides {
+                deps_id.push(*provide_pkgid);
             }
             if deps_id.is_empty() {
                 let error = anyhow!(
