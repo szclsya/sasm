@@ -18,28 +18,26 @@ ctrlc = { version = "3", features = ["termination"] }
 varisat = "0.2"
 petgraph = "0.6"
 # Dealing with deb control files and InRelease
-debcontrol = "0.1"
-sequoia-openpgp = "1.7"
+sequoia-openpgp = "1.16"
 sha2 = "0.10"
 hex = "0.4"
+walkdir = "2"
 # cli
 console = "0.15"
 clap = { version = "3", features = ["derive"] }
 tabled = { version = "0.4", features = ["color"] }
-# 0.16.2 doesn't work with tokio
-indicatif = "=0.17.0-beta.1"
+indicatif = "0.17"
 dialoguer = "0.9"
 # Dealing with config files
 serde = "1"
-toml = "0.5"
-toml_edit = "0.13"
-nom = "7"
+toml = "0.7"
+nom = "7.1"
 # Network stack
 futures-util = "0.3"
-tokio = { version = "1.15", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
+tokio = { version = "1", default_features = false, features = ["rt", "macros", "fs", "io-util"] }
 bytes = "1"
-reqwest = { version = "0.11", features = ["rustls-tls"], default-features = false }
-async-compression = { version = "0.3", features = ["tokio", "gzip", "xz"] }
+reqwest = "0.11" 
+async-compression = { version = "0.4", features = ["tokio", "gzip", "xz"] }
 flate2 = "1"
 # Actions modifier
 nix = "0.23"

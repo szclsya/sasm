@@ -28,7 +28,6 @@ pub struct PkgMeta {
     pub conflicts: Vec<(String, VersionRequirement, Option<String>)>,
     pub provides: Vec<(String, VersionRequirement, Option<String>)>,
     pub replaces: Vec<(String, VersionRequirement, Option<String>)>,
-    pub download_size: u64,
     pub install_size: u64,
 
     pub source: PkgSource,

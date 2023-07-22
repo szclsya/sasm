@@ -3,7 +3,7 @@ use crate::{
     cli::{self, ask_confirm},
     db::LocalDb,
     debug,
-    executor::{dpkg, modifier, MachineStatus, PkgState},
+    executor::{alpm, MachineStatus},
     info,
     pool::{self, PkgPool},
     solver::Solver,
@@ -49,7 +49,7 @@ pub async fn execute(
 
     debug!("Processing user request...");
     let root = &opts.root;
-    let machine_status = MachineStatus::new(root)?;
+    let machine_status = MachineStatus::new(root).await?;
     process_user_request(request, pool.as_ref(), blueprint, &machine_status)?;
 
     debug!("Applying replaces according to package catalog...");
@@ -59,12 +59,7 @@ pub async fn execute(
     let solver = Solver::from(pool);
     let res = solver.install(blueprint)?;
     // Translating result to list of actions
-    let mut actions = machine_status.gen_actions(res.as_slice(), false);
-    if alt_root {
-        let modifier = modifier::UnpackOnly::default();
-        modifier.apply(&mut actions);
-    }
-
+    let actions = machine_status.gen_actions(res.as_slice(), false);
     if actions.is_empty() {
         success!("There is nothing to do.");
         return Ok(false);
@@ -82,7 +77,6 @@ pub async fn execute(
 
     if ask_confirm(opts, "Proceed?")? {
         // Run it!
-        dpkg::execute_pkg_actions(actions, &opts.root, downloader, false).await?;
         Ok(false)
     } else {
         Ok(true)

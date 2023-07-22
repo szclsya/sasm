@@ -36,7 +36,7 @@ fn parse_value_with_empty_line(i: &str) -> IResult<&str, &str> {
 }
 
 /// Parse the value part of a paragraph that ends with EOF
-fn parse_value(mut i: &str) -> IResult<&str, Vec<String>> {
+fn parse_value(mut i: &str) -> IResult<&str, String> {
     let mut lines = Vec::new();
     loop {
         let (x, content) = take_till(|c| c == '\n')(i)?;
@@ -50,18 +50,19 @@ fn parse_value(mut i: &str) -> IResult<&str, Vec<String>> {
             break;
         }
     }
-    Ok((i, lines))
+    let s = lines.join("\n");
+    Ok((i, s))
 }
 
 /// Parse a key-value pair in pacman's package description syntax
-fn parse_pair(i: &str) -> IResult<&str, (String, Vec<String>)> {
+fn parse_pair(i: &str) -> IResult<&str, (String, String)> {
     let (i, key) = parse_key(i)?;
     let (i, lines) = parse_value(i)?;
 
     Ok((i, (key.to_owned(), lines)))
 }
 
-pub fn parse_str(mut i: &str) -> anyhow::Result<HashMap<String, Vec<String>>> {
+pub fn parse_str(mut i: &str) -> anyhow::Result<HashMap<String, String>> {
     let mut res = HashMap::new();
     let mut counter = 0;
     while !i.is_empty() {
@@ -133,11 +134,7 @@ mod test {
                 "something else",
                 (
                     "NAME".to_string(),
-                    vec![
-                        "A multiple".to_string(),
-                        "line".to_string(),
-                        "paragraph.".to_string()
-                    ]
+                    "A multiple\nline\nparagraph.".to_string(),
                 )
             ),
             parse_pair(
@@ -155,11 +152,7 @@ something else"
                 "",
                 (
                     "NAME".to_string(),
-                    vec![
-                        "A multiple".to_string(),
-                        "line".to_string(),
-                        "paragraph.".to_string()
-                    ],
+                    "A multiple\nline\nparagraph".to_string(),
                 )
             ),
             parse_pair(

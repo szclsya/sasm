@@ -26,7 +26,11 @@ impl InMemoryPool {
 impl BasicPkgPool for InMemoryPool {
     fn add(&mut self, meta: PkgMeta) -> usize {
         // Find out which names are provided
-        let provide_names: Vec<(String, VersionRequirement)> = meta.provides.iter().map(|p| ( p.0.clone(), p.1.clone() )).collect();
+        let provide_names: Vec<(String, VersionRequirement)> = meta
+            .provides
+            .iter()
+            .map(|p| (p.0.clone(), p.1.clone()))
+            .collect();
 
         let name = meta.name.clone();
         let version = meta.version.clone();
@@ -37,7 +41,7 @@ impl BasicPkgPool for InMemoryPool {
         for (provide, ver_req) in provide_names {
             if self.provide_to_ids.contains_key(&provide) {
                 let ids = self.provide_to_ids.get_mut(&provide).unwrap();
-                ids.push(( index, ver_req));
+                ids.push((index, ver_req));
             } else {
                 self.provide_to_ids.insert(provide, vec![(index, ver_req)]);
             }
@@ -84,7 +88,11 @@ impl BasicPkgPool for InMemoryPool {
 
     fn get_pkgs_by_provide(&self, name: &str, ver_req: &VersionRequirement) -> Option<Vec<usize>> {
         let res = if let Some(provides) = self.provide_to_ids.get(name) {
-            let res = provides.into_iter().filter(|pkg| ver_req.overlap(&pkg.1)).map(|pkg| pkg.0).collect();
+            let res = provides
+                .into_iter()
+                .filter(|pkg| ver_req.overlap(&pkg.1))
+                .map(|pkg| pkg.0)
+                .collect();
             Some(res)
         } else {
             None

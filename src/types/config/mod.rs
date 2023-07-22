@@ -64,36 +64,12 @@ pub struct Opts {
 
 #[derive(Parser)]
 pub enum SubCmd {
-    /// Install new packages
-    #[clap(display_order = 1)]
-    Install(InstallPkg),
-    /// Remove packages
-    #[clap(display_order = 2)]
-    Remove(RemovePkg),
-    /// Pick a specific version of a package
-    #[clap(display_order = 3)]
-    Pick(PickPkg),
-    /// Refresh local package databases
-    #[clap(display_order = 5, aliases = &["update"])]
-    Refresh,
     /// Install and upgrade all packages according to Blueprint
     #[clap(display_order = 4, aliases = &["upgrade"])]
     Execute,
-    /// Search packages from package database
-    #[clap(display_order = 11)]
-    Search(SearchPkg),
-    /// Search what packages provide a certain file
-    #[clap(display_order = 12)]
-    Provide(ProvideFile),
     /// Delete local package cache (optionally metadata cache)
     #[clap(display_order = 21)]
     Clean(CleanConfig),
-    /// Benchmark and pick optimal mirrors
-    #[clap(display_order = 31)]
-    Bench,
-    /// Download a package from remote repository
-    #[clap(display_order = 32)]
-    Download(DownloadPkg),
 }
 
 #[derive(Parser)]

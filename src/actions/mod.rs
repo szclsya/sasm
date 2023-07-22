@@ -1,9 +1,5 @@
-//mod bench;
 mod download;
 mod execute;
-//mod local;
-mod pick;
-//mod search;
 use execute::execute;
 
 use crate::{
@@ -55,71 +51,6 @@ pub async fn fullfill_command(
     );
 
     match &opts.subcmd {
-        SubCmd::Install(add) => {
-            // This operation has side effects
-            lock::ensure_unlocked(&opts.root)?;
-            lock::lock(&opts.root)?;
-
-            let names = add.names.clone();
-            let req: Vec<InstallRequest> = names
-                .iter()
-                .map(|pkgname| InstallRequest {
-                    pkgname: pkgname.to_owned(),
-                    install_recomm: !add.no_recommends,
-                    ver_req: None,
-                    local: add.local,
-                    modify: false,
-                })
-                .collect();
-            let req = UserRequest::Install(req);
-            // Update local db
-            localdb.update(&downloader).await?;
-            // Execute blueprint
-            let cancelled = execute(&localdb, &downloader, blueprints, opts, config, req).await?;
-
-            Ok(cancelled)
-        }
-        SubCmd::Remove(rm) => {
-            // This operation has side effects
-            lock::ensure_unlocked(&opts.root)?;
-            lock::lock(&opts.root)?;
-
-            // Prepare request
-            let req: Vec<(String, bool)> = rm
-                .names
-                .iter()
-                .map(|name| (name.clone(), rm.remove_recommends))
-                .collect();
-            let req = UserRequest::Remove(req);
-            // Update local db
-            localdb.update(&downloader).await?;
-            // Apply stuff
-            let cancelled = execute(&localdb, &downloader, blueprints, opts, config, req).await?;
-
-            Ok(cancelled)
-        }
-        SubCmd::Pick(pick) => {
-            // This operation has side effects
-            lock::ensure_unlocked(&opts.root)?;
-            lock::lock(&opts.root)?;
-
-            let req = pick::pick(&pick.name, blueprints, opts, &localdb)?;
-            // Update local db
-            localdb.update(&downloader).await?;
-            // Apply stuff
-            let cancelled = execute(&localdb, &downloader, blueprints, opts, config, req).await?;
-
-            Ok(cancelled)
-        }
-        SubCmd::Refresh => {
-            // This operation has side effects
-            lock::ensure_unlocked(&opts.root)?;
-            lock::lock(&opts.root)?;
-
-            localdb.update(&downloader).await?;
-            success!("sasm has successfully refreshed local package metadata.");
-            Ok(false)
-        }
         SubCmd::Execute => {
             // This operation has side effects
             lock::ensure_unlocked(&opts.root)?;
@@ -135,18 +66,6 @@ pub async fn fullfill_command(
 
             Ok(exit)
         }
-        /*
-        SubCmd::Search(search) => {
-            let machine_status = MachineStatus::new(&opts.root)?;
-            search::search_deb_db(&localdb, &search.keyword, &machine_status)?;
-            Ok(false)
-        }
-        SubCmd::Provide(provide) => {
-            let machine_status = MachineStatus::new(&opts.root)?;
-            search::show_provide_file(&localdb, &machine_status, &provide.file, provide.bin)?;
-            Ok(false)
-        }
-        */
         SubCmd::Clean(cleanconfig) => {
             // This operation has side effects
             lock::ensure_unlocked(&opts.root)?;
@@ -160,7 +79,7 @@ pub async fn fullfill_command(
             }
 
             info!("Purging local package cache...");
-            let ms = MachineStatus::new(&opts.root)?;
+            let ms = MachineStatus::new(&opts.root).await?;
 
             if cleanconfig.all {
                 info!("Purging local metadata cache...");
@@ -173,27 +92,5 @@ pub async fn fullfill_command(
 
             Ok(false)
         }
-        /*
-        SubCmd::Bench => {
-            // This operation has side effects (refresh)
-            lock::ensure_unlocked(&opts.root)?;
-            lock::lock(&opts.root)?;
-
-            bench::bench(opts, config, localdb, &downloader).await?;
-            Ok(false)
-        }
-        */
-        SubCmd::Download(download) => {
-            let mut latest = download.latest;
-            if opts.yes {
-                // If yesman, then use latest version automatically
-                latest = true;
-            }
-
-            download::download(&download.pkgname, &localdb, &downloader, latest).await?;
-            success!("Requested package has been downloaded to current working directory.");
-            Ok(false)
-        }
-        _ => unimplemented!(),
     }
 }

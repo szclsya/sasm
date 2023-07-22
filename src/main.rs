@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
 mod actions;
 mod cli;
 mod db;
@@ -49,7 +51,7 @@ fn verbose() -> bool {
 async fn main() {
     // Initial setup
     let mut opts: Opts = Opts::parse();
-    // Set-up debug globally
+    // Configure debug globally
     VERBOSE.store(opts.verbose, Ordering::Relaxed);
     // If yes mode is enabled, pager will be disabled
     if opts.yes {

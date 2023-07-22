@@ -94,7 +94,7 @@ impl Downloader {
             }
         };
         let barsty = ProgressStyle::default_bar()
-            .template(bar_template)
+            .template(bar_template)?
             .progress_chars("=>-");
         // Create a global bar if some files specified size
         let total = to_download.len();
@@ -249,7 +249,7 @@ async fn download_file(
                     bar.finish_and_clear();
                     // Reduce global bar length, since we don't need to download this file
                     if let Some(ref global_bar) = global_bar {
-                        global_bar.set_length(global_bar.length() - len);
+                        global_bar.set_length(global_bar.length().unwrap() - len);
                     }
 
                     if crate::verbose() || global_bar.is_some() {
@@ -318,7 +318,7 @@ async fn download_file(
         writer.shutdown().await?;
 
         if let Some(len) = job.size {
-            if bar.length() != len {
+            if bar.length().unwrap() != len {
                 bail!(
                     "Bad file size when downloading {}: mirrors may be synchronizing, please try again later.",
                     job.url

@@ -154,10 +154,14 @@ pub trait PkgPool: BasicPkgPool {
                 None => Vec::new(),
             };
             // Provides can be considered as dependencies as well
-            let provides: Vec<usize> = self.get_pkgs_by_provide(&dep.0, &dep.1).unwrap_or_default();
+            let provides: Vec<usize> =
+                self.get_pkgs_by_provide(&dep.0, &dep.1).unwrap_or_default();
 
             if available.is_empty() && provides.is_empty() {
-                bail!("Cannot find a package which fulfills dependency {}.", style(&dep.0).bold());
+                bail!(
+                    "Cannot find a package which fulfills dependency {}.",
+                    style(&dep.0).bold()
+                );
             }
 
             let mut clause = vec![!Lit::from_dimacs(pkgid as isize)];
@@ -273,35 +277,33 @@ mod test {
         let a_id = pool.add(PkgMeta {
             name: "a".to_string(),
             description: "".to_string(),
-            section: "".to_string(),
             version: PkgVersion::try_from("1").unwrap(),
+
             depends: vec![(
                 "c".to_string(),
                 VersionRequirement {
                     lower_bond: None,
                     upper_bond: None,
                 },
+                None,
             )],
-            breaks: vec![(
+            optional: Vec::new(),
+            conflicts: vec![(
                 "d".to_string(),
                 VersionRequirement {
                     lower_bond: None,
                     upper_bond: None,
                 },
+                None,
             )],
-            conflicts: Vec::new(),
-            recommends: None,
-            suggests: None,
-            replaces: None,
-            provides: None,
+            provides: Vec::new(),
+            replaces: Vec::new(),
             install_size: 0,
-            essential: false,
             source: PkgSource::Local(PathBuf::new()),
         });
         let b_id = pool.add(PkgMeta {
             name: "b".to_string(),
             description: "".to_string(),
-            section: "".to_string(),
             version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "a".to_string(),
@@ -309,21 +311,18 @@ mod test {
                     lower_bond: None,
                     upper_bond: None,
                 },
+                None,
             )],
-            breaks: Vec::new(),
+            optional: Vec::new(),
             conflicts: Vec::new(),
-            recommends: None,
-            suggests: None,
-            replaces: None,
-            provides: None,
+            replaces: Vec::new(),
+            provides: Vec::new(),
             install_size: 0,
-            essential: false,
             source: PkgSource::Local(PathBuf::new()),
         });
         let c_id = pool.add(PkgMeta {
             name: "c".to_string(),
             description: "".to_string(),
-            section: "".to_string(),
             version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "b".to_string(),
@@ -331,21 +330,18 @@ mod test {
                     lower_bond: None,
                     upper_bond: None,
                 },
+                None,
             )],
-            breaks: Vec::new(),
+            optional: Vec::new(),
             conflicts: Vec::new(),
-            recommends: None,
-            suggests: None,
-            replaces: None,
-            provides: None,
+            replaces: Vec::new(),
+            provides: Vec::new(),
             install_size: 0,
-            essential: false,
             source: PkgSource::Local(PathBuf::new()),
         });
         let d_id = pool.add(PkgMeta {
             name: "d".to_string(),
             description: "".to_string(),
-            section: "".to_string(),
             version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "b".to_string(),
@@ -353,15 +349,13 @@ mod test {
                     lower_bond: None,
                     upper_bond: None,
                 },
+                None,
             )],
-            breaks: Vec::new(),
+            optional: Vec::new(),
             conflicts: Vec::new(),
-            recommends: None,
-            suggests: None,
-            replaces: None,
-            provides: None,
+            replaces: Vec::new(),
+            provides: Vec::new(),
             install_size: 0,
-            essential: false,
             source: PkgSource::Local(PathBuf::new()),
         });
         pool.finalize();

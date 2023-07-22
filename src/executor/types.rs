@@ -3,50 +3,13 @@ use crate::types::PkgVersion;
 use anyhow::{bail, format_err, Context, Error, Result};
 use std::collections::HashMap;
 
-/// dpkg package state
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum PkgState {
-    // Not installed
-    NotInstalled,
-    // Previously installed, now not installed, config files remains
-    ConfigFiles,
-    // Installation uncompleted
-    HalfInstalled,
-    Unpacked,
-    HalfConfigured,
-    TriggerAwaited,
-    TriggerPending,
-    Installed,
-}
-
-impl std::convert::TryFrom<&str> for PkgState {
-    type Error = Error;
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
-        let res = match s {
-            "not-installed" => Self::NotInstalled,
-            "config-files" => Self::ConfigFiles,
-            "half-installed" => Self::HalfInstalled,
-            "unpacked" => Self::Unpacked,
-            "half-configured" => Self::HalfConfigured,
-            "triggers-awaited" => Self::TriggerAwaited,
-            "triggers-pending" => Self::TriggerPending,
-            "installed" => Self::Installed,
-            unknown => {
-                bail!("Invalid package state {} .", unknown)
-            }
-        };
-        Ok(res)
-    }
-}
-
-/// Status of package on this instance, extracted from dpkg status db
+/// Status of package on this instance, extracted from pacman local state db
+/// Usually located at /var/lib/pacman/local
 #[derive(Clone)]
 pub struct PkgStatus {
     pub name: String,
     pub version: PkgVersion,
     pub install_size: u64,
-    pub essential: bool,
-    pub state: PkgState,
 }
 
 impl TryFrom<HashMap<&str, String>> for PkgStatus {
@@ -100,14 +63,10 @@ impl TryFrom<HashMap<&str, String>> for PkgStatus {
             bail!("Malformed dpkg status database.");
         }
 
-        let state = PkgState::try_from(*status.get(2).unwrap())?;
-
         let res = PkgStatus {
             name,
             version,
             install_size,
-            essential,
-            state,
         };
 
         Ok(res)

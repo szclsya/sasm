@@ -28,8 +28,8 @@ impl Theme for OmaTheme {
         active: bool,
     ) -> fmt::Result {
         let prefix = match active {
-            true => (crate::cli::gen_prefix(&style("->").bold().to_string())),
-            false => (crate::cli::gen_prefix("")),
+            true => crate::cli::gen_prefix(&style("->").bold().to_string()),
+            false => crate::cli::gen_prefix(""),
         };
 
         write!(f, "{prefix}{text}")
