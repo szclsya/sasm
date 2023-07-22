@@ -31,19 +31,14 @@ pub async fn read_alpm_local_db(root: &Path) -> Result<()> {
             let content = fs::read_to_string(entry.path()).await?;
             let mut result = pacparse::parse_str(&content)?;
             let name = result.remove("NAME").ok_or_else(|| {
-                anyhow!(
-                    "bad ALPM local db: NAME missing from {}",
-                    entry.path().display()
-                )
+                anyhow!("bad ALPM local db: NAME missing from {}", entry.path().display())
             })?;
             let version: PkgVersion = result
                 .remove("NAME")
                 .ok_or_else(|| {
-                    anyhow!(
-                        "bad ALPM local db: NAME missing from {}",
-                        entry.path().display()
-                    )
+                    anyhow!("bad ALPM local db: NAME missing from {}", entry.path().display())
                 })?
+                .as_str()
                 .try_into()?;
         }
     }

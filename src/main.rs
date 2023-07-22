@@ -93,14 +93,10 @@ async fn main() {
 
 async fn try_main(opts: &Opts) -> Result<i32> {
     // Start reading configs
-    let config_root = opts
-        .root
-        .join(&opts.config_root)
-        .canonicalize()
-        .context(format!(
-            "Failed to find config_root in Sasm configuration file {} .",
-            opts.config_root.display()
-        ))?;
+    let config_root = opts.root.join(&opts.config_root).canonicalize().context(format!(
+        "Failed to find config_root in Sasm configuration file {} .",
+        opts.config_root.display()
+    ))?;
     if !config_root.is_dir() {
         bail!(
             "Configuration root (config_root) does not exist or is not a directory at {} .",
@@ -110,14 +106,10 @@ async fn try_main(opts: &Opts) -> Result<i32> {
 
     let config_path = config_root.join("config.toml");
     // Set-up main config file
-    let mut config_file = File::open(&config_path).context(format!(
-        "Failed to open configuration file {} .",
-        config_path.display()
-    ))?;
+    let mut config_file = File::open(&config_path)
+        .context(format!("Failed to open configuration file {} .", config_path.display()))?;
     let mut data = String::new();
-    config_file
-        .read_to_string(&mut data)
-        .context("Failed to read configuration file.")?;
+    config_file.read_to_string(&mut data).context("Failed to read configuration file.")?;
     let config: Config = toml::from_str(&data).context("Failed to parse configuration file.")?;
 
     // Set-up blueprints

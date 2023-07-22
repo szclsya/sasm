@@ -109,10 +109,7 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
     }
 
     for (name, version) in &actions.configure {
-        let row = ConfigureRow {
-            name: name.clone(),
-            version: version.to_string(),
-        };
+        let row = ConfigureRow { name: name.clone(), version: version.to_string() };
         configure_rows.push(row);
     }
 
@@ -127,11 +124,7 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
     }
 
     if !remove_rows.is_empty() {
-        writeln!(
-            out,
-            "The following packages will be {}:\n",
-            style("REMOVED").red().bold()
-        )?;
+        writeln!(out, "The following packages will be {}:\n", style("REMOVED").red().bold())?;
         let table = Table::new(&remove_rows)
             .with(Modify::new(Full).with(Alignment::left()))
             // Install Size column should align right
@@ -142,11 +135,7 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
     }
 
     if !install_rows.is_empty() {
-        writeln!(
-            out,
-            "The following packages will be {}:\n",
-            style("installed").green().bold()
-        )?;
+        writeln!(out, "The following packages will be {}:\n", style("installed").green().bold())?;
         let table = Table::new(&install_rows)
             .with(Modify::new(Full).with(Alignment::left()))
             // Install Size column should align right
@@ -157,11 +146,7 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
     }
 
     if !upgrade_rows.is_empty() {
-        writeln!(
-            out,
-            "The following packages will be {}:\n",
-            style("upgraded").green().bold()
-        )?;
+        writeln!(out, "The following packages will be {}:\n", style("upgraded").green().bold())?;
         let table = Table::new(&upgrade_rows)
             .with(Modify::new(Full).with(Alignment::left()))
             // Install Size column should align right
@@ -172,11 +157,7 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
     }
 
     if !downgrade_rows.is_empty() {
-        writeln!(
-            out,
-            "The following packages will be {}:\n",
-            style("downgraded").yellow().bold()
-        )?;
+        writeln!(out, "The following packages will be {}:\n", style("downgraded").yellow().bold())?;
         let table = Table::new(&downgrade_rows)
             .with(Modify::new(Full).with(Alignment::left()))
             // Install Size column should align right
@@ -187,11 +168,7 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
     }
 
     if !configure_rows.is_empty() {
-        writeln!(
-            out,
-            "The following packages will be {}:\n",
-            style("configured").blue().bold()
-        )?;
+        writeln!(out, "The following packages will be {}:\n", style("configured").blue().bold())?;
         let table = Table::new(&configure_rows)
             .with(Modify::new(Full).with(Alignment::left()))
             .with(Modify::new(Full).with(|s: &str| format!(" {s} ")))

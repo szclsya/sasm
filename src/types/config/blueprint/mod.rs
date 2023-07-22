@@ -103,10 +103,7 @@ impl Blueprints {
         local: bool,
     ) -> Result<()> {
         if !modify && self.user_list_contains(pkgname) {
-            bail!(
-                "Package {} already exists in user blueprint.",
-                style(pkgname).bold()
-            );
+            bail!("Package {} already exists in user blueprint.", style(pkgname).bold());
         }
         if let Some(path) = self.vendor_list_contains(pkgname) {
             if modify {
@@ -142,22 +139,13 @@ impl Blueprints {
     pub fn remove(&mut self, pkgname: &str, remove_recomms: bool) -> Result<()> {
         if !self.user_list_contains(pkgname) {
             if let Some(path) = self.vendor_list_contains(pkgname) {
-                error!(
-                    "Package {} not found in user blueprint.",
-                    style(pkgname).bold()
-                );
-                info!(
-                    "However, it exists in vendor blueprint {}.",
-                    style(path.display()).bold()
-                );
+                error!("Package {} not found in user blueprint.", style(pkgname).bold());
+                info!("However, it exists in vendor blueprint {}.", style(path.display()).bold());
                 msg!(
                     "You may not remove packages in vendor blueprints via the Omakase CLI. If you really wish to remove this package, please edit the vendor blueprint file above directly."
                 );
             } else {
-                error!(
-                    "Package {} not found in any installed blueprints.",
-                    style(pkgname).bold()
-                );
+                error!("Package {} not found in any installed blueprints.", style(pkgname).bold());
             }
             bail!("Failed to remove {} from user blueprint.", pkgname)
         } else {
@@ -201,17 +189,13 @@ impl Blueprints {
         }
 
         // Open user blueprint
-        let blueprint_file = OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .open(&self.user_blueprint_path)?;
+        let blueprint_file =
+            OpenOptions::new().write(true).truncate(true).open(&self.user_blueprint_path)?;
         blueprint_file.set_len(0)?;
-        blueprint_file
-            .write_all_at(&res.into_bytes(), 0)
-            .context(format!(
-                "Failed to write to blueprint file {}.",
-                self.user_blueprint_path.display()
-            ))?;
+        blueprint_file.write_all_at(&res.into_bytes(), 0).context(format!(
+            "Failed to write to blueprint file {}.",
+            self.user_blueprint_path.display()
+        ))?;
 
         Ok(true)
     }

@@ -154,14 +154,10 @@ pub trait PkgPool: BasicPkgPool {
                 None => Vec::new(),
             };
             // Provides can be considered as dependencies as well
-            let provides: Vec<usize> =
-                self.get_pkgs_by_provide(&dep.0, &dep.1).unwrap_or_default();
+            let provides: Vec<usize> = self.get_pkgs_by_provide(&dep.0, &dep.1).unwrap_or_default();
 
             if available.is_empty() && provides.is_empty() {
-                bail!(
-                    "Cannot find a package which fulfills dependency {}.",
-                    style(&dep.0).bold()
-                );
+                bail!("Cannot find a package which fulfills dependency {}.", style(&dep.0).bold());
             }
 
             let mut clause = vec![!Lit::from_dimacs(pkgid as isize)];
@@ -180,10 +176,7 @@ pub trait PkgPool: BasicPkgPool {
             if clause.len() > 1 {
                 res.push(clause);
             } else {
-                bail!(
-                    "Cannot find an applicable version for dependency {}.",
-                    style(&dep.0).bold()
-                );
+                bail!("Cannot find an applicable version for dependency {}.", style(&dep.0).bold());
             }
         }
 
@@ -245,18 +238,14 @@ pub trait PkgPool: BasicPkgPool {
         // Generate conflict for different versions of the same package
         for (_, versions) in self.pkgname_iter() {
             let versions: Vec<usize> = match subset {
-                Some(ids) => versions
-                    .iter()
-                    .filter(|pkg| ids.contains(&pkg.0))
-                    .map(|pkg| pkg.0)
-                    .collect(),
+                Some(ids) => {
+                    versions.iter().filter(|pkg| ids.contains(&pkg.0)).map(|pkg| pkg.0).collect()
+                }
                 None => versions.iter().map(|(id, _)| *id).collect(),
             };
             if versions.len() > 1 {
-                let clause: Vec<Lit> = versions
-                    .into_iter()
-                    .map(|pkgid| !Lit::from_dimacs(pkgid as isize))
-                    .collect();
+                let clause: Vec<Lit> =
+                    versions.into_iter().map(|pkgid| !Lit::from_dimacs(pkgid as isize)).collect();
                 formula.add_clause(&clause);
             }
         }
@@ -281,19 +270,13 @@ mod test {
 
             depends: vec![(
                 "c".to_string(),
-                VersionRequirement {
-                    lower_bond: None,
-                    upper_bond: None,
-                },
+                VersionRequirement { lower_bond: None, upper_bond: None },
                 None,
             )],
             optional: Vec::new(),
             conflicts: vec![(
                 "d".to_string(),
-                VersionRequirement {
-                    lower_bond: None,
-                    upper_bond: None,
-                },
+                VersionRequirement { lower_bond: None, upper_bond: None },
                 None,
             )],
             provides: Vec::new(),
@@ -307,10 +290,7 @@ mod test {
             version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "a".to_string(),
-                VersionRequirement {
-                    lower_bond: None,
-                    upper_bond: None,
-                },
+                VersionRequirement { lower_bond: None, upper_bond: None },
                 None,
             )],
             optional: Vec::new(),
@@ -326,10 +306,7 @@ mod test {
             version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "b".to_string(),
-                VersionRequirement {
-                    lower_bond: None,
-                    upper_bond: None,
-                },
+                VersionRequirement { lower_bond: None, upper_bond: None },
                 None,
             )],
             optional: Vec::new(),
@@ -345,10 +322,7 @@ mod test {
             version: PkgVersion::try_from("1").unwrap(),
             depends: vec![(
                 "b".to_string(),
-                VersionRequirement {
-                    lower_bond: None,
-                    upper_bond: None,
-                },
+                VersionRequirement { lower_bond: None, upper_bond: None },
                 None,
             )],
             optional: Vec::new(),

@@ -39,9 +39,7 @@ mod test {
                 PkgVersion::try_from(e.2).unwrap()
             );
             assert_eq!(
-                PkgVersion::try_from(e.0)
-                    .unwrap()
-                    .cmp(&PkgVersion::try_from(e.2).unwrap()),
+                PkgVersion::try_from(e.0).unwrap().cmp(&PkgVersion::try_from(e.2).unwrap()),
                 e.1
             );
         }
@@ -51,10 +49,7 @@ mod test {
     fn pkg_ver_eq() {
         let source = vec![("1.1+git2021", "1.1+git2021")];
         for e in &source {
-            assert_eq!(
-                PkgVersion::try_from(e.0).unwrap(),
-                PkgVersion::try_from(e.1).unwrap()
-            );
+            assert_eq!(PkgVersion::try_from(e.0).unwrap(), PkgVersion::try_from(e.1).unwrap());
         }
     }
 }

@@ -24,9 +24,7 @@ impl Solver {
         debug!("Adding requested packages to solver formula...");
         let mut ids = Vec::new();
         for req in blueprints.get_pkg_requests() {
-            let id = self
-                .pool
-                .pick_best_pkg(&req.name, &req.version, req.local)?;
+            let id = self.pool.pick_best_pkg(&req.name, &req.version, req.local)?;
             formula.add_clause(&[Lit::from_dimacs(id as isize)]);
             ids.push(id);
         }
@@ -56,10 +54,8 @@ impl Solver {
         sort::sort_pkgs(self.pool.as_ref(), &mut res).context("Failed to sort packages")?;
 
         // Generate result
-        let pkgs: Vec<&PkgMeta> = res
-            .into_iter()
-            .map(|pkgid| self.pool.get_pkg_by_id(pkgid).unwrap())
-            .collect();
+        let pkgs: Vec<&PkgMeta> =
+            res.into_iter().map(|pkgid| self.pool.get_pkg_by_id(pkgid).unwrap()).collect();
 
         Ok(pkgs)
     }

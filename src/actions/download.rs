@@ -14,9 +14,7 @@ pub async fn download(
     downloader: &Downloader,
     latest: bool,
 ) -> Result<()> {
-    let dbs = local_db
-        .get_all_package_db()
-        .context("Invalid local package database")?;
+    let dbs = local_db.get_all_package_db().context("Invalid local package database")?;
     let pool = pool::source::create_pool(&dbs, &[])?;
 
     // Get all versions

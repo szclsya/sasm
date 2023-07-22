@@ -26,11 +26,8 @@ impl InMemoryPool {
 impl BasicPkgPool for InMemoryPool {
     fn add(&mut self, meta: PkgMeta) -> usize {
         // Find out which names are provided
-        let provide_names: Vec<(String, VersionRequirement)> = meta
-            .provides
-            .iter()
-            .map(|p| (p.0.clone(), p.1.clone()))
-            .collect();
+        let provide_names: Vec<(String, VersionRequirement)> =
+            meta.provides.iter().map(|p| (p.0.clone(), p.1.clone())).collect();
 
         let name = meta.name.clone();
         let version = meta.version.clone();
@@ -101,11 +98,7 @@ impl BasicPkgPool for InMemoryPool {
     }
 
     fn pkgname_iter(&self) -> Box<dyn Iterator<Item = (&str, &[(usize, PkgVersion)])> + '_> {
-        Box::new(
-            self.name_to_ids
-                .iter()
-                .map(|(name, pkgs)| (name.as_str(), pkgs.as_slice())),
-        )
+        Box::new(self.name_to_ids.iter().map(|(name, pkgs)| (name.as_str(), pkgs.as_slice())))
     }
 
     fn pkgid_iter(&self) -> Box<dyn Iterator<Item = (usize, &PkgMeta)> + '_> {

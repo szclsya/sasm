@@ -15,10 +15,7 @@ pub struct VersionRequirement {
 
 impl VersionRequirement {
     pub fn new() -> Self {
-        VersionRequirement {
-            lower_bond: None,
-            upper_bond: None,
-        }
+        VersionRequirement { lower_bond: None, upper_bond: None }
     }
 
     /// Check if this VersionRequirement accepts arbitary version
@@ -54,11 +51,7 @@ impl VersionRequirement {
         }
 
         if !new.valid() {
-            bail!(
-                "Failed to reach a solution for version requirements {} and {} .",
-                self,
-                other
-            );
+            bail!("Failed to reach a solution for version requirements {} and {} .", self, other);
         }
 
         Ok(new)

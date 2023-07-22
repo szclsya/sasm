@@ -44,11 +44,8 @@ pub async fn fullfill_command(
     let downloader = crate::utils::downloader::Downloader::new();
     // Directory that stores trusted public keys for repos
     let _key_root = opts.root.join(crate::DB_KEY_PATH);
-    let localdb = LocalDb::new(
-        opts.root.join(crate::DB_CACHE_PATH),
-        config.repo.clone(),
-        &config.arch,
-    );
+    let localdb =
+        LocalDb::new(opts.root.join(crate::DB_CACHE_PATH), config.repo.clone(), &config.arch);
 
     match &opts.subcmd {
         SubCmd::Execute => {

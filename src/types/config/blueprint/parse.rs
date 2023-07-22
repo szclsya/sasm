@@ -29,15 +29,11 @@ pub enum BlueprintLine {
 
 pub fn read_blueprint_from_file(path: &Path) -> Result<Vec<BlueprintLine>> {
     // Read lines from blueprint file
-    let f = File::open(path).context(format!(
-        "Failed to open blueprint file at {}.",
-        style(path.display()).bold()
-    ))?;
+    let f = File::open(path)
+        .context(format!("Failed to open blueprint file at {}.", style(path.display()).bold()))?;
     let reader = BufReader::new(f);
-    let lines = parse_blueprint_lines(reader).context(format!(
-        "Failed to parse blueprint {}.",
-        style(path.display()).bold()
-    ))?;
+    let lines = parse_blueprint_lines(reader)
+        .context(format!("Failed to parse blueprint {}.", style(path.display()).bold()))?;
     for (no, line) in lines.iter().enumerate() {
         // Try fill variables to sanitize
         if let BlueprintLine::PkgRequest(req) = &line {
@@ -66,11 +62,7 @@ fn parse_blueprint_lines(reader: impl BufRead) -> Result<Vec<BlueprintLine>> {
             }
             Err(e) => {
                 errors += 1;
-                error!(
-                    "Failed to parse blueprint at line {}: {}.\n",
-                    no,
-                    e.to_string()
-                );
+                error!("Failed to parse blueprint at line {}: {}.\n", no, e.to_string());
             }
         };
     }
@@ -131,10 +123,7 @@ fn pkg_option(i: &str) -> IResult<&str, PkgOption> {
         return Ok((i, PkgOption::Local));
     }
 
-    Err(nom::Err::Error(nom::error::Error::from_error_kind(
-        i,
-        ErrorKind::Alt,
-    )))
+    Err(nom::Err::Error(nom::error::Error::from_error_kind(i, ErrorKind::Alt)))
 }
 
 fn package_line(i: &str) -> IResult<&str, PkgRequest> {
@@ -192,20 +181,8 @@ mod tests {
         let t: Vec<(&str, IResult<&str, BlueprintLine>)> = vec![
             ("", Ok(("", BlueprintLine::EmptyLine))),
             ("   ", Ok(("", BlueprintLine::EmptyLine))),
-            (
-                "blah",
-                Err(nom::Err::Error(Error::new(
-                    "blah",
-                    nom::error::ErrorKind::Eof,
-                ))),
-            ),
-            (
-                "   nope",
-                Err(nom::Err::Error(Error::new(
-                    "nope",
-                    nom::error::ErrorKind::Eof,
-                ))),
-            ),
+            ("blah", Err(nom::Err::Error(Error::new("blah", nom::error::ErrorKind::Eof)))),
+            ("   nope", Err(nom::Err::Error(Error::new("nope", nom::error::ErrorKind::Eof)))),
         ];
 
         for test in t {
@@ -222,20 +199,8 @@ mod tests {
                 "# This is a comment",
                 Ok(("", BlueprintLine::Comment(" This is a comment".to_string()))),
             ),
-            (
-                "blah",
-                Err(nom::Err::Error(Error::new(
-                    "blah",
-                    nom::error::ErrorKind::Char,
-                ))),
-            ),
-            (
-                "   nope",
-                Err(nom::Err::Error(Error::new(
-                    "   nope",
-                    nom::error::ErrorKind::Char,
-                ))),
-            ),
+            ("blah", Err(nom::Err::Error(Error::new("blah", nom::error::ErrorKind::Char)))),
+            ("   nope", Err(nom::Err::Error(Error::new("   nope", nom::error::ErrorKind::Char)))),
         ];
 
         for test in t {

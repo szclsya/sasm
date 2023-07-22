@@ -33,12 +33,7 @@ where
 #[derive(Parser)]
 #[clap(about, version, author)]
 pub struct Opts {
-    #[clap(
-        display_order = 1,
-        long,
-        default_value = "/",
-        help = "Root directory for operation"
-    )]
+    #[clap(display_order = 1, long, default_value = "/", help = "Root directory for operation")]
     pub root: PathBuf,
     #[clap(
         display_order = 2,
@@ -49,12 +44,7 @@ pub struct Opts {
     pub config_root: PathBuf,
     #[clap(display_order = 3, long, help = "Say yes to every prompt")]
     pub yes: bool,
-    #[clap(
-        display_order = 4,
-        short,
-        long,
-        help = "Print additional debug information"
-    )]
+    #[clap(display_order = 4, short, long, help = "Print additional debug information")]
     pub verbose: bool,
     #[clap(display_order = 5, long, help = "Don't pipe long output into a pager")]
     pub no_pager: bool,

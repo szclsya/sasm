@@ -26,9 +26,7 @@ pub struct Writer {
 
 impl Writer {
     pub fn new() -> Self {
-        Writer {
-            term: Term::stdout(),
-        }
+        Writer { term: Term::stdout() }
     }
 
     pub fn show_cursor(&self) -> Result<()> {
@@ -45,9 +43,7 @@ impl Writer {
     }
 
     fn write_prefix(&self, prefix: &str) -> Result<()> {
-        self.term
-            .write_str(&gen_prefix(prefix))
-            .context("Failed to write prefix to console.")?;
+        self.term.write_str(&gen_prefix(prefix)).context("Failed to write prefix to console.")?;
         Ok(())
     }
 
@@ -60,16 +56,12 @@ impl Writer {
         while !msg.is_empty() {
             let line_msg = console::truncate_str(&msg, max_len.into(), "\n");
             if first_run {
-                self.write_prefix(prefix)
-                    .context("Failed to write prefix to console.")?;
+                self.write_prefix(prefix).context("Failed to write prefix to console.")?;
                 first_run = false;
             } else {
-                self.write_prefix("")
-                    .context("Failed to write prefix to console.")?;
+                self.write_prefix("").context("Failed to write prefix to console.")?;
             }
-            self.term
-                .write_str(&line_msg)
-                .context("Failed to write message to console.")?;
+            self.term.write_str(&line_msg).context("Failed to write message to console.")?;
             // Remove the already written part, strip ANSI since it can mess everything up
             let mut new_msg = console::strip_ansi_codes(&msg).to_string();
             let line_msg_len = console::measure_text_width(&line_msg);

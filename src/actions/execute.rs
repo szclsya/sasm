@@ -38,9 +38,7 @@ pub async fn execute(
     }
 
     debug!("Parsing dpkg database...");
-    let dbs = local_db
-        .get_all_package_db()
-        .context("Invalid local package database!")?;
+    let dbs = local_db.get_all_package_db().context("Invalid local package database!")?;
     let local_repo = opts.root.join(crate::LOCAL_REPO_PATH);
     if !local_repo.is_dir() {
         std::fs::create_dir_all(&local_repo)?;
@@ -138,8 +136,7 @@ fn apply_replaces(opts: &Opts, pool: &dyn PkgPool, blueprint: &mut Blueprints) -
             // Found a replacement!
             // If in user blueprint, ask if to replace it
             if blueprint.user_list_contains(&pkg.name) {
-                if cli::ask_confirm(opts, &format!("Replace {} with {}?", pkg.name, replacement))?
-                {
+                if cli::ask_confirm(opts, &format!("Replace {} with {}?", pkg.name, replacement))? {
                     blueprint.remove(&pkg.name, true)?;
                     blueprint.add(&replacement, false, None, None, false)?;
                 } else {

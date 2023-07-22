@@ -13,10 +13,7 @@ struct LockInfo {
 
 pub fn ensure_unlocked(root: &Path) -> Result<()> {
     if let Some(pid) = check(root)? {
-        bail!(
-            "Another instance of sasm is currently running at PID {}.",
-            pid
-        );
+        bail!("Another instance of sasm is currently running at PID {}.", pid);
     }
 
     Ok(())
@@ -54,9 +51,7 @@ pub fn lock(root: &Path) -> Result<()> {
     if !prefix.is_dir() {
         fs::create_dir_all(prefix).context("Failed to create directory for lock file.")?;
     }
-    let lock_info = LockInfo {
-        pid: std::process::id(),
-    };
+    let lock_info = LockInfo { pid: std::process::id() };
     let lock_content = toml::to_string(&lock_info)?;
     let mut file = fs::File::create(&lock_path).context("Failed to create lock file.")?;
     file.write(lock_content.as_bytes())

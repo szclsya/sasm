@@ -33,10 +33,8 @@ impl ChecksumValidator {
 
 impl Checksum {
     pub fn from_file_sha256(path: &Path) -> Result<Self> {
-        let mut file = File::open(path).context(format!(
-            "Failed to open {} for checking checksum",
-            path.display()
-        ))?;
+        let mut file = File::open(path)
+            .context(format!("Failed to open {} for checking checksum", path.display()))?;
         let mut hasher = Sha256::new();
         io::copy(&mut file, &mut hasher)?;
         let hash = hasher.finalize().to_vec();
@@ -92,10 +90,8 @@ impl Checksum {
     }
 
     pub fn cmp_file(&self, path: &Path) -> Result<bool> {
-        let file = File::open(path).context(format!(
-            "Failed to open {} for checking checksum",
-            path.display()
-        ))?;
+        let file = File::open(path)
+            .context(format!("Failed to open {} for checking checksum", path.display()))?;
 
         self.cmp_read(Box::new(file) as Box<dyn std::io::Read>)
     }

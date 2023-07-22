@@ -71,9 +71,7 @@ impl PkgActions<'_> {
             })
             .collect();
         let install_prefix = style("INSTALL").on_blue().bold().to_string();
-        crate::WRITER
-            .write_chunks(&install_prefix, &to_install)
-            .unwrap();
+        crate::WRITER.write_chunks(&install_prefix, &to_install).unwrap();
 
         let to_upgrade: Vec<String> = self
             .install
@@ -93,9 +91,7 @@ impl PkgActions<'_> {
             })
             .collect();
         let upgrade_prefix = style("UPGRADE").on_green().black().bold().to_string();
-        crate::WRITER
-            .write_chunks(&upgrade_prefix, &to_upgrade)
-            .unwrap();
+        crate::WRITER.write_chunks(&upgrade_prefix, &to_upgrade).unwrap();
 
         let to_downgrade: Vec<String> = self
             .install
@@ -115,9 +111,7 @@ impl PkgActions<'_> {
             })
             .collect();
         let downgrade_prefix = style("DOWNGRADE").on_yellow().white().bold().to_string();
-        crate::WRITER
-            .write_chunks(&downgrade_prefix, &to_downgrade)
-            .unwrap();
+        crate::WRITER.write_chunks(&downgrade_prefix, &to_downgrade).unwrap();
 
         let to_unpack: Vec<String> = self
             .unpack
@@ -138,19 +132,12 @@ impl PkgActions<'_> {
             })
             .collect();
         let unpack_prefix = style("UNPACK").on_blue().bold().to_string();
-        crate::WRITER
-            .write_chunks(&unpack_prefix, &to_unpack)
-            .unwrap();
+        crate::WRITER.write_chunks(&unpack_prefix, &to_unpack).unwrap();
 
         let configure_prefix = style("CONFIGURE").on_white().bold().to_string();
-        let configure_pkgnames: Vec<&str> = self
-            .configure
-            .iter()
-            .map(|(name, _)| name.as_str())
-            .collect();
-        crate::WRITER
-            .write_chunks(&configure_prefix, configure_pkgnames.as_slice())
-            .unwrap();
+        let configure_pkgnames: Vec<&str> =
+            self.configure.iter().map(|(name, _)| name.as_str()).collect();
+        crate::WRITER.write_chunks(&configure_prefix, configure_pkgnames.as_slice()).unwrap();
 
         let removes: Vec<String> = self
             .remove
@@ -164,9 +151,7 @@ impl PkgActions<'_> {
             })
             .collect();
         let remove_prefix = style("REMOVE").on_red().bold().white().to_string();
-        crate::WRITER
-            .write_chunks(&remove_prefix, &removes)
-            .unwrap();
+        crate::WRITER.write_chunks(&remove_prefix, &removes).unwrap();
 
         let purge_prefix = style("PURGE").on_red().white().bold().to_string();
         let purges: Vec<String> = self
@@ -206,9 +191,7 @@ impl PkgActions<'_> {
                     "",
                     &format!(
                         "{} +{}",
-                        &style("Estimated change in storage usage:")
-                            .bold()
-                            .to_string(),
+                        &style("Estimated change in storage usage:").bold().to_string(),
                         HumanBytes(abs_install_size_change)
                     ),
                 )
@@ -219,9 +202,7 @@ impl PkgActions<'_> {
                     "",
                     &format!(
                         "{} -{}",
-                        &style("Estimated change in storage usage:")
-                            .bold()
-                            .to_string(),
+                        &style("Estimated change in storage usage:").bold().to_string(),
                         HumanBytes(abs_install_size_change)
                     ),
                 )

@@ -17,11 +17,7 @@ pub struct LocalDb {
 
 impl LocalDb {
     pub fn new(root: PathBuf, repos: HashMap<String, RepoConfig>, arch: &str) -> Self {
-        LocalDb {
-            root,
-            arch: arch.to_owned(),
-            repos,
-        }
+        LocalDb { root, arch: arch.to_owned(), repos }
     }
 
     /// Get the remote (relative) path and local path for a repository

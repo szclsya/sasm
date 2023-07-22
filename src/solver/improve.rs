@@ -13,8 +13,7 @@ pub fn upgrade(pool: &dyn PkgPool, res: &mut Vec<usize>, solver: &mut Solver) ->
     loop {
         let updates = gen_update_assume(pool, res);
         if !updates.is_empty() {
-            let names: HashSet<String> =
-                updates.iter().map(|(name, _)| name.to_string()).collect();
+            let names: HashSet<String> = updates.iter().map(|(name, _)| name.to_string()).collect();
             // If the update list only contains packages that can't be upgraded, stop
             if cant_update == names {
                 break;
@@ -64,10 +63,7 @@ pub fn reduce(pool: &dyn PkgPool, res: &mut Vec<usize>, to_install: &[usize]) ->
             }
         }
 
-        let mut no_ids: Vec<Lit> = cycle
-            .iter()
-            .map(|id| !Lit::from_dimacs(*id as isize))
-            .collect();
+        let mut no_ids: Vec<Lit> = cycle.iter().map(|id| !Lit::from_dimacs(*id as isize)).collect();
         let mut new_assume = assumes.clone();
         new_assume.append(&mut no_ids);
         solver.assume(&new_assume);

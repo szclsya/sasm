@@ -3,10 +3,8 @@ use varisat::{Lit, Solver};
 
 pub fn find_incompatible_friendly(pool: &dyn PkgPool, to_install: &[usize]) -> String {
     let incompatible = find_incompatible(pool, to_install);
-    let pkgs: Vec<&PkgMeta> = incompatible
-        .into_iter()
-        .map(|id| pool.get_pkg_by_id(id).unwrap())
-        .collect();
+    let pkgs: Vec<&PkgMeta> =
+        incompatible.into_iter().map(|id| pool.get_pkg_by_id(id).unwrap()).collect();
 
     if pkgs.is_empty() {
         "Unknown reason".to_string()
@@ -22,11 +20,7 @@ pub fn find_incompatible_friendly(pool: &dyn PkgPool, to_install: &[usize]) -> S
         res.push_str("");
         let mut pkgs = pkgs.into_iter().peekable();
         while let Some(pkg) = pkgs.next() {
-            res.push_str(&format!(
-                "{}({})",
-                pkg.name,
-                console::style(&pkg.version).dim()
-            ));
+            res.push_str(&format!("{}({})", pkg.name, console::style(&pkg.version).dim()));
             if pkgs.peek().is_some() {
                 res.push_str(", ");
             }
@@ -42,19 +36,13 @@ fn find_incompatible(pool: &dyn PkgPool, to_install: &[usize]) -> Vec<usize> {
     solver.add_formula(&formula);
 
     // Check individual packages first
-    let to_install_as_lits: Vec<Lit> = to_install
-        .iter()
-        .map(|id| Lit::from_dimacs(*id as isize))
-        .collect();
+    let to_install_as_lits: Vec<Lit> =
+        to_install.iter().map(|id| Lit::from_dimacs(*id as isize)).collect();
     solver.solve().unwrap();
     solver.assume(&to_install_as_lits);
     solver.solve().unwrap();
     let core: Vec<usize> = match solver.failed_core() {
-        Some(pkgids) => pkgids
-            .to_vec()
-            .into_iter()
-            .map(|lit| lit.to_dimacs() as usize)
-            .collect(),
+        Some(pkgids) => pkgids.to_vec().into_iter().map(|lit| lit.to_dimacs() as usize).collect(),
         None => Vec::new(),
     };
 

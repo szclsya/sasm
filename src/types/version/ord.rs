@@ -13,11 +13,8 @@ impl Ord for PkgVersion {
             return Ordering::Less;
         }
 
-        let this_segments: Vec<&PkgVersionSegment> = self
-            .version
-            .iter()
-            .filter(|x| !matches!(x, PkgVersionSegment::Separater(_)))
-            .collect();
+        let this_segments: Vec<&PkgVersionSegment> =
+            self.version.iter().filter(|x| !matches!(x, PkgVersionSegment::Separater(_))).collect();
         let that_segments: Vec<&PkgVersionSegment> = other
             .version
             .iter()

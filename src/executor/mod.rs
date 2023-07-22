@@ -28,11 +28,7 @@ impl MachineStatus {
     }
 
     /// Generate a list of actions according to machine status and package blueprint
-    pub fn gen_actions<'a>(
-        &self,
-        blueprint: &[&'a PkgMeta],
-        purge_config: bool,
-    ) -> PkgActions<'a> {
+    pub fn gen_actions<'a>(&self, blueprint: &[&'a PkgMeta], purge_config: bool) -> PkgActions<'a> {
         let mut res = PkgActions::default();
         // We will modify the list, so do a clone
         let mut old_pkgs = self.pkgs.clone();

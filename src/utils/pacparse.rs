@@ -130,13 +130,7 @@ mod test {
     fn try_parse() {
         assert_eq!(("", "BRUH"), parse_key("%BRUH%\n").unwrap());
         assert_eq!(
-            (
-                "something else",
-                (
-                    "NAME".to_string(),
-                    "A multiple\nline\nparagraph.".to_string(),
-                )
-            ),
+            ("something else", ("NAME".to_string(), "A multiple\nline\nparagraph.".to_string(),)),
             parse_pair(
                 "%NAME%
 A multiple
@@ -148,13 +142,7 @@ something else"
             .unwrap()
         );
         assert_eq!(
-            (
-                "",
-                (
-                    "NAME".to_string(),
-                    "A multiple\nline\nparagraph".to_string(),
-                )
-            ),
+            ("", ("NAME".to_string(), "A multiple\nline\nparagraph".to_string(),)),
             parse_pair(
                 "%NAME%
 A multiple

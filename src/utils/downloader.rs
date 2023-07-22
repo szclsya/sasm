@@ -56,11 +56,7 @@ pub struct Downloader {
 
 impl Downloader {
     pub fn new() -> Self {
-        Downloader {
-            client: Client::new(),
-            max_concurrent: 5,
-            max_retry: 3,
-        }
+        Downloader { client: Client::new(), max_concurrent: 5, max_retry: 3 }
     }
 
     /// Download all required stuff in an async manner and show a progress bar
@@ -93,9 +89,7 @@ impl Downloader {
                 " {msg:<48} {total_bytes:>10} {binary_bytes_per_sec:>12} {eta:>4} [{wide_bar:.white/black}] {percent:>3}%"
             }
         };
-        let barsty = ProgressStyle::default_bar()
-            .template(bar_template)?
-            .progress_chars("=>-");
+        let barsty = ProgressStyle::default_bar().template(bar_template)?.progress_chars("=>-");
         // Create a global bar if some files specified size
         let total = to_download.len();
         let total_str_len = total.to_string().len();
@@ -200,13 +194,7 @@ async fn try_download_file(
         Ok(res) => Ok(res),
         Err(error) => Err({
             bar.reset();
-            DownloadError {
-                error,
-                job,
-                retry: retry + 1,
-                bar,
-                global_bar,
-            }
+            DownloadError { error, job, retry: retry + 1, bar, global_bar }
         }),
     }
 }
@@ -232,9 +220,9 @@ async fn download_file(
     };
     let len = match job.size {
         Some(len) => len,
-        None => resp
-            .content_length()
-            .ok_or_else(|| format_err!("Cannot determine content length."))?,
+        None => {
+            resp.content_length().ok_or_else(|| format_err!("Cannot determine content length."))?
+        }
     };
     let msg = job.description.as_ref().unwrap_or(&filename);
 
@@ -263,21 +251,12 @@ async fn download_file(
                 }
             }
             // If checksum DNE/mismatch, purge current content
-            let f = OpenOptions::new()
-                .read(true)
-                .write(true)
-                .truncate(true)
-                .open(&file_path)
-                .await?;
+            let f =
+                OpenOptions::new().read(true).write(true).truncate(true).open(&file_path).await?;
             f.set_len(0).await?;
             f
         } else {
-            OpenOptions::new()
-                .read(true)
-                .write(true)
-                .create(true)
-                .open(&file_path)
-                .await?
+            OpenOptions::new().read(true).write(true).create(true).open(&file_path).await?
         }
     };
 
@@ -293,11 +272,8 @@ async fn download_file(
 
     // Download!
     {
-        let mut validator = job
-            .compression
-            .get_download_checksum()
-            .as_ref()
-            .map(|c| c.get_validator());
+        let mut validator =
+            job.compression.get_download_checksum().as_ref().map(|c| c.get_validator());
         let mut writer: Box<dyn AsyncWrite + Unpin + Send> = match job.compression {
             Compression::Gzip(_) => Box::new(GzipDecoder::new(&mut f)),
             Compression::Xz(_) => Box::new(XzDecoder::new(&mut f)),
@@ -363,10 +339,5 @@ fn update_global_bar(
 #[inline]
 fn gen_global_bar_message(total: usize, finished: usize, total_text_len: usize) -> String {
     let finished_str = finished.to_string();
-    format!(
-        "Total Progress: [{: >width$}/{}]",
-        finished_str,
-        total,
-        width = total_text_len
-    )
+    format!("Total Progress: [{: >width$}/{}]", finished_str, total, width = total_text_len)
 }

@@ -25,11 +25,7 @@ pub fn parse_version(i: &str) -> IResult<&str, PkgVersion> {
         Err(_) => upstream_version(i)?,
     };
 
-    let res = PkgVersion {
-        epoch,
-        version: upstream_version,
-        revision,
-    };
+    let res = PkgVersion { epoch, version: upstream_version, revision };
 
     Ok((i, res))
 }
@@ -65,17 +61,11 @@ fn revision(i: &str) -> IResult<&str, &str> {
 
 fn upstream_version(i: &str) -> IResult<&str, (Vec<PkgVersionSegment>, Option<u64>)> {
     if i.is_empty() {
-        return Err(nom::Err::Error(nom::error::Error::from_error_kind(
-            i,
-            ErrorKind::Eof,
-        )));
+        return Err(nom::Err::Error(nom::error::Error::from_error_kind(i, ErrorKind::Eof)));
     }
 
     if !i.starts_with(|c: char| c.is_alphanumeric()) {
-        return Err(nom::Err::Error(nom::error::Error::from_error_kind(
-            i,
-            ErrorKind::Char,
-        )));
+        return Err(nom::Err::Error(nom::error::Error::from_error_kind(i, ErrorKind::Char)));
     }
 
     let mut result = Vec::new();

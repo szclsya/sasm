@@ -9,13 +9,11 @@ pub fn fill_variables(rule: &str) -> Result<String> {
 
     let kernel_version = get_kernel_version()?;
     let mut unknown_variable = Vec::new();
-    let res = EXPANSION.replace_all(rule, |caps: &Captures| {
-        match caps.get(1).unwrap().as_str() {
-            "KERNEL_VERSION" => &kernel_version,
-            unintended => {
-                unknown_variable.push(unintended.to_owned());
-                ""
-            }
+    let res = EXPANSION.replace_all(rule, |caps: &Captures| match caps.get(1).unwrap().as_str() {
+        "KERNEL_VERSION" => &kernel_version,
+        unintended => {
+            unknown_variable.push(unintended.to_owned());
+            ""
         }
     });
 

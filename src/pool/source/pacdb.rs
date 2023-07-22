@@ -45,39 +45,27 @@ pub fn import(db: &Path, pool: &mut dyn PkgPool, baseurl: &str) -> Result<()> {
 
 fn parse_desc(mut f: impl Read, from: &str) -> Result<PkgMeta> {
     let mut content = String::new();
-    f.read_to_string(&mut content)
-        .context("error reading desc file from db")?;
+    f.read_to_string(&mut content).context("error reading desc file from db")?;
     let fields =
         pacparse::parse_str(&content).context(format!("error parsing desc from {from}"))?;
-    let pkgmeta =
-        fields_to_pkgmeta(fields).context(format!("error reading fields from {from}"))?;
+    let pkgmeta = fields_to_pkgmeta(fields).context(format!("error reading fields from {from}"))?;
     Ok(pkgmeta)
 }
 
 fn fields_to_pkgmeta(mut f: HashMap<String, String>) -> Result<PkgMeta> {
     // Get name first, for error reporting
-    let name = f
-        .remove("NAME")
-        .ok_or_else(|| anyhow!("bad metadata: missing NAME"))?;
+    let name = f.remove("NAME").ok_or_else(|| anyhow!("bad metadata: missing NAME"))?;
     // Generate real url
-    let path = f
-        .remove("FILENAME")
-        .ok_or_else(|| anyhow!("bad metadata: missing FILENAME"))?;
+    let path = f.remove("FILENAME").ok_or_else(|| anyhow!("bad metadata: missing FILENAME"))?;
 
     // Needed for source, so parse this first
-    let download_size = f
-        .remove("CSIZE")
-        .ok_or_else(|| anyhow!("bad metadata: missing CSIZE"))?
-        .parse()?;
+    let download_size =
+        f.remove("CSIZE").ok_or_else(|| anyhow!("bad metadata: missing CSIZE"))?.parse()?;
     Ok(PkgMeta {
         name: name.clone(),
-        description: f
-            .remove("DESC")
-            .ok_or_else(|| anyhow!("bad metadata for {name}: {e}"))?,
+        description: f.remove("DESC").ok_or_else(|| anyhow!("bad metadata for {name}: {e}"))?,
         version: PkgVersion::try_from(
-            f.remove("VERSION")
-                .ok_or_else(|| anyhow!("bad metadata for {name}: {e}"))?
-                .as_str(),
+            f.remove("VERSION").ok_or_else(|| anyhow!("bad metadata for {name}: {e}"))?.as_str(),
         )?,
 
         depends: get_pkg_list(&name, "DEPENDS", &mut f)?,
