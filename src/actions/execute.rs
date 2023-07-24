@@ -28,15 +28,6 @@ pub async fn execute(
     config: &Config,
     request: UserRequest,
 ) -> Result<bool> {
-    // Check if operating in alt-root mode
-    let mut alt_root = false;
-    if opts.root != std::path::Path::new("/") {
-        info!(
-            "Operating in external system root mode, Omakase will only unpack packages without configuration!"
-        );
-        alt_root = true;
-    }
-
     debug!("Parsing dpkg database...");
     let dbs = local_db.get_all_package_db().context("Invalid local package database!")?;
     let local_repo = opts.root.join(crate::LOCAL_REPO_PATH);
@@ -57,14 +48,14 @@ pub async fn execute(
     let solver = Solver::from(pool);
     let res = solver.install(blueprint)?;
     // Translating result to list of actions
-    let actions = machine_status.gen_actions(res.as_slice(), false);
+    let actions = machine_status.gen_actions(res.as_slice());
     if actions.is_empty() {
         success!("There is nothing to do.");
         return Ok(false);
     }
 
     // There is something to do. Show it.
-    info!("Omakase will perform the following actions:");
+    info!("sasm will perform the following actions:");
     if opts.yes && opts.no_pager {
         actions.show();
     } else {

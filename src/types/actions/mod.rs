@@ -9,11 +9,8 @@ use indicatif::HumanBytes;
 #[derive(Default, Debug)]
 pub struct PkgActions<'a> {
     pub install: Vec<(&'a PkgMeta, Option<(PkgVersion, u64)>)>,
-    pub unpack: Vec<(&'a PkgMeta, Option<(PkgVersion, u64)>)>,
-    // (Name, InstallSize, Essential?)
-    pub remove: Vec<(String, u64, bool)>,
-    pub purge: Vec<(String, u64, bool)>,
-    pub configure: Vec<(String, PkgVersion)>,
+    // (Name, InstallSize)
+    pub remove: Vec<(String, u64)>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -33,27 +30,7 @@ pub trait PkgActionModifier {
 
 impl PkgActions<'_> {
     pub fn is_empty(&self) -> bool {
-        self.install.is_empty()
-            && self.unpack.is_empty()
-            && self.remove.is_empty()
-            && self.purge.is_empty()
-            && self.configure.is_empty()
-    }
-
-    pub fn remove_essential(&self) -> bool {
-        for (_, _, essential) in &self.remove {
-            if *essential {
-                return true;
-            }
-        }
-
-        for (_, _, essential) in &self.purge {
-            if *essential {
-                return true;
-            }
-        }
-
-        false
+        self.install.is_empty() && self.remove.is_empty()
     }
 
     pub fn show(&self) {
@@ -113,59 +90,16 @@ impl PkgActions<'_> {
         let downgrade_prefix = style("DOWNGRADE").on_yellow().white().bold().to_string();
         crate::WRITER.write_chunks(&downgrade_prefix, &to_downgrade).unwrap();
 
-        let to_unpack: Vec<String> = self
-            .unpack
-            .iter()
-            .map(|(install, oldpkg)| {
-                let mut msg = install.name.clone();
-                match oldpkg {
-                    Some(oldpkg) => {
-                        let ver_str = format!("({} -> {})", oldpkg.0, install.version);
-                        msg.push_str(&style(ver_str).dim().to_string());
-                    }
-                    None => {
-                        let ver_str = format!("({})", install.version);
-                        msg.push_str(&style(ver_str).dim().to_string());
-                    }
-                };
-                msg
-            })
-            .collect();
-        let unpack_prefix = style("UNPACK").on_blue().bold().to_string();
-        crate::WRITER.write_chunks(&unpack_prefix, &to_unpack).unwrap();
-
-        let configure_prefix = style("CONFIGURE").on_white().bold().to_string();
-        let configure_pkgnames: Vec<&str> =
-            self.configure.iter().map(|(name, _)| name.as_str()).collect();
-        crate::WRITER.write_chunks(&configure_prefix, configure_pkgnames.as_slice()).unwrap();
-
         let removes: Vec<String> = self
             .remove
             .iter()
-            .map(|(name, _, essential)| {
+            .map(|(name, _)| {
                 let mut pkg = name.clone();
-                if *essential {
-                    pkg.push_str(&style("(essential)").red().to_string());
-                }
                 pkg
             })
             .collect();
         let remove_prefix = style("REMOVE").on_red().bold().white().to_string();
         crate::WRITER.write_chunks(&remove_prefix, &removes).unwrap();
-
-        let purge_prefix = style("PURGE").on_red().white().bold().to_string();
-        let purges: Vec<String> = self
-            .purge
-            .iter()
-            .map(|(name, _, essential)| {
-                let mut pkg = name.clone();
-                if *essential {
-                    pkg.push_str(&style("(essential)").red().to_string());
-                }
-                pkg
-            })
-            .collect();
-        crate::WRITER.write_chunks(&purge_prefix, &purges).unwrap();
     }
 
     pub fn show_tables(&self, no_pager: bool) -> Result<()> {
@@ -219,19 +153,8 @@ impl PkgActions<'_> {
             }
         }
 
-        for unpack in &self.unpack {
-            res += i128::from(unpack.0.install_size);
-            if let Some(oldpkg) = &unpack.1 {
-                res -= i128::from(oldpkg.1);
-            }
-        }
-
         for remove in &self.remove {
             res -= i128::from(remove.1);
-        }
-
-        for purge in &self.purge {
-            res -= i128::from(purge.1);
         }
 
         res
@@ -244,13 +167,6 @@ impl PkgActions<'_> {
                 res += size;
             }
         }
-
-        for unpack in &self.unpack {
-            if let PkgSource::Http((_, size, _)) = unpack.0.source {
-                res += size;
-            }
-        }
-
         res
     }
 }

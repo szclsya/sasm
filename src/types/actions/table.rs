@@ -29,20 +29,11 @@ struct RemoveRow {
     detail: String,
 }
 
-#[derive(Tabled)]
-struct ConfigureRow {
-    #[header("Name")]
-    name: String,
-    #[header("Version")]
-    version: String,
-}
-
 pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
     let mut install_rows = Vec::new();
     let mut upgrade_rows = Vec::new();
     let mut downgrade_rows = Vec::new();
     let mut remove_rows = Vec::new();
-    let mut configure_rows = Vec::new();
 
     for (new, old) in actions.install.iter().rev() {
         let mut install_size_change: i128 = new.install_size.into();
@@ -80,37 +71,14 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
         }
     }
 
-    for (name, size, essential) in &actions.remove {
-        let detail = if *essential {
-            style("Essential").on_white().red().to_string()
-        } else {
-            String::new()
-        };
+    for (name, size) in &actions.remove {
+        let detail = String::new();
         let row = RemoveRow {
             name: style(name).red().to_string(),
             size: HumanBytes(*size).to_string(),
             detail,
         };
         remove_rows.push(row);
-    }
-
-    for (name, size, essential) in &actions.purge {
-        let mut detail_sections = vec![style("Purge configuration files.").red().to_string()];
-        if *essential {
-            detail_sections.insert(0, style("Essential package.").on_white().red().to_string());
-        }
-        let detail = detail_sections.join(",");
-        let row = RemoveRow {
-            name: style(name).red().to_string(),
-            size: HumanBytes(*size).to_string(),
-            detail,
-        };
-        remove_rows.push(row);
-    }
-
-    for (name, version) in &actions.configure {
-        let row = ConfigureRow { name: name.clone(), version: version.to_string() };
-        configure_rows.push(row);
     }
 
     let mut pager = Pager::new(no_pager)?;
@@ -162,15 +130,6 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
             .with(Modify::new(Full).with(Alignment::left()))
             // Install Size column should align right
             .with(Modify::new(Column(1..2)).with(Alignment::right()))
-            .with(Modify::new(Full).with(|s: &str| format!(" {s} ")))
-            .with(Style::PSQL);
-        writeln!(out, "{table}")?;
-    }
-
-    if !configure_rows.is_empty() {
-        writeln!(out, "The following packages will be {}:\n", style("configured").blue().bold())?;
-        let table = Table::new(&configure_rows)
-            .with(Modify::new(Full).with(Alignment::left()))
             .with(Modify::new(Full).with(|s: &str| format!(" {s} ")))
             .with(Style::PSQL);
         writeln!(out, "{table}")?;

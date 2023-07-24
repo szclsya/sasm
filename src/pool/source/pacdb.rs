@@ -63,9 +63,9 @@ fn fields_to_pkgmeta(mut f: HashMap<String, String>) -> Result<PkgMeta> {
         f.remove("CSIZE").ok_or_else(|| anyhow!("bad metadata: missing CSIZE"))?.parse()?;
     Ok(PkgMeta {
         name: name.clone(),
-        description: f.remove("DESC").ok_or_else(|| anyhow!("bad metadata for {name}: {e}"))?,
+        description: f.remove("DESC").ok_or_else(|| anyhow!("bad metadata for {name}"))?,
         version: PkgVersion::try_from(
-            f.remove("VERSION").ok_or_else(|| anyhow!("bad metadata for {name}: {e}"))?.as_str(),
+            f.remove("VERSION").ok_or_else(|| anyhow!("bad metadata for {name}"))?.as_str(),
         )?,
 
         depends: get_pkg_list(&name, "DEPENDS", &mut f)?,
