@@ -66,19 +66,13 @@ impl LocalDb {
 
         let mut download_jobs = Vec::with_capacity(package_dbs.len());
         for (name, repo) in &self.repos {
-            let (remote_path, local_path) = self.get_package_db(&name)?;
-            let checksum = if local_path.is_file() {
-                // Calculate old checksum
-                Some(Checksum::from_file_sha256(&local_path)?)
-            } else {
-                None
-            };
+            let (remote_path, _local_path) = self.get_package_db(&name)?;
             download_jobs.push(DownloadJob {
                 url: format!("{}/{}", repo.get_url(name, &self.arch)?, remote_path),
                 description: Some(format!("Package database for {}", style(name).bold())),
                 filename: Some(format!("{}.db", name)),
                 size: None,
-                compression: Compression::None(checksum),
+                compression: Compression::None(None),
             })
         }
 

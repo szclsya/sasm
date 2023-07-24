@@ -296,7 +296,7 @@ async fn download_file(
         if let Some(len) = job.size {
             if bar.length().unwrap() != len {
                 bail!(
-                    "Bad file size when downloading {}: mirrors may be synchronizing, please try again later.",
+                    "Bad file size when downloading {}: mirrors may be synchronizing, try again later.",
                     job.url
                 );
             }

@@ -28,7 +28,6 @@ pub async fn execute(
     config: &Config,
     request: UserRequest,
 ) -> Result<bool> {
-    debug!("Parsing dpkg database...");
     let dbs = local_db.get_all_package_db().context("Invalid local package database!")?;
     let local_repo = opts.root.join(crate::LOCAL_REPO_PATH);
     if !local_repo.is_dir() {

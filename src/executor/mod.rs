@@ -52,7 +52,7 @@ impl MachineStatus {
 
         // Now deal with the leftovers
         for oldpkg in old_pkgs {
-            todo!()
+            res.remove.push((oldpkg.0, oldpkg.1.install_size));
         }
         res
     }

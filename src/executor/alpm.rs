@@ -30,7 +30,6 @@ pub async fn read_alpm_local_db(root: &Path) -> Result<HashMap<String, PkgStatus
             // Parse it
             let content = fs::read_to_string(entry.path()).await?;
             let mut result = pacparse::parse_str(&content)?;
-            debug!("{:?}", result);
             let name = result.remove("NAME").ok_or_else(|| {
                 anyhow!("bad ALPM local db: NAME missing from {}", entry.path().display())
             })?;
