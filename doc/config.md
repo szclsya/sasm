@@ -1,4 +1,4 @@
-Omakase requires a config folder of this structure:
+sasm requires a config folder of this structure:
 
 ```
 CONFIG_ROOT (typically /etc/omakase)
@@ -21,7 +21,7 @@ arch = "amd64"
 
 # Repository configuration sections are denoted by `[repo.REPO_NAME]`. REPO_NAME can be arbitary.
 [repo.main]
-# Omakase support loading mirrors from a mirrorlist
+# sasm support loading mirrors from a mirrorlist
 # The mirrorlist path must be an absolute path
 source = { mirrorlist = "/usr/share/distro-repository-data/mirrors.toml", preferred = "origin" }
 # Or, use a simple URL
@@ -31,7 +31,7 @@ components = ["main"]
 # GPG public key for this repository.
 # Put the public keys in the `keys/` folder, and provide filenames of the key files here
 keys = ["main.asc"]
-# Tags are used by external programs to identify repositories. Omakase doesn't use them.
+# Tags are used by external programs to identify repositories. sasm doesn't use them.
 tags = ["topic-template"]
 ```
 
@@ -53,23 +53,23 @@ url = "https://magicmirror.bruh/"
 ```
 
 ## The Omanomicon: `unsafe` section
-Some dangerous flags of Omakase can be enabled in the `unsafe` section. This section is optional and the default config will not contain this section, but if you are sure you want to enable these features, you can manually add this section and enable the flags you want.
+Some dangerous flags of sasm can be enabled in the `unsafe` section. This section is optional and the default config will not contain this section, but if you are sure you want to enable these features, you can manually add this section and enable the flags you want.
 
 ```toml
 [unsafe]
-# When Omakase thinks it should remove a package, purge the package's config files too
+# When sasm thinks it should remove a package, purge the package's config files too
 purge_on_remove = true
 # Allow dpkg to skip fsync on files. Only use on systems with battery backup.
 unsafe_io = true
 # Allow remove essential packages.
-# If not implicitly set to true, Omakase will refuse any action that involves removing essential packages
+# If not implicitly set to true, sasm will refuse any action that involves removing essential packages
 allow_remove_essential = true
 ```
 
 # Blueprints
 Blueprint are, as their name suggests, the blueprint for the system. They defines the packages users can use about the system, and omakase will ensure these packages are available. However, this also means that any package that is not included in the system blueprint is not guaranteed to be installed. For example, user might able to use a package installed as dependency, but if this package is no longer depended, it can be removed. Thus, user should always include packages they use in the blueprint files.
 
-There are two types of blueprint: _user blueprint_ and _vendor blueprint_. There is only one user blueprint at `CONFIG_ROOT/user.blueprint`, but there may be many vendor blueprints at `CONFIG_ROOT/blueprint.d/*.blueprint`. When using the CLI, Omakase will only modify user blueprint. So, if you wants to remove a package inside vendor blueprint, Omakase will not allow so. You will have to manually remove the line in the corresponding vendor blueprint.
+There are two types of blueprint: _user blueprint_ and _vendor blueprint_. There is only one user blueprint at `CONFIG_ROOT/user.blueprint`, but there may be many vendor blueprints at `CONFIG_ROOT/blueprint.d/*.blueprint`. When using the CLI, sasm will only modify user blueprint. So, if you wants to remove a package inside vendor blueprint, sasm will not allow so. You will have to manually remove the line in the corresponding vendor blueprint.
 
 Blueprint files have a special syntax. Each line in a blueprint file represents a package request. Such line include two parts: package name and (optional) additional requirements. Here's a few examples:
 

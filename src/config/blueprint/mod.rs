@@ -142,7 +142,7 @@ impl Blueprints {
                 error!("Package {} not found in user blueprint.", style(pkgname).bold());
                 info!("However, it exists in vendor blueprint {}.", style(path.display()).bold());
                 msg!(
-                    "You may not remove packages in vendor blueprints via the Omakase CLI. If you really wish to remove this package, please edit the vendor blueprint file above directly."
+                    "You may not remove packages in vendor blueprints via the sasm CLI. If you really wish to remove this package, please edit the vendor blueprint file above directly."
                 );
             } else {
                 error!("Package {} not found in any installed blueprints.", style(pkgname).bold());

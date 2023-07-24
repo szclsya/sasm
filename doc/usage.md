@@ -47,7 +47,7 @@ Search what packages contain a certain file.
 oma pick PKGNAME
 ```
 
-Tell Omakase to use a certain version of a package.
+Tell sasm to use a certain version of a package.
 
 # Benchmarking mirrors and pick the best one
 ```bash

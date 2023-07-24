@@ -1,7 +1,6 @@
-pub mod alpm;
 mod types;
 
-use crate::types::{PkgActions, PkgMeta};
+use crate::{ types::{PkgActions, PkgMeta}, pm::alpm };
 pub use types::PkgStatus;
 
 use anyhow::{Context, Result};
@@ -21,7 +20,7 @@ impl MachineStatus {
                 .context("Failed to initialize ALPM local database.")?;
         }
 
-        let pkgs = alpm::read_alpm_local_db(&alpm_local_db_root).await?;
+        let pkgs = alpm::local::read_alpm_local_db(&alpm_local_db_root).await?;
 
         Ok(MachineStatus { pkgs })
     }

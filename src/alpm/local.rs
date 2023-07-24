@@ -36,7 +36,7 @@ pub async fn read_alpm_local_db(root: &Path) -> Result<HashMap<String, PkgStatus
             let version: PkgVersion = result
                 .remove("VERSION")
                 .ok_or_else(|| {
-                    anyhow!("bad ALPM local db: NAME missing from {}", entry.path().display())
+                    anyhow!("bad ALPM local db: VERSION missing from {}", entry.path().display())
                 })?
                 .as_str()
                 .try_into()?;

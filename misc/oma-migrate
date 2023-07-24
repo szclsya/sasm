@@ -2,7 +2,7 @@
 
 _help_message() {
     printf "\
-    oma-migrate: export APT database as an Omakase blueprint
+    oma-migrate: export APT database as an sasm blueprint
 Useage:
     oma-migrate [OUTPUT]
     - OUTPUT: Where to generate blueprint. If not specified, /etc/omakase/user.blueprint will be used.
@@ -27,5 +27,5 @@ if [[ $? -ne 0 ]]; then
     echo "Failed to get packages from apt. Is this system using APT?"
 else
     echo "All manually installed packages from apt has been added to $BLUEPRINT_PATH."
-    echo "Now, run oma execute to let Omakase take over. Please carefully examine the installation/removal list. If packages are installed or removed unexpectedly, then manually adjust the blueprint."
+    echo "Now, run oma execute to let sasm take over. Please carefully examine the installation/removal list. If packages are installed or removed unexpectedly, then manually adjust the blueprint."
 fi

@@ -1,14 +1,14 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
+// TODO: Remove above allows when the transition is done
 mod actions;
-mod cli;
-mod db;
+mod config;
 mod executor;
-mod pool;
-mod solver;
 mod types;
 mod utils;
-use types::config::{Blueprints, Config, Opts};
+mod alpm;
+mod solver;
+use config::{Blueprints, Config, Opts};
 
 use anyhow::{bail, Context, Result};
 use clap::Parser;
@@ -24,7 +24,7 @@ use std::{
 
 // Initialize writer
 lazy_static! {
-    static ref WRITER: cli::Writer = cli::Writer::new();
+    static ref WRITER: utils::cli::Writer = utils::cli::Writer::new();
 }
 // Debug flag
 static VERBOSE: AtomicBool = AtomicBool::new(false);

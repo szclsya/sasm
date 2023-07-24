@@ -1,3 +1,7 @@
+/// The sasm dependency solver
+/// Comes with the pool it uses to calculate dependencies upon
+pub mod pool;
+
 mod improve;
 mod incompatible;
 mod sort;
@@ -41,7 +45,7 @@ impl Solver {
                     self.pool.as_ref(),
                     &ids
                 )))
-                .context("Omakase cannot satisfy package requirements.")
+                .context("sasm cannot satisfy package requirements.")
             }
         };
 
@@ -65,7 +69,7 @@ impl Solver {
 pub fn solve(solver: &mut varisat::Solver) -> Result<Vec<usize>> {
     let mut res = Vec::new();
     if !solver.solve().unwrap() {
-        bail!("Omakase cannot satisfy package requirements.");
+        bail!("sasm cannot satisfy package requirements.");
     } else {
         let model = solver.model().unwrap();
         for i in model {
@@ -77,3 +81,4 @@ pub fn solve(solver: &mut varisat::Solver) -> Result<Vec<usize>> {
     }
     Ok(res)
 }
+

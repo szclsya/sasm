@@ -164,8 +164,8 @@ pub fn show_table(actions: &PkgActions, no_pager: bool) -> Result<()> {
 fn write_review_help_message(w: &mut dyn Write) -> Result<()> {
     writeln!(w, "{}", style("Pending Operations").bold())?;
     writeln!(w)?;
-    writeln!(w, "Shown below is an overview of the pending changes Omakase will apply to your system, please review them carefully.")?;
-    writeln!(w, "Please note that Omakase may {}, {}, {}, {}, or {} packages in order to fulfill your requested changes.", style("install").green(), style("remove").red(), style("upgrade").green(), style("downgrade").yellow(), style("configure").blue())?;
+    writeln!(w, "Shown below is an overview of the pending changes sasm will apply to your system, please review them carefully.")?;
+    writeln!(w, "Please note that sasm may {}, {}, {}, {}, or {} packages in order to fulfill your requested changes.", style("install").green(), style("remove").red(), style("upgrade").green(), style("downgrade").yellow(), style("configure").blue())?;
     writeln!(w)?;
     Ok(())
 }

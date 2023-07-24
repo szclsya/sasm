@@ -1,12 +1,11 @@
 use super::UserRequest;
 use crate::{
-    cli::{self, ask_confirm},
-    db::LocalDb,
+    utils::cli::{self, ask_confirm},
+    alpm::db::LocalDb,
     debug,
-    executor::{alpm, MachineStatus},
+    executor::MachineStatus,
     info,
-    pool::{self, PkgPool},
-    solver::Solver,
+    solver::{ Solver, pool::{self, PkgPool} },
     success,
     types::{
         config::{Blueprints, Config, Opts},
