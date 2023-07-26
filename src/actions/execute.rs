@@ -32,16 +32,18 @@ pub async fn execute(
     if !local_repo.is_dir() {
         std::fs::create_dir_all(&local_repo)?;
     }
-    let pool = pool::source::create_pool(&dbs, &[local_repo])?;
-    for db in dbs {}
+    let mut pool = pool::InMemoryPool::new();
+    for (db_base_url, db_path) in dbs {
+        crate::alpm::db::import(&db_path, &mut pool, &db_base_url)?;
+    }
 
     debug!("Processing user request...");
     let root = &opts.root;
     let machine_status = MachineStatus::new(root).await?;
-    process_user_request(request, pool.as_ref(), blueprint, &machine_status)?;
+    process_user_request(request, &pool, blueprint, &machine_status)?;
 
     debug!("Applying replaces according to package catalog...");
-    apply_replaces(opts, pool.as_ref(), blueprint)?;
+    apply_replaces(opts, &pool, blueprint)?;
 
     info!("Resolving dependencies...");
     let solver = Solver::from(pool);

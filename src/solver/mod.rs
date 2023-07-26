@@ -21,6 +21,12 @@ impl From<Box<dyn PkgPool>> for Solver {
     }
 }
 
+impl From<pool::InMemoryPool> for Solver {
+    fn from(pool: pool::InMemoryPool) -> Self {
+        Solver { pool: Box::new(pool) }
+    }
+}
+
 impl Solver {
     pub fn install(&self, blueprints: &Blueprints) -> Result<Vec<&PkgMeta>> {
         let mut formula = self.pool.gen_formula(None);

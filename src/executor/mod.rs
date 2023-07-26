@@ -17,7 +17,7 @@ impl MachineStatus {
                 .context("Failed to initialize ALPM local database.")?;
         }
 
-        let pkgs = alpm::local::read_alpm_local_db(&alpm_local_db_root).await?;
+        let pkgs = crate::alpm::local::read_alpm_local_db(&alpm_local_db_root).await?;
 
         Ok(MachineStatus { pkgs })
     }
