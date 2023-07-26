@@ -2,12 +2,12 @@
 #![allow(unused_imports)]
 // TODO: Remove above allows when the transition is done
 mod actions;
+mod alpm;
 mod config;
 mod executor;
+mod solver;
 mod types;
 mod utils;
-mod alpm;
-mod solver;
 use config::{Blueprints, Config, Opts};
 
 use anyhow::{bail, Context, Result};

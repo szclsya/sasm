@@ -1,4 +1,4 @@
-use crate::types::config::Opts;
+use crate::config::Opts;
 
 use anyhow::Result;
 use console::style;
@@ -18,9 +18,9 @@ pub fn ask_confirm(opts: &Opts, msg: &str) -> Result<bool> {
 
 /// Theme for dialoguer
 #[derive(Default)]
-pub struct OmaTheme;
+pub struct SasmTheme;
 
-impl Theme for OmaTheme {
+impl Theme for SasmTheme {
     fn format_select_prompt_item(
         &self,
         f: &mut dyn fmt::Write,
@@ -28,8 +28,8 @@ impl Theme for OmaTheme {
         active: bool,
     ) -> fmt::Result {
         let prefix = match active {
-            true => crate::cli::gen_prefix(&style("->").bold().to_string()),
-            false => crate::cli::gen_prefix(""),
+            true => crate::utils::cli::gen_prefix(&style("->").bold().to_string()),
+            false => crate::utils::cli::gen_prefix(""),
         };
 
         write!(f, "{prefix}{text}")

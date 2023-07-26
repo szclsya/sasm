@@ -1,58 +1,86 @@
-use anyhow::{bail, Result};
-use serde::{Deserialize, Serialize, Serializer};
-use std::path::PathBuf;
+mod config;
+pub use config::RepoConfig;
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct RepoConfig {
-    pub source: Mirror,
-    pub keys: Vec<String>,
+use crate::{
+    debug, info,
+    utils::downloader::{Compression, DownloadJob, Downloader},
+};
+use anyhow::Result;
+use console::style;
+use std::{collections::HashMap, path::PathBuf};
+
+#[derive(Debug)]
+pub struct CachedRepoDb {
+    // root directory for dbs
+    root: PathBuf,
+    arch: String,
+    repos: HashMap<String, RepoConfig>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-#[serde(untagged)]
-pub enum Mirror {
-    Simple(String),
-    MirrorList(PathBuf),
-}
+impl CachedRepoDb {
+    pub fn new(root: PathBuf, repos: HashMap<String, RepoConfig>, arch: &str) -> Self {
+        CachedRepoDb { root, arch: arch.to_owned(), repos }
+    }
 
-impl RepoConfig {
-    /// Check if there's some mirror available
-    pub fn check_sanity(&self) -> Result<()> {
-        // TODO: Implement mirrorlist
-        if matches!(self.source, Mirror::MirrorList(_)) {
-            bail!("mirrorlist not supported yet!")
+    /// Get the remote (relative) path and local path for a repository
+    pub fn get_package_db(&self, name: &str) -> Result<(String, PathBuf)> {
+        let remote_relative_path = format!("{0}.db", name);
+        let local_path = self.root.join(self.root.join(format!("{}.db", name)));
+
+        Ok((remote_relative_path, local_path))
+    }
+
+    // Get (BaseURL, FilePath) of all configured repos
+    pub fn get_all_package_db(&self) -> Result<Vec<(String, PathBuf)>> {
+        let mut res = Vec::new();
+        for repo in &self.repos {
+            res.push(self.get_package_db(repo.0)?);
         }
+        Ok(res)
+    }
+
+    pub fn get_contents_db(&self, name: &str) -> Result<(String, PathBuf)> {
+        let arch = &self.arch;
+        let remote_relative_path = format!("{0}.files", name);
+        let local_path = self.root.join(self.root.join(format!("{}.files", name)));
+
+        Ok((remote_relative_path, local_path))
+    }
+
+    // Get (BaseURL, FilePath) of all configured repos
+    pub fn get_all_contents_db(&self) -> Result<Vec<(String, PathBuf)>> {
+        let mut res = Vec::new();
+        for repo in &self.repos {
+            res.push(self.get_contents_db(repo.0)?);
+        }
+        Ok(res)
+    }
+
+    pub async fn update(&self, downloader: &Downloader) -> Result<()> {
+        info!("Refreshing local repository metadata...");
+
+        let package_dbs = self.get_all_package_db()?;
+        if crate::verbose() {
+            for db in &package_dbs {
+                debug!("Downloading {} {}", db.0, db.1.display());
+            }
+        }
+
+        let mut download_jobs = Vec::with_capacity(package_dbs.len());
+        for (name, repo) in &self.repos {
+            let (remote_path, _local_path) = self.get_package_db(&name)?;
+            download_jobs.push(DownloadJob {
+                url: format!("{}/{}", repo.get_url(name, &self.arch)?, remote_path),
+                description: Some(format!("Package database for {}", style(name).bold())),
+                filename: Some(format!("{}.db", name)),
+                size: None,
+                compression: Compression::None(None),
+            })
+        }
+
+        // The downloader will verify the checksum for us
+        downloader.fetch(download_jobs, &self.root, false).await?;
 
         Ok(())
     }
-
-    /// Get base urls for all repositories
-    /// Returns a list of possible urls for the repository
-    pub fn get_url(&self, name: &str, arch: &str) -> Result<String> {
-        let mut url = match &self.source {
-            Mirror::Simple(m) => {
-                let mut url = m.clone();
-                normalize_mirror_url(&mut url);
-                url
-            }
-            Mirror::MirrorList(path) => {
-                unimplemented!()
-            }
-        };
-
-        // Replace variables
-        // $repo: Repository name
-        // $arch: Current system architecture
-        url = url.replace("$repo", name);
-        url = url.replace("$arch", arch);
-        Ok(url)
-    }
 }
-
-fn normalize_mirror_url(url: &mut String) {
-    if url.ends_with('/') {
-        url.pop();
-    }
-}
-
-pub enum MirrorlistLine {}

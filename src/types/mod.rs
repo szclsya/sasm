@@ -39,3 +39,12 @@ pub enum PkgSource {
     // Local(path)
     Local(PathBuf),
 }
+
+/// Status of package on this instance, extracted from pacman local state db
+/// Usually located at /var/lib/pacman/local
+#[derive(Clone)]
+pub struct PkgStatus {
+    pub name: String,
+    pub version: PkgVersion,
+    pub install_size: u64,
+}

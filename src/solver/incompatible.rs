@@ -1,4 +1,5 @@
-use crate::{pool::PkgPool, types::PkgMeta};
+use super::pool::PkgPool;
+use crate::types::PkgMeta;
 use varisat::{Lit, Solver};
 
 pub fn find_incompatible_friendly(pool: &dyn PkgPool, to_install: &[usize]) -> String {

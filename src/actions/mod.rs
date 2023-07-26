@@ -1,15 +1,12 @@
-mod download;
 mod execute;
 use execute::execute;
 
 use crate::{
-    db::LocalDb,
+    config::CachedRepoDb,
+    config::{Blueprints, Config, Opts, SubCmd},
     executor::MachineStatus,
     info, success,
-    types::{
-        config::{Blueprints, Config, Opts, SubCmd},
-        VersionRequirement,
-    },
+    types::VersionRequirement,
     utils::lock,
 };
 
@@ -45,7 +42,7 @@ pub async fn fullfill_command(
     // Directory that stores trusted public keys for repos
     let _key_root = opts.root.join(crate::DB_KEY_PATH);
     let localdb =
-        LocalDb::new(opts.root.join(crate::DB_CACHE_PATH), config.repo.clone(), &config.arch);
+        CachedRepoDb::new(opts.root.join(crate::DB_CACHE_PATH), config.repo.clone(), &config.arch);
 
     match &opts.subcmd {
         SubCmd::Execute => {

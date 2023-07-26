@@ -1,5 +1,8 @@
-use super::types::PkgStatus;
-use crate::{debug, error, types::PkgVersion, utils::pacparse};
+use crate::{
+    debug, error,
+    types::{PkgStatus, PkgVersion},
+    utils::pacparse,
+};
 use anyhow::{anyhow, bail, Context, Result};
 use std::{collections::HashMap, path::Path};
 use tokio::fs;

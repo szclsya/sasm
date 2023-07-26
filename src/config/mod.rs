@@ -1,9 +1,9 @@
 mod blueprint;
 pub use blueprint::{Blueprints, PkgRequest};
 mod repo;
-pub use repo::RepoConfig;
+pub use repo::{CachedRepoDb, RepoConfig};
 
-use crate::warn;
+use crate::{info, warn};
 
 use anyhow::{bail, Context, Result};
 use clap::Parser;

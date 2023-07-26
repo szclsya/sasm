@@ -6,10 +6,9 @@ mod improve;
 mod incompatible;
 mod sort;
 
-use crate::debug;
-use crate::pool::PkgPool;
-use crate::types::{config::Blueprints, PkgMeta};
+use crate::{config::Blueprints, debug, types::PkgMeta};
 use anyhow::{bail, format_err, Context, Result};
+use pool::PkgPool;
 use varisat::{lit::Lit, ExtendFormula};
 
 pub struct Solver {
@@ -81,4 +80,3 @@ pub fn solve(solver: &mut varisat::Solver) -> Result<Vec<usize>> {
     }
     Ok(res)
 }
-

@@ -1,7 +1,4 @@
-mod types;
-
-use crate::{ types::{PkgActions, PkgMeta}, pm::alpm };
-pub use types::PkgStatus;
+use crate::types::{PkgActions, PkgMeta, PkgStatus};
 
 use anyhow::{Context, Result};
 use std::{collections::HashMap, fs, path::Path};

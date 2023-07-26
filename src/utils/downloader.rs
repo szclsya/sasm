@@ -243,7 +243,9 @@ async fn download_file(
                     if crate::verbose() || global_bar.is_some() {
                         bar.println(format!(
                             "{}{} (not modified)",
-                            crate::cli::gen_prefix(&console::style("SKIP").dim().to_string()),
+                            crate::utils::cli::gen_prefix(
+                                &console::style("SKIP").dim().to_string()
+                            ),
                             &msg
                         ));
                     }
@@ -313,7 +315,7 @@ async fn download_file(
     bar.finish_and_clear();
     bar.println(format!(
         "{}{}",
-        crate::cli::gen_prefix(&console::style("DONE").dim().to_string()),
+        crate::utils::cli::gen_prefix(&console::style("DONE").dim().to_string()),
         &msg
     ));
     Ok((job.url, file_path))

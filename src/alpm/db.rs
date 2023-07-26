@@ -1,7 +1,7 @@
 /// The pacman db reader
 use crate::{
     debug,
-    pool::PkgPool,
+    solver::pool::PkgPool,
     types::{Checksum, PkgMeta, PkgSource, PkgVersion, VersionRequirement},
     utils::{downloader, pacparse},
     warn,

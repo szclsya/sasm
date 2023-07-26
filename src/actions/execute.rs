@@ -1,16 +1,16 @@
 use super::UserRequest;
 use crate::{
-    utils::cli::{self, ask_confirm},
-    alpm::db::LocalDb,
+    config::{Blueprints, CachedRepoDb, Config, Opts},
     debug,
     executor::MachineStatus,
     info,
-    solver::{ Solver, pool::{self, PkgPool} },
-    success,
-    types::{
-        config::{Blueprints, Config, Opts},
-        PkgActionModifier,
+    solver::{
+        pool::{self, PkgPool},
+        Solver,
     },
+    success,
+    types::PkgActionModifier,
+    utils::cli::{self, ask_confirm},
     utils::downloader::Downloader,
     warn,
 };
@@ -20,19 +20,20 @@ use console::style;
 
 // -> Result<UserCancelled?>
 pub async fn execute(
-    local_db: &LocalDb,
+    repo_db: &CachedRepoDb,
     downloader: &Downloader,
     blueprint: &mut Blueprints,
     opts: &Opts,
     config: &Config,
     request: UserRequest,
 ) -> Result<bool> {
-    let dbs = local_db.get_all_package_db().context("Invalid local package database!")?;
+    let dbs = repo_db.get_all_package_db().context("Invalid local package database!")?;
     let local_repo = opts.root.join(crate::LOCAL_REPO_PATH);
     if !local_repo.is_dir() {
         std::fs::create_dir_all(&local_repo)?;
     }
     let pool = pool::source::create_pool(&dbs, &[local_repo])?;
+    for db in dbs {}
 
     debug!("Processing user request...");
     let root = &opts.root;
